@@ -1,0 +1,2806 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>IT Support Game</title>
+<!-- STANDALONE BUILD: double-click to play, no Node/build needed. -->
+<!-- Auto-generated from src/ by tools/build-standalone.mjs. Do not hand-edit. -->
+<!-- Sprite PNGs only load when served over http (dev server or deployed site). -->
+<style>
+:root {
+  --bg: #f7f5ee;
+  --surface: #ffffff;
+  --surface-2: #efece2;
+  --text: #1f1f1d;
+  --text-muted: #5f5e5a;
+  --text-faint: #888780;
+  --border: rgba(0, 0, 0, 0.12);
+  --border-strong: rgba(0, 0, 0, 0.25);
+  --info: #185fa5;
+  --info-bg: #e6f1fb;
+  --info-text: #0c447c;
+  --success: #3b6d11;
+  --success-bg: #eaf3de;
+  --success-text: #27500a;
+  --danger: #a32d2d;
+  --danger-bg: #fcebeb;
+  --danger-text: #791f1f;
+  --amber: #ef9f27;
+  --amber-bg: #fdf0d8;
+  --green: #88c25a;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0; padding: 0;
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px 20px 60px;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.topbar-label {
+  font-size: 11px;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.topbar-title { font-size: 16px; font-weight: 500; }
+
+.progress { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+
+.pill {
+  font-size: 12px;
+  padding: 4px 10px;
+  background: var(--surface-2);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.pill-accent {
+  background: var(--info-bg);
+  color: var(--info-text);
+  font-weight: 500;
+}
+.pill-button {
+  background: transparent;
+  border: 0.5px solid var(--border-strong);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+}
+.pill-button:hover { background: var(--surface-2); }
+
+.viewport-shell {
+  background: var(--surface-2);
+  border-radius: var(--radius-lg);
+  padding: 8px;
+}
+
+#viewport {
+  width: 100%;
+  aspect-ratio: 30 / 22;
+  max-height: 78vh;
+  background: #0a0a09;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  position: relative;
+  outline: none;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
+  touch-action: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#viewport:focus-visible {
+  box-shadow: 0 0 0 2px var(--info), inset 0 0 0 1px rgba(255,255,255,0.04);
+}
+
+#world {
+  display: block;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.interact-hint {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translate(-50%, 10px);
+  background: rgba(0, 0, 0, 0.78);
+  color: white;
+  font-size: 12px;
+  padding: 7px 14px;
+  border-radius: var(--radius-md);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  border: 0.5px solid rgba(255,255,255,0.15);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  z-index: 2;
+}
+.interact-hint.visible { opacity: 1; transform: translate(-50%, 0); }
+
+.eod-hint {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--amber);
+  color: #2C2C2A;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 6px 14px;
+  border-radius: var(--radius-md);
+  pointer-events: none;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  z-index: 2;
+}
+
+/* --- touch controls: shown only on coarse-pointer (touch) devices --- */
+.touch-controls { display: none; }
+@media (pointer: coarse) {
+  .touch-controls {
+    display: block;
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 3;
+  }
+  .dpad {
+    position: absolute;
+    left: 14px;
+    bottom: 14px;
+    width: 132px;
+    height: 132px;
+    pointer-events: none;
+  }
+  .dpad-btn {
+    position: absolute;
+    width: 44px;
+    height: 44px;
+    border: none;
+    background: rgba(255,255,255,0.82);
+    color: #2C2C2A;
+    border-radius: 10px;
+    font-size: 16px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.35);
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+  }
+  .dpad-btn.pressed { background: var(--info); color: #fff; transform: scale(0.94); }
+  .dpad-up    { left: 44px; top: 0; }
+  .dpad-left  { left: 0;    top: 44px; }
+  .dpad-right { left: 88px; top: 44px; }
+  .dpad-down  { left: 44px; top: 88px; }
+
+  .action-btn {
+    position: absolute;
+    right: 18px;
+    bottom: 34px;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255,255,255,0.82);
+    color: #2C2C2A;
+    font-weight: 700;
+    font-size: 20px;
+    pointer-events: auto;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+    transition: background 0.12s, transform 0.12s;
+  }
+  .action-btn.ready { background: var(--amber); color: #2C2C2A; }
+  .action-btn.pressed { transform: scale(0.92); }
+
+  /* hide the keyboard-centric hint text on touch */
+  .legend-hint { display: none; }
+}
+
+.legend {
+  display: flex;
+  gap: 14px;
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--text-faint);
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 0 4px;
+}
+.legend-hint { margin-left: auto; }
+.dot {
+  display: inline-block;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  vertical-align: -1px;
+  margin-right: 4px;
+}
+.dot-ticket { background: var(--amber); }
+.dot-sq     { background: #85b7eb; width: 8px; height: 8px; }
+.dot-done   { background: var(--green); }
+
+.modal-bg {
+  margin-top: 12px;
+}
+
+.modal {
+  background: var(--surface);
+  border: 0.5px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.12);
+}
+
+.modal-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.modal-avatar {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: var(--info-bg);
+  color: var(--info-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-weight: 600;
+}
+
+.modal-headtext { flex: 1; min-width: 0; }
+.modal-title { font-size: 15px; font-weight: 500; }
+.modal-subtitle { font-size: 11px; color: var(--text-muted); }
+
+.modal-close {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  color: var(--text-faint);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.modal-body { font-size: 13px; color: var(--text); line-height: 1.6; }
+
+button {
+  font-family: inherit;
+  font-size: 13px;
+  padding: 7px 11px;
+  background: var(--surface);
+  border: 0.5px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  color: var(--text);
+  text-align: left;
+}
+button:hover { background: var(--surface-2); }
+button:disabled { cursor: default; opacity: 0.65; }
+
+.primary-btn {
+  background: var(--info);
+  color: #fff;
+  border-color: var(--info);
+  font-weight: 500;
+  text-align: center;
+}
+.primary-btn:hover { background: #14528f; }
+
+input[type="text"] {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  border: 0.5px solid var(--border-strong);
+  font-family: inherit;
+  font-size: 13px;
+  background: var(--surface);
+  color: var(--text);
+}
+input[type="text"]:focus { outline: none; border-color: var(--info); }
+
+.intro-foot {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 14px;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.intro-controls { font-size: 11px; color: var(--text-faint); }
+
+.dx-btn { width: 100%; text-align: left; font-size: 12px; }
+.dx-btn.correct {
+  background: var(--success-bg);
+  color: var(--success-text);
+  border-color: var(--success);
+}
+.dx-btn.wrong {
+  background: var(--danger-bg);
+  color: var(--danger-text);
+  border-color: var(--danger);
+}
+
+.fu-btn { font-size: 11px; padding: 5px 9px; }
+
+.scenario-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+}
+
+.scenario-section-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.btn-column { display: flex; flex-direction: column; gap: 5px; }
+.btn-column + .scenario-section-label { margin-top: 12px; }
+
+.ev-list { min-height: 80px; }
+.ev-item {
+  padding: 5px 0;
+  border-bottom: 0.5px solid var(--border);
+  font-size: 12px;
+}
+.ev-item:last-child { border-bottom: none; }
+.ev-where { font-size: 10px; color: var(--text-faint); margin-bottom: 1px; }
+.ev-empty { color: var(--text-faint); font-style: italic; font-size: 11px; }
+
+.action-note {
+  margin-top: 10px;
+  padding: 8px 10px;
+  background: var(--amber-bg);
+  color: #7a5a12;
+  border-radius: var(--radius-md);
+  font-size: 11px;
+}
+
+.poi-detail {
+  background: var(--surface-2);
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  margin-top: 10px;
+}
+.poi-detail-title { font-weight: 500; margin-bottom: 4px; }
+.poi-detail-body { color: var(--text-muted); line-height: 1.5; }
+.poi-followups { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
+
+.terminal {
+  background: #111;
+  color: #9fe1cb;
+  font-family: var(--mono);
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  font-size: 11px;
+  margin-top: 6px;
+  white-space: pre-wrap;
+}
+
+.scenario-feedback {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: var(--radius-md);
+  font-size: 12px;
+}
+.scenario-feedback.win { background: var(--success-bg); color: var(--success-text); }
+.scenario-feedback.lose { background: var(--danger-bg); color: var(--danger-text); }
+.scenario-feedback strong { font-weight: 500; }
+
+.principle-callout {
+  padding-top: 6px;
+  margin-top: 6px;
+  border-top: 0.5px solid currentColor;
+  opacity: 0.9;
+}
+
+.ticket-row {
+  padding: 8px 10px;
+  border-bottom: 0.5px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+}
+.ticket-row:last-child { border-bottom: none; }
+.ticket-row.solved { opacity: 0.6; }
+.ticket-row-icon { font-size: 16px; color: var(--info); }
+.ticket-row.solved .ticket-row-icon { color: var(--success); }
+.ticket-row-main { flex: 1; min-width: 0; }
+.ticket-row-title { font-weight: 500; }
+.ticket-row-meta { font-size: 11px; color: var(--text-faint); }
+.ticket-row-status { font-size: 10px; color: var(--text-faint); }
+.ticket-row.solved .ticket-row-status { color: var(--success); }
+
+/* --- end of day --- */
+.eod-stats {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.eod-stat {
+  flex: 1 1 calc(50% - 4px);
+  min-width: 70px;
+  background: var(--surface-2);
+  border-radius: var(--radius-md);
+  padding: 10px 8px;
+  text-align: center;
+}
+.eod-stat-num { font-size: 20px; font-weight: 600; color: var(--info); }
+.eod-stat-label { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+.principle-list {
+  margin: 0 0 4px;
+  padding-left: 18px;
+  font-size: 12px;
+  color: var(--text);
+}
+.principle-list li { padding: 2px 0; }
+
+.eod-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+/* --- responsive --- */
+@media (max-width: 720px) {
+  body { padding: 16px 12px 40px; }
+  .topbar-title { font-size: 14px; }
+  #viewport { max-height: 64vh; }
+  .scenario-grid { grid-template-columns: 1fr; }
+}
+
+/* --- title screen --- */
+.title-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 10, 9, 0.55);
+  cursor: pointer;
+}
+.title-card {
+  text-align: center;
+  font-family: var(--mono);
+  padding: 24px;
+  max-width: 460px;
+}
+.title-kicker {
+  color: #9fe1cb;
+  font-size: 11px;
+  letter-spacing: 2px;
+  margin-bottom: 6px;
+}
+.title-name {
+  color: #FCDE5A;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-shadow: 2px 2px 0 #185fa5;
+  margin-bottom: 14px;
+  line-height: 1.1;
+}
+.title-blurb {
+  color: #d8d4c8;
+  font-size: 13px;
+  line-height: 1.6;
+  margin-bottom: 18px;
+}
+.title-start {
+  background: #3C3489;
+  color: #FCDE5A;
+  border: 2px solid #7F77DD;
+  border-radius: 6px;
+  padding: 12px 22px;
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  cursor: pointer;
+  text-align: center;
+}
+.title-start:hover { background: #4a40a8; }
+.title-continue {
+  color: #9a988e;
+  font-size: 12px;
+  margin-top: 12px;
+}
+
+/* --- SDV layer: Field Companion / Discoveries gallery --------------------- */
+.companion-econ { display: flex; gap: 6px; flex-wrap: wrap; }
+.reward-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.reward-chip {
+  font-size: 12px; padding: 4px 9px; border-radius: var(--radius-md);
+  background: var(--amber-bg); color: var(--text); white-space: nowrap;
+  border: 0.5px solid var(--border);
+}
+.find-grid { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+.find-card {
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 8px 10px; border-radius: var(--radius-md);
+  background: var(--surface-2); border: 0.5px solid var(--border);
+}
+.find-card.locked { opacity: 0.55; }
+.find-icon { font-size: 22px; line-height: 1; flex: 0 0 auto; width: 26px; text-align: center; }
+.find-text { min-width: 0; }
+.find-name { font-weight: 600; font-size: 13px; }
+.find-note { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+</style>
+</head>
+<body>
+<div class="topbar">
+      <div>
+        <div class="topbar-label">IT support &middot; Floor 3</div>
+        <div class="topbar-title" id="game-title">
+          Walk to a ticket. Arrow keys or WASD to move, space or E to interact.
+        </div>
+      </div>
+      <div class="progress">
+        <div class="pill pill-accent" id="day-pill">Day 1</div>
+        <div class="pill" id="ticket-progress">0 / 7 tickets</div>
+        <div class="pill" id="sq-progress">0 side quests</div>
+        <div class="pill" id="coins-progress" title="Vending coins &middot; break-room tokens">&#129689; 0</div>
+        <button class="pill pill-button" id="companion-btn" title="Open your Field Companion"><span id="finds-progress">&#9733; 0/2</span></button>
+        <button class="pill pill-button" id="sound-btn" title="Toggle step sound">Sound: off</button>
+        <button class="pill pill-button" id="reset-btn" title="Clear save and start over">Reset</button>
+      </div>
+    </div>
+
+    <div class="legend">
+      <span>[WASD/arrows] walk</span>
+      <span>[space/E] interact</span>
+      <span><span class="dot dot-ticket"></span> ticket</span>
+      <span><span class="dot dot-sq"></span> side quest</span>
+      <span><span class="dot dot-done"></span> done</span>
+    </div>
+
+    <div class="viewport-shell">
+      <div id="viewport" tabindex="0">
+        <canvas id="world"></canvas>
+
+        <!-- title screen: gates input until the player begins -->
+        <div id="title-screen" class="title-screen">
+          <div class="title-card">
+            <div class="title-kicker">FLOOR 3 &middot; HELP DESK</div>
+            <div class="title-name">THE TICKET QUEUE</div>
+            <div class="title-blurb">
+              You're the IT person. Read the ticket monitor, walk the office,
+              find who filed each ticket, and learn the principle behind every fix.
+            </div>
+            <button id="start-btn" class="title-start">&#9654;&nbsp; PRESS SPACE TO BEGIN</button>
+            <div id="continue-line" class="title-continue"></div>
+          </div>
+        </div>
+
+        <div id="interact-hint" class="interact-hint">
+          <span id="interact-hint-text">Press E to interact</span>
+        </div>
+
+        <div id="eod-hint" class="eod-hint" hidden>
+          All seven tickets are closed. Walk back to your ticket monitor.
+        </div>
+
+        <div class="touch-controls" id="touch-controls" aria-hidden="true">
+          <div class="dpad">
+            <button class="dpad-btn dpad-up" id="touch-up" aria-label="Move up">&#9650;</button>
+            <button class="dpad-btn dpad-left" id="touch-left" aria-label="Move left">&#9664;</button>
+            <button class="dpad-btn dpad-right" id="touch-right" aria-label="Move right">&#9654;</button>
+            <button class="dpad-btn dpad-down" id="touch-down" aria-label="Move down">&#9660;</button>
+          </div>
+          <button class="action-btn" id="touch-action" aria-label="Interact">E</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="modal-bg" class="modal-bg" hidden>
+      <div class="modal" role="dialog" aria-modal="true">
+        <div class="modal-head">
+          <div class="modal-avatar" id="modal-avatar">i</div>
+          <div class="modal-headtext">
+            <div class="modal-title" id="modal-title"></div>
+            <div class="modal-subtitle" id="modal-subtitle"></div>
+          </div>
+          <button id="modal-close" class="modal-close" aria-label="Close">&times;</button>
+        </div>
+        <div id="modal-body" class="modal-body"></div>
+      </div>
+    </div>
+<script type="module">
+/* ===== src/storage.js ===== */
+const PREFIX = "it-game:";
+function loadSet(key) {
+  try {
+    const raw = localStorage.getItem(PREFIX + key);
+    if (!raw) return new Set();
+    return new Set(JSON.parse(raw));
+  } catch {
+    return new Set();
+  }
+}
+function saveSet(key, set) {
+  try {
+    localStorage.setItem(PREFIX + key, JSON.stringify(Array.from(set)));
+  } catch {
+    // unavailable or full
+  }
+}
+function loadString(key, fallback = "") {
+  try {
+    return localStorage.getItem(PREFIX + key) ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+function saveString(key, val) {
+  try {
+    localStorage.setItem(PREFIX + key, val);
+  } catch {
+    // ignore
+  }
+}
+function loadBool(key, fallback = false) {
+  try {
+    const v = localStorage.getItem(PREFIX + key);
+    if (v === null) return fallback;
+    return v === "1";
+  } catch {
+    return fallback;
+  }
+}
+function saveBool(key, val) {
+  try {
+    localStorage.setItem(PREFIX + key, val ? "1" : "0");
+  } catch {
+    // ignore
+  }
+}
+function loadNum(key, fallback = 0) {
+  try {
+    const v = localStorage.getItem(PREFIX + key);
+    if (v === null) return fallback;
+    const n = parseInt(v, 10);
+    return Number.isFinite(n) ? n : fallback;
+  } catch {
+    return fallback;
+  }
+}
+function saveNum(key, val) {
+  try {
+    localStorage.setItem(PREFIX + key, String(val));
+  } catch {
+    // ignore
+  }
+}
+function clearAll() {
+  try {
+    Object.keys(localStorage)
+      .filter((k) => k.startsWith(PREFIX))
+      .forEach((k) => localStorage.removeItem(k));
+  } catch {
+    // ignore
+  }
+}
+
+/* ===== src/world.js ===== */
+// World data: the map, the rooms, the people, the things you can interact with.
+// Edit this file to change the office layout or to add new NPCs / props.
+const TILE = 32;
+const MAP_W = 30;
+const MAP_H = 22;
+
+// Tile codes:
+//   W wall   . office floor   o open-plan carpet   e cool/exam floor
+//   D desk (solid)   c chair (walkable)   S server rack (solid)
+//   X exit/door marker (walkable, cosmetic)
+// The map is built programmatically so every row is guaranteed uniform width.
+// Rooms are carved as rectangles, then furniture is stamped in.
+
+function blank() {
+  const m = [];
+  for (let y = 0; y < MAP_H; y++) {
+    const row = [];
+    for (let x = 0; x < MAP_W; x++) row.push("W");
+    m.push(row);
+  }
+  return m;
+}
+function carve(m, x0, y0, w, h, tile) {
+  for (let y = y0; y < y0 + h; y++)
+    for (let x = x0; x < x0 + w; x++)
+      if (x > 0 && y > 0 && x < MAP_W - 1 && y < MAP_H - 1) m[y][x] = tile;
+}
+function door(m, x, y) { if (m[y] && m[y][x] !== undefined) m[y][x] = "."; }
+function stamp(m, x, y, tile) { if (m[y] && m[y][x] !== undefined) m[y][x] = tile; }
+
+function buildMap() {
+  const m = blank();
+
+  // Rooms separated by wall columns 6 & 19 and wall rows 7 & 14.
+  // Top band (rows 1-6)
+  carve(m, 1, 1, 5, 6, ".");     // IT room        (x 1..5)
+  carve(m, 7, 1, 12, 6, ".");    // Reception      (x 7..18)
+  carve(m, 20, 1, 8, 6, "e");    // Open desks     (x 20..27)
+  // Middle band (rows 8-13)
+  carve(m, 1, 8, 5, 6, ".");     // Print room     (x 1..5)
+  carve(m, 7, 8, 12, 6, "o");    // Open desks 2   (x 7..18)
+  carve(m, 20, 8, 8, 6, "o");    // Manager        (x 20..27)
+  // Bottom band (rows 15-20)
+  carve(m, 1, 15, 5, 6, ".");    // Server closet  (x 1..5)
+  carve(m, 7, 15, 9, 6, "e");    // Conf room      (x 7..15)
+  carve(m, 17, 15, 11, 6, "o");  // Accounting     (x 17..27)
+
+  // Two-tile doorways through the separating walls (wider = easier to navigate)
+  door(m, 6, 3);  door(m, 6, 4);    door(m, 19, 3); door(m, 19, 4);   // top horizontals
+  door(m, 6, 10); door(m, 6, 11);   door(m, 19, 10); door(m, 19, 11); // middle horizontals
+  door(m, 6, 18); door(m, 6, 17);   door(m, 16, 18); door(m, 16, 17); // bottom horizontals
+  door(m, 3, 7);  door(m, 4, 7);    door(m, 12, 7); door(m, 13, 7);  door(m, 24, 7);  door(m, 25, 7);  // top<->mid
+  door(m, 3, 14); door(m, 4, 14);   door(m, 11, 14); door(m, 12, 14); door(m, 24, 14); door(m, 25, 14); // mid<->bottom
+
+  // Furniture
+  stamp(m, 2, 2, "D"); stamp(m, 3, 2, "D"); stamp(m, 2, 4, "c");                 // IT
+  for (let x = 9; x <= 15; x++) stamp(m, x, 2, "D");
+  stamp(m, 9, 4, "c"); stamp(m, 15, 4, "c");                                     // Reception
+  stamp(m, 22, 2, "D"); stamp(m, 26, 2, "D"); stamp(m, 22, 5, "D"); stamp(m, 26, 5, "D"); // Open desks
+  stamp(m, 2, 9, "D");                                                           // Print
+  stamp(m, 9, 9, "D"); stamp(m, 12, 9, "D"); stamp(m, 15, 9, "D");
+  stamp(m, 9, 12, "D"); stamp(m, 15, 12, "D");                                   // Open desks 2
+  stamp(m, 22, 9, "D"); stamp(m, 25, 9, "D"); stamp(m, 25, 12, "c");             // Manager
+  stamp(m, 2, 16, "S"); stamp(m, 4, 16, "S"); stamp(m, 2, 19, "S"); stamp(m, 4, 19, "S"); // Server
+  for (let x = 9; x <= 13; x++) stamp(m, x, 17, "D");
+  stamp(m, 9, 19, "c"); stamp(m, 13, 19, "c");                                   // Conf
+  stamp(m, 19, 16, "D"); stamp(m, 26, 16, "D"); stamp(m, 19, 19, "D"); stamp(m, 26, 19, "D"); // Accounting
+
+  return m.map((row) => row.join(""));
+}
+const MAP = buildMap();
+
+const BLOCKING = new Set(["W", "D", "S"]);
+function isWalkable(x, y) {
+  if (x < 0 || y < 0 || x >= MAP_W || y >= MAP_H) return false;
+  return !BLOCKING.has(MAP[y][x]);
+}
+const ROOMS = [
+  { name: "IT room",       x: 1,  y: 1,  w: 5,  h: 6 },
+  { name: "Reception",     x: 7,  y: 1,  w: 12, h: 6 },
+  { name: "Open desks",    x: 20, y: 1,  w: 8,  h: 6 },
+  { name: "Print room",    x: 1,  y: 8,  w: 5,  h: 6 },
+  { name: "Open desks 2",  x: 7,  y: 8,  w: 12, h: 6 },
+  { name: "Manager",       x: 20, y: 8,  w: 8,  h: 6 },
+  { name: "Server closet", x: 1,  y: 15, w: 5,  h: 6 },
+  { name: "Conf. room",    x: 7,  y: 15, w: 9,  h: 6 },
+  { name: "Accounting",    x: 17, y: 15, w: 11, h: 6 }
+];
+
+// NPCs each get a `sprite` identity so the renderer draws a real pixel person.
+const NPCS = [
+  {
+    id: "karen", name: "Karen", role: "Receptionist",
+    x: 13, y: 4, ticket: "monitor",
+    sprite: { body:"#D4537E", body2:"#993556", accent:"#FCDE5A", hair:"#6B4A2A", skin:"#E0B080" },
+    chat: [
+      "Thanks for fixing my screen last week.",
+      "Phones have been quiet today, knock on wood.",
+      "Don't roll your chair over your cables. Lesson learned."
+    ]
+  },
+  {
+    id: "marcus", name: "Marcus", role: "Open desks",
+    x: 22, y: 3, ticket: "internet-down",
+    sprite: { body:"#1D9E75", body2:"#0F6E56", accent:"#9FE1CB", hair:"#2C2C2A", skin:"#8A5A3A" },
+    chat: [
+      "Yeah, I know now \u2014 scope before blaming the wifi.",
+      "Slack works, internet works, I was being dramatic. Sorry.",
+      "If I file a ticket again, ask me what else is broken first."
+    ]
+  },
+  {
+    id: "priya", name: "Priya", role: "Open desks",
+    x: 26, y: 4, ticket: "dns",
+    sprite: { body:"#7F77DD", body2:"#534AB7", accent:"#F4C0D1", hair:"#1a1a18", skin:"#C9926B" },
+    chat: [
+      "Hostnames are not the same as IPs. I get it now.",
+      "Fileshare's been solid since you flushed DNS.",
+      "I made a sticky note: ping by IP first."
+    ]
+  },
+  {
+    id: "dana", name: "Dana", role: "Print room",
+    x: 3, y: 10, ticket: "printer",
+    sprite: { body:"#BA7517", body2:"#854F0B", accent:"#FCDE5A", hair:"#888780", skin:"#D8B088" },
+    chat: [
+      "Windows updates strike again, huh.",
+      "Driver's been good since you fixed it. Thanks.",
+      "I tell people now: 'check the queue first.'"
+    ]
+  },
+  {
+    id: "jordan", name: "Jordan", role: "Open desks 2",
+    x: 12, y: 10, ticket: "slow",
+    sprite: { body:"#0F6E56", body2:"#085041", accent:"#85B7EB", hair:"#412402", skin:"#8A5A3A" },
+    chat: [
+      "I close my tabs now. Mostly.",
+      "Wasn't the wifi. Got it.",
+      "Task Manager is my friend. Reluctantly."
+    ]
+  },
+  {
+    id: "riley", name: "Riley", role: "Open desks 2",
+    x: 15, y: 11, ticket: "permissions",
+    sprite: { body:"#D85A30", body2:"#993C1D", accent:"#FCDE5A", hair:"#BA7517", skin:"#E0B080" },
+    chat: [
+      "Color access went through, thanks.",
+      "Operations finally got added to the group. Took a week.",
+      "If Sam can do it and I can't, it's me, not the printer."
+    ]
+  },
+  {
+    id: "chen", name: "Mgr Chen", role: "Manager",
+    x: 24, y: 12, ticket: "change",
+    sprite: { body:"#378ADD", body2:"#185FA5", accent:"#F1EFE8", hair:"#2C2C2A", skin:"#B08050", glasses:true },
+    chat: [
+      "Email's good. Change-log's now a daily check.",
+      "DNS migrations on a Friday. Lesson learned for everyone.",
+      "Thanks for being calm when I was not."
+    ]
+  },
+  {
+    id: "ed", name: "Ed", role: "Accounting",
+    x: 19, y: 18, sideQuest: "unplugged",
+    sprite: { body:"#888780", body2:"#5F5E5A", accent:"#B5D4F4", hair:"#C8C4B4", skin:"#D8B088", glasses:true },
+    chat: [
+      "I check the power strip first now. Every time.",
+      "Don't tell anyone what the problem was.",
+      "I keep tape over the strip switch. No more accidents."
+    ]
+  },
+  {
+    id: "lisa", name: "Lisa", role: "Accounting",
+    x: 26, y: 18, sideQuest: "monitorStandby",
+    sprite: { body:"#534AB7", body2:"#3C3489", accent:"#F4C0D1", hair:"#2C2C2A", skin:"#C9926B" },
+    chat: [
+      "Amber means asleep. Got it.",
+      "I wiggle the mouse before panicking now.",
+      "It's amazing how much I assumed was broken."
+    ]
+  }
+];
+const PLAYER_SPRITE = { body:"#2E6FB0", body2:"#1B4E84", accent:"#FCDE5A", hair:"#2C2C2A", skin:"#C9926B" };
+
+// Props are interactable objects dispatched by `kind` (see game.js / render.js).
+// Kinds in use:  monitor | printer | pet | search | chest | usb
+//   monitor  the ticket board (opens the queue / end-of-day)
+//   printer  the low-ink side quest prop
+//   pet      a companion you befriend over several steps; bootstraps the economy
+//   search   furniture you examine; can grant a carry-flag and/or a collectable
+//   chest     a hidden stash, invisible until `needFlag` is set; pays out the economy
+//   usb       a found object that opens a one-shot awareness side quest
+// Optional fields:
+//   walkable:true   prop does NOT block its tile (small floor objects like a USB)
+//   needFlag        prop is invisible/non-blocking until state.flags has this
+//   doneFlag        once set, the prop reads as "done"
+const PROPS = [
+  { id: "ticket-monitor", x: 4, y: 4,  label: "Ticket monitor",     room: "IT room",    kind: "monitor", isMonitor: true },
+  { id: "sq-printer-ink", x: 4, y: 10, label: "Printer (low ink?)",  room: "Print room", kind: "printer", sideQuest: "printerInk", isPrinter: true },
+
+  // --- SDV layer: the pet + economy bootstrap ---------------------------------
+  // Mittens the office cat. Meet her hungry, find her food, feed her; she pays
+  // you back by pawing open a hidden ceiling-tile stash (the `chest` below).
+  { id: "cat", x: 8, y: 18, label: "the office cat", room: "Conf. room", kind: "pet", name: "Mittens" },
+
+  // Cat food lives in a supply cabinet over in the print room (so befriending
+  // her makes you walk the floor — the whole point of side quests).
+  { id: "cat-food", x: 4, y: 12, label: "supply cabinet", room: "Print room", kind: "search",
+    title: "SUPPLY CABINET",
+    giveFlag: "hasCatFood", needPriorFlag: "catMet",
+    lockedText: "Toner, pens, a stack of paper. Nothing you need yet.",
+    take: "Behind the toner: an unopened pouch of cat food. Somebody used to look after her.",
+    empty: "You already grabbed the cat food. The rest is just toner." },
+
+  // The hidden stash. Invisible (and non-blocking) until Mittens reveals it.
+  { id: "cat-stash", x: 14, y: 16, label: "loose ceiling tile", room: "Conf. room", kind: "chest",
+    walkable: true, needFlag: "catRevealed", doneFlag: "stashTaken",
+    coins: 15, tokens: 1, findReward: "charm",
+    title: "LOOSE CEILING TILE",
+    give: "Mittens bats a sagging ceiling tile until it tips. Taped above it is an old admin's stash: a fistful of vending coins, one break-room token, and her spare collar charm.",
+    done: "Empty now. Mittens looks extremely pleased with herself." },
+
+  // A mystery USB stick on the open-plan carpet. Walkable so it doesn't wall off
+  // the floor; opens a phishing-awareness one-shot (see sideQuests.js: usbDrop).
+  { id: "usb-drop", x: 9, y: 11, label: "a USB stick on the floor", room: "Open desks 2",
+    kind: "usb", walkable: true, sideQuest: "usbDrop" }
+];
+const PLAYER_START = { x: 2, y: 5, dir: "down" };
+const LOC_LABEL = "IT SUPPORT \u00b7 FLOOR 3";
+
+/* ===== src/scenarios.js ===== */
+// The seven main tickets. Each maps to one IT principle.
+// Schema:
+//   title, principle, principleText, ticket, ticketMeta, actions
+//   pois[]:      { id, label, body, evidence, followups?[] }
+//   followups[]: { label, result, addEvidence? }
+//   diagnoses[]: { key, label, correct, feedback }
+const SCENARIOS = {
+  "monitor": {
+    title: "Reception monitor is black",
+    principle: "Physical layer first",
+    principleText:
+      "When a display reports 'no signal' on every input but the PC is alive, the wire is suspect before drivers, power, or network. Layer 1 first.",
+    ticket: "\"My monitor is black. I already tried everything. Please hurry.\"",
+    ticketMeta: "Tier 1 \u00b7 Reception \u00b7 Karen",
+    actions: 6,
+    pois: [
+      {
+        id: "monitor",
+        label: "The monitor",
+        body: "Power LED is amber. On-screen flashes 'No signal \u00b7 DisplayPort'.",
+        evidence: "Monitor LED amber, 'No signal \u00b7 DisplayPort'.",
+        followups: [
+          {
+            label: "Cycle input source",
+            result: "HDMI input also reports 'No signal'.",
+            addEvidence: "Both inputs report no signal."
+          }
+        ]
+      },
+      {
+        id: "pc",
+        label: "Tower",
+        body: "Fans spinning. Front LED solid green. Drive light blinks normally.",
+        evidence: "Tower powered and booted fine."
+      },
+      {
+        id: "cables",
+        label: "Cables",
+        body: "DisplayPort connector at the monitor end is barely seated. Slight wiggle, pops loose.",
+        evidence: "DisplayPort cable not fully seated.",
+        followups: [
+          {
+            label: "Reseat the DP cable",
+            result: "It clicks in. Picture appears.",
+            addEvidence: "Reseating restored video."
+          }
+        ]
+      },
+      {
+        id: "power",
+        label: "Power strip",
+        body: "Red switch lit. Everything has power.",
+        evidence: "Power strip on, no issue."
+      },
+      {
+        id: "karen",
+        label: "Talk to Karen",
+        body: "'I didn't change anything. Was fine yesterday. Just back from vacation.' Her chair has been rolling over the cables.",
+        evidence: "Chair rolls over cables; user reports no change."
+      }
+    ],
+    diagnoses: [
+      { key: "psu", label: "Power supply failure", correct: false,
+        feedback: "Tower is alive \u2014 fans, lights, drive activity. Wasn't the PSU." },
+      { key: "cable", label: "Loose / wrong-input cable", correct: true,
+        feedback: "Right. Amber LED + 'no signal' on both inputs + running tower = signal path failure." },
+      { key: "gpu", label: "GPU / driver problem", correct: false,
+        feedback: "GPU/driver issues usually show POST or one port works. Never got any signal." },
+      { key: "network", label: "Network outage", correct: false,
+        feedback: "Symptom is black screen, not 'no internet'. Scope the symptom first." }
+    ]
+  },
+
+  "internet-down": {
+    title: "\"The internet is down\"",
+    principle: "Scope the problem",
+    principleText:
+      "Before you fix anything, find out how big the problem is. One user, one floor, or the whole building?",
+    ticket: "\"Internet's down. Can someone come look?\"",
+    ticketMeta: "Tier 1 \u00b7 Open desks \u00b7 Marcus",
+    actions: 5,
+    pois: [
+      { id: "marcus", label: "Talk to Marcus",
+        body: "'Down for like 20 minutes.' His Slack is open and active.",
+        evidence: "Marcus says internet is down. But Slack is connected." },
+      { id: "marcus-pc", label: "His PC",
+        body: "Browser shows ERR_NAME_NOT_RESOLVED for one site. Slack, Outlook, Spotify all working.",
+        evidence: "Only one site failing; everything else works." },
+      { id: "coworker", label: "Coworker",
+        body: "On a call. Loads the same site Marcus can't, no problem.",
+        evidence: "Neighbor has working internet AND can reach the site." },
+      { id: "router", label: "Building router",
+        body: "WAN solid, uptime 47 days, no alerts.",
+        evidence: "Router healthy. No building outage." },
+      { id: "walljack", label: "Wall jack",
+        body: "Link light blinks normally.",
+        evidence: "Wall jack healthy." }
+    ],
+    diagnoses: [
+      { key: "reboot", label: "Reboot the router", correct: false,
+        feedback: "Classic mistake. Marcus is one user with one site failing. Reboot would kill everyone's calls." },
+      { key: "scope-user", label: "Isolated to Marcus / one site", correct: true,
+        feedback: "Right. Neighbor works, Slack works on Marcus's machine, one site fails \u2014 DNS or hosts file." },
+      { key: "isp", label: "Call the ISP", correct: false,
+        feedback: "Don't escalate before scoping. Everyone else is online." },
+      { key: "cable", label: "Bad cable at his desk", correct: false,
+        feedback: "A bad cable kills all traffic. His Slack works." }
+    ]
+  },
+
+  "dns": {
+    title: "Can't reach the file share",
+    principle: "Name vs IP (DNS)",
+    principleText:
+      "If pinging by IP works but pinging by hostname doesn't, name resolution is broken. DNS is its own layer of failure.",
+    ticket: "\"I can't open the file share. Says it can't find the server.\"",
+    ticketMeta: "Tier 2 \u00b7 Open desks \u00b7 Priya",
+    actions: 5,
+    pois: [
+      { id: "priya", label: "Talk to Priya",
+        body: "'I click the shortcut, spins forever, says \\\\fileshare01 can't be found.' Browser loads google.com fine.",
+        evidence: "Internet works; \\\\fileshare01 fails." },
+      { id: "priya-pc", label: "Her PC",
+        body: "Run a test. Pick what you'd type.",
+        evidence: "Her PC is operational.",
+        followups: [
+          { label: "ping fileshare01",
+            result: "> ping fileshare01\nPing request could not find host fileshare01.",
+            addEvidence: "Ping by hostname: 'could not find host'." },
+          { label: "ping 10.0.0.20",
+            result: "> ping 10.0.0.20\nReply from 10.0.0.20: time=1ms",
+            addEvidence: "Ping by IP works perfectly." }
+        ] },
+      { id: "server", label: "Fileshare",
+        body: "Server up. Other users connecting fine.",
+        evidence: "Fileshare up; others connecting." },
+      { id: "dns", label: "Router/DNS",
+        body: "Internal DNS server's response time is high. Some queries timing out.",
+        evidence: "Internal DNS slow / timing out." }
+    ],
+    diagnoses: [
+      { key: "network", label: "Network is down to her desk", correct: false,
+        feedback: "Browser works, ping by IP works. Network is fine." },
+      { key: "server", label: "Fileshare offline", correct: false,
+        feedback: "Server is up and others are connected. Problem is between Priya and the name." },
+      { key: "dns", label: "DNS / name resolution failure", correct: true,
+        feedback: "Right. Ping by IP works, ping by name fails \u2014 canonical DNS-failure signature." },
+      { key: "permissions", label: "User permission issue", correct: false,
+        feedback: "Permission issue would deny her after she reached the server. She can't resolve the name." }
+    ]
+  },
+
+  "printer": {
+    title: "\"The printer won't print\"",
+    principle: "Three-system print stack",
+    principleText:
+      "Printing is three independent systems: driver on the user's PC, queue on the print server, and network path. Test each separately.",
+    ticket: "\"Sent print job three times. Nothing comes out. Printer is on.\"",
+    ticketMeta: "Tier 2 \u00b7 Print room \u00b7 Dana",
+    actions: 5,
+    pois: [
+      { id: "printer", label: "Printer",
+        body: "Powered on, ready light solid green, no error codes.",
+        evidence: "Printer hardware fine, no errors." },
+      { id: "queue", label: "Print queue",
+        body: "Dana's jobs are stuck in 'Error \u2014 driver mismatch'. Other users' jobs print fine.",
+        evidence: "Dana's jobs: driver mismatch. Others print fine." },
+      { id: "dana", label: "Talk to Dana",
+        body: "'Worked last week. I think I ran Windows updates Friday.' Her print dialog shows 'Office HP \u2014 Generic / Text Only'.",
+        evidence: "Dana ran updates Friday; printer showing as Generic driver." },
+      { id: "network", label: "Network",
+        body: "Ping reaches the printer. Path is healthy.",
+        evidence: "Network path to printer is healthy." }
+    ],
+    diagnoses: [
+      { key: "reboot-printer", label: "Restart the printer", correct: false,
+        feedback: "Tempting and very common. Printer is fine \u2014 others print. Failure is on Dana's PC." },
+      { key: "network", label: "Network outage to the printer", correct: false,
+        feedback: "Ping reached it. Others print. Network is healthy." },
+      { key: "driver", label: "Driver problem on Dana's PC", correct: true,
+        feedback: "Right. Windows update replaced the HP driver with Generic. Hardware \u2713, queue server \u2713, driver \u2717." },
+      { key: "permissions", label: "Permissions issue", correct: false,
+        feedback: "Permissions show as 'access denied', not 'driver mismatch'. The error code names the layer." }
+    ]
+  },
+
+  "slow": {
+    title: "\"The internet is so slow today\"",
+    principle: "Resource vs network",
+    principleText:
+      "User-reported symptoms describe experience, not cause. 'Slow internet' often means slow computer.",
+    ticket: "\"Internet's been crawling. Pages take forever.\"",
+    ticketMeta: "Tier 2 \u00b7 Open desks 2 \u00b7 Jordan",
+    actions: 5,
+    pois: [
+      { id: "jordan", label: "Talk to Jordan",
+        body: "'Everything's slow. Probably the wifi.' 47 browser tabs open.",
+        evidence: "Blames wifi. ~47 tabs open." },
+      { id: "jordan-pc", label: "His PC",
+        body: "Task Manager: CPU 100%, RAM 94%, one Chrome process eating 6GB.",
+        evidence: "CPU 100%, RAM 94%, runaway Chrome tab.",
+        followups: [
+          { label: "Speed test",
+            result: "380 Mbps down, 25 ms latency.",
+            addEvidence: "Speed test excellent (380 Mbps)." }
+        ] },
+      { id: "neighbor", label: "Neighbor",
+        body: "Streaming a video call with no issues. Same wifi.",
+        evidence: "Neighbor on same wifi is fine." },
+      { id: "router", label: "Building router",
+        body: "Moderate utilization. No alerts.",
+        evidence: "Router healthy." }
+    ],
+    diagnoses: [
+      { key: "wifi", label: "Wifi is slow", correct: false,
+        feedback: "Neighbor on same wifi is fine. Speed test from his own PC is excellent." },
+      { key: "isp", label: "ISP problem", correct: false,
+        feedback: "His own speed test pulled 380 Mbps. Pipe is wide open." },
+      { key: "resource", label: "Local resource exhaustion", correct: true,
+        feedback: "Right. CPU pegged, runaway tab. Browser feels slow \u2192 user reports 'slow internet'." },
+      { key: "malware", label: "Malware", correct: false,
+        feedback: "Possible but premature \u2014 the runaway tab is sitting right there in Task Manager." }
+    ]
+  },
+
+  "permissions": {
+    title: "\"Why can he print and I can't?\"",
+    principle: "Environment vs user",
+    principleText:
+      "When two people in the same place have different outcomes, the variable is the user account, not the environment.",
+    ticket: "\"Sam can print to the color printer. I can't. Same printer.\"",
+    ticketMeta: "Tier 3 \u00b7 Open desks 2 \u00b7 Riley",
+    actions: 6,
+    pois: [
+      { id: "riley", label: "Talk to Riley",
+        body: "'I get \"access denied\". Sam prints to it all day.'",
+        evidence: "Riley: access denied. Sam: works." },
+      { id: "sam", label: "Talk to Sam",
+        body: "'Works for me. I'm in marketing \u2014 they gave us color access.'",
+        evidence: "Marketing has color access." },
+      { id: "printer", label: "Color printer",
+        body: "Functioning. Sam's jobs print successfully.",
+        evidence: "Printer works for Sam." },
+      { id: "queue", label: "Print server ACL",
+        body: "Color printer allowed groups: Marketing, Executives, IT. Riley is in Operations.",
+        evidence: "ACL excludes Operations. Riley is in Operations." },
+      { id: "manager", label: "Riley's manager",
+        body: "'Riley prints client presentations occasionally. Been meaning to ask about access.'",
+        evidence: "Business justification exists." }
+    ],
+    diagnoses: [
+      { key: "driver", label: "Driver is broken", correct: false,
+        feedback: "Driver error would say so. Error is 'access denied' \u2014 names the layer." },
+      { key: "queue", label: "Queue is stuck", correct: false,
+        feedback: "Sam is actively printing. Queue is fine for those with access." },
+      { key: "permissions", label: "Riley's group lacks permission", correct: true,
+        feedback: "Right. Same environment, different user, different outcome \u2192 user variable. Operations isn't on the allow-list." },
+      { key: "printer-hw", label: "Printer hardware fault", correct: false,
+        feedback: "Works for Sam in the same room. Not hardware." }
+    ]
+  },
+
+  "change": {
+    title: "\"Email broke overnight\"",
+    principle: "Change management",
+    principleText:
+      "When something breaks with no user-side change, look at what changed on the system side. Check the change log.",
+    ticket: "\"Whole team can't send external email. Internal works. We didn't change anything.\"",
+    ticketMeta: "Tier 4 \u00b7 Manager \u00b7 Mgr Chen",
+    actions: 6,
+    pois: [
+      { id: "manager", label: "Talk to Mgr Chen",
+        body: "'Started ~7am. Internal email works. External replies bounce.'",
+        evidence: "Internal works, external bounces. Started ~7am." },
+      { id: "manager-pc", label: "A team PC",
+        body: "NDR reads: 'Recipient address rejected: SPF check failed for sender domain.'",
+        evidence: "Bounces: SPF check failed." },
+      { id: "server", label: "Mail server",
+        body: "Server up. Internal delivery normal. Outbound SMTP connects. External rejects on SPF.",
+        evidence: "Server healthy; recipients reject on SPF." },
+      { id: "changelog", label: "IT change log",
+        body: "Last night 2:47am: 'DNS migration completed \u2014 old TXT records purged, new ones to be added Monday.' SPF lives in TXT.",
+        evidence: "DNS migration purged TXT records (SPF). Monday isn't here." },
+      { id: "router", label: "Router/firewall",
+        body: "Outbound flowing fine. No blocks.",
+        evidence: "Network healthy." }
+    ],
+    diagnoses: [
+      { key: "isp", label: "ISP blocking outbound", correct: false,
+        feedback: "Bounces are SPF failures, not connection failures. Mail is leaving \u2014 recipients reject on policy." },
+      { key: "compromise", label: "Account compromise", correct: false,
+        feedback: "Possible but the change log shows a much simpler explanation the same night." },
+      { key: "change", label: "Recent DNS change removed SPF", correct: true,
+        feedback: "Right. TXT purge nuked the SPF record. External servers can't verify sender. Re-add the SPF record." },
+      { key: "server-down", label: "Mail server is down", correct: false,
+        feedback: "Internal email works, outbound SMTP connects. Server is fine." }
+    ]
+  }
+};
+
+/* ===== src/sideQuests.js ===== */
+// Side quests are one-shot quick-solves. No evidence chain, no debrief screen.
+// Walk past, notice the marker, pick an answer, get a one-line lesson.
+// Schema: { title, body, where, options[] }
+//   options: { key, label, correct, feedback }
+const SIDE_QUESTS = {
+  "unplugged": {
+    title: "Ed: \"My PC won't turn on\"",
+    body: "Ed (accountant): 'I've been trying for 10 minutes. Nothing happens. I think the hard drive is dead.' You glance under the desk.",
+    where: "Accounting \u00b7 Ed's desk",
+    options: [
+      { key: "plug", label: "Check that it's plugged in", correct: true,
+        feedback: "The power strip switch is off. You flip it. The PC boots immediately. Ed is embarrassed. 5-second fix." },
+      { key: "psu", label: "Open the case, check the PSU", correct: false,
+        feedback: "You spent 10 minutes opening the case. Everything was fine. The power strip was off the whole time. Always check the simplest physical cause first." },
+      { key: "reinstall", label: "Reinstall Windows", correct: false,
+        feedback: "The machine never even posted. Reinstalling Windows on a machine that doesn't power on is nonsense." }
+    ]
+  },
+
+  "monitorStandby": {
+    title: "Lisa: \"My screen is dead\"",
+    body: "Lisa: 'It just went black. I think the monitor finally died.' The monitor's power button glows amber, gently pulsing.",
+    where: "Accounting \u00b7 Lisa's desk",
+    options: [
+      { key: "wake", label: "Wiggle the mouse to wake it", correct: true,
+        feedback: "The monitor flashes on. The PC was just asleep. Amber-pulsing usually means standby, not dead. Took two seconds." },
+      { key: "replace", label: "Order a new monitor", correct: false,
+        feedback: "You'd have wasted $200. Amber pulsing = standby = the PC went to sleep. Always check what the LED is telling you." },
+      { key: "cable", label: "Replace the DisplayPort cable", correct: false,
+        feedback: "Nothing was wrong with the cable. PC was asleep. Read the LED first." }
+    ]
+  },
+
+  "usbDrop": {
+    title: "A USB stick on the floor",
+    body: "There's an unbranded USB stick on the carpet by the open desks. No name, no label. Someone could've dropped it \u2014 or someone could've left it there on purpose.",
+    where: "Open desks 2",
+    reward: { find: "usbWise", coins: 6 },
+    options: [
+      { key: "security", label: "Bag it and hand it to security", correct: true,
+        feedback: "Right call. Unknown USBs are a classic attack \u2014 drop a few in a parking lot or lobby and wait for a curious employee to plug one in. Security can inspect it safely on an isolated machine. (Keepsake: USB-Wise badge.)" },
+      { key: "plug", label: "Plug it in to see whose it is", correct: false,
+        feedback: "Don't. A malicious USB can auto-run payloads or pose as a keyboard and type commands the instant it's connected \u2014 'find the owner' is exactly the curiosity the attacker is counting on." },
+      { key: "leave", label: "Leave it where it is", correct: false,
+        feedback: "Understandable, but now it's still bait for the next person who walks by. The move is to remove it from circulation \u2014 hand it to security." }
+    ]
+  },
+
+  "printerInk": {
+    title: "Printer waving for ink",
+    body: "The print room printer has a small yellow light blinking next to the cyan cartridge. Nobody filed a ticket. It still prints in monochrome.",
+    where: "Print room",
+    options: [
+      { key: "replace", label: "Replace the cyan cartridge", correct: true,
+        feedback: "30-second swap. Color printing is restored before anyone notices. This is the kind of proactive fix that quietly prevents a real ticket later." },
+      { key: "ignore", label: "Ignore \u2014 it still prints", correct: false,
+        feedback: "It'll work until someone tries to print a client deck in color, then it'll be an urgent ticket. Proactive \u2265 reactive." },
+      { key: "replace-all", label: "Replace all four cartridges", correct: false,
+        feedback: "Wasteful. Only cyan was low. The blinking light specifically named the cartridge." }
+    ]
+  }
+};
+
+/* ===== src/collectables.js ===== */
+// Collectables registry — the SDV "keepsakes" layer.
+//
+// Each entry is a memento tied to a person/story/moment, NOT a stat boost.
+// FINDTOTAL recomputes itself from the keys, so adding ONE entry here is all
+// it takes to grow the "finds x/total" counter — no other code changes.
+//
+// Schema:  id -> { icon, name, note }
+//   icon : a short glyph for the HUD (emoji is fine; HUD is HTML)
+//   name : what it's called in the Discoveries gallery
+//   note : the little story line that makes it stick
+const FINDS = {
+  charm: {
+    icon: "\u{1F9F6}",
+    name: "Mittens' collar charm",
+    note: "A frayed tag from the office cat. She trusts you now \u2014 and she showed you where the old admin hid the break-room stash."
+  },
+  usbWise: {
+    icon: "\u{1F6E1}\uFE0F",
+    name: "USB-Wise badge",
+    note: "You handed a mystery USB to security instead of plugging it in. Attackers really do scatter these in parking lots hoping someone gets curious."
+  }
+  // ---- more keepsakes land here as content grows ----
+  // breakroomAce: { icon:"\u{1F3C6}", name:"Break-room Ace", note:"Top run in the secret break-room game." }
+};
+const FINDTOTAL = Object.keys(FINDS).length;
+
+/* ===== src/render.js ===== */
+// Drawing layer — ports the public-health RPG's rich procedural renderer:
+// real little pixel people, shaded office tiles, an offscreen map cache,
+// walking step animation, head bubbles, the SPACE/E prompt, and a vignette.
+//
+// Sprite images still override primitives: drop PNGs in /public/sprites/ and
+// list them in the manifest (game.js). Missing files fall back to procedural.
+const ASSETS = { tiles: {}, sprites: {}, props: {}, markers: {} };
+function loadAssets(manifest = {}) {
+  const jobs = [];
+  const onTileLoad = () => { mapCanvasCache = {}; };
+  for (const [key, src] of Object.entries(manifest)) {
+    jobs.push(new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        img._ready = true;
+        if (key.startsWith("tile_")) onTileLoad();
+        resolve();
+      };
+      img.onerror = () => { img._ready = false; resolve(); };
+      img.src = src;
+      // route into the right bucket
+      if (key.startsWith("npc_") || key.startsWith("player_")) {
+        // sprites are stored per-id with a direction; manifest keys look like
+        // "player_down" or "npc_karen". We register them under a flat map and
+        // resolve at draw time.
+        ASSETS.sprites[key] = img;
+      } else if (key.startsWith("tile_")) {
+        ASSETS.tiles[key] = img;
+      } else if (key.startsWith("marker_")) {
+        ASSETS.markers[key] = img;
+      } else {
+        ASSETS.props[key] = img;
+      }
+    }));
+  }
+  return Promise.all(jobs);
+}
+function sizeCanvas(canvas, viewport) {
+  const r = viewport.getBoundingClientRect();
+  const mapW = MAP_W * TILE, mapH = MAP_H * TILE;
+  const mapAspect = mapW / mapH;
+  const boxAspect = r.width / r.height;
+  // letterbox: fit the whole map inside the viewport, preserving aspect ratio
+  let cssW, cssH;
+  if (boxAspect > mapAspect) {
+    cssH = r.height; cssW = Math.round(cssH * mapAspect);
+  } else {
+    cssW = r.width; cssH = Math.round(cssW / mapAspect);
+  }
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.round(cssW * dpr);
+  canvas.height = Math.round(cssH * dpr);
+  canvas.style.width = cssW + "px";
+  canvas.style.height = cssH + "px";
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+  canvas._cssW = cssW;
+  canvas._cssH = cssH;
+}
+
+// ---- palette (office-themed, derived from the public-health PAL) ----
+const PAL = {
+  wall:"#5F5E5A", wallShade:"#444441", wallLight:"#7A7873",
+  floor:"#E8E4D8", floorShade:"#D3D1C7", floorLight:"#F1EFE8",
+  carpet:"#DAD3C2", carpetShade:"#C2BBA8",
+  cool:"#D8E4E8", coolShade:"#B8C4C8",
+  desk:"#A88862", deskShade:"#7A5F40", deskHighlight:"#C9A37A",
+  chair:"#7A6B5D", chairShade:"#5A4F44",
+  server:"#2C2C2A", serverShade:"#1a1a18", serverLight:"#3A3A38", serverLed:"#63B370",
+  door:"#FCDE5A", doorShade:"#EF9F27", doorArrow:"#412402",
+  monitorBezel:"#3A3A38", monitorScreen:"#85B7EB",
+  printerBody:"#C9D6D0", printerDark:"#3A3A38", inkBlink:"#F2C94C",
+  shadow:"rgba(0,0,0,0.25)"
+};
+
+let mapCanvasCache = {};
+
+function drawFloorBase(c, px, py, base, shade) {
+  c.fillStyle = base; c.fillRect(px, py, TILE, TILE);
+  c.fillStyle = shade; c.fillRect(px, py + TILE - 2, TILE, 2); c.fillRect(px + TILE - 2, py, 2, TILE);
+}
+
+function drawTileProc(c, x, y, code) {
+  const px = x * TILE, py = y * TILE;
+  if (code === "W") {
+    c.fillStyle = PAL.wall; c.fillRect(px, py, TILE, TILE);
+    c.fillStyle = PAL.wallLight; c.fillRect(px, py, TILE, 3);
+    c.fillStyle = PAL.wallShade; c.fillRect(px, py + TILE - 4, TILE, 4);
+    c.fillStyle = "rgba(255,255,255,0.05)"; c.fillRect(px + 4, py + 8, 8, 2); c.fillRect(px + 20, py + 18, 8, 2);
+  } else if (code === ".") {
+    drawFloorBase(c, px, py, PAL.floor, PAL.floorShade);
+    if ((x + y) % 3 === 0) { c.fillStyle = PAL.floorLight; c.fillRect(px + 4, py + 6, 3, 3); }
+  } else if (code === "o") {
+    drawFloorBase(c, px, py, PAL.carpet, PAL.carpetShade);
+    if ((x + y) % 2 === 0) { c.fillStyle = "rgba(0,0,0,0.04)"; c.fillRect(px + 2, py + 2, TILE - 4, TILE - 4); }
+  } else if (code === "e") {
+    drawFloorBase(c, px, py, PAL.cool, PAL.coolShade);
+    c.fillStyle = "#E8F0F2"; c.fillRect(px + TILE / 2 - 1, py, 2, TILE);
+  } else if (code === "D") {
+    drawFloorBase(c, px, py, PAL.floor, PAL.floorShade);
+    c.fillStyle = PAL.desk; c.fillRect(px, py + 8, TILE, TILE - 8);
+    c.fillStyle = PAL.deskHighlight; c.fillRect(px, py + 8, TILE, 2);
+    c.fillStyle = PAL.deskShade; c.fillRect(px, py + TILE - 3, TILE, 3);
+    // alternate a monitor or papers on desks for variety
+    if ((x + y) % 2 === 0) {
+      c.fillStyle = "#2C2C2A"; c.fillRect(px + 8, py + 13, 14, 9);
+      c.fillStyle = "#85B7EB"; c.fillRect(px + 9, py + 14, 12, 7);
+    } else {
+      c.fillStyle = "#F1EFE8"; c.fillRect(px + 9, py + 13, 10, 11);
+      c.fillStyle = "#888780"; c.fillRect(px + 10, py + 15, 8, 1); c.fillRect(px + 10, py + 17, 8, 1); c.fillRect(px + 10, py + 19, 5, 1);
+    }
+  } else if (code === "c") {
+    drawFloorBase(c, px, py, PAL.floor, PAL.floorShade);
+    c.fillStyle = PAL.chair; c.fillRect(px + 8, py + 8, 16, 16);
+    c.fillStyle = PAL.chairShade; c.fillRect(px + 8, py + 22, 16, 2);
+    c.fillStyle = "rgba(255,255,255,0.1)"; c.fillRect(px + 10, py + 10, 12, 2);
+  } else if (code === "S") {
+    drawFloorBase(c, px, py, PAL.floor, PAL.floorShade);
+    c.fillStyle = PAL.server; c.fillRect(px + 4, py + 2, TILE - 8, TILE - 4);
+    c.fillStyle = PAL.serverLight; c.fillRect(px + 4, py + 2, TILE - 8, 2);
+    for (let i = 0; i < 4; i++) { c.fillStyle = PAL.serverShade; c.fillRect(px + 7, py + 6 + i * 5, TILE - 14, 2); }
+    // blinking LED
+    c.fillStyle = PAL.serverLed; c.fillRect(px + TILE - 9, py + 5, 2, 2);
+  } else {
+    drawFloorBase(c, px, py, PAL.floor, PAL.floorShade);
+  }
+}
+
+function getMapCanvas(name) {
+  if (mapCanvasCache[name]) return mapCanvasCache[name];
+  const oc = document.createElement("canvas");
+  oc.width = MAP_W * TILE; oc.height = MAP_H * TILE;
+  const c = oc.getContext("2d");
+  c.imageSmoothingEnabled = false;
+  for (let y = 0; y < MAP_H; y++) {
+    for (let x = 0; x < MAP_W; x++) {
+      const code = MAP[y][x];
+      const img = ASSETS.tiles["tile_" + code];
+      if (img && img._ready) c.drawImage(img, x * TILE, y * TILE, TILE, TILE);
+      else drawTileProc(c, x, y, code);
+    }
+  }
+  mapCanvasCache[name] = oc;
+  return oc;
+}
+
+// ---- sprite: a real little pixel person (ported from drawSpriteProc) ----
+// A gentle idle bob so standing characters look alive (breathing), and a
+// crisper hop while walking. `seed` desyncs each NPC so the room isn't a
+// chorus line.
+function bobFor(stepping, tick, seed) {
+  if (stepping) return -1;                       // walking hop handled by frame
+  return Math.round(Math.sin((tick + seed) / 26) * 0.5 - 0.5); // 0 or -1, slow
+}
+
+function drawPersonProc(ctx, px, py, sp, facing, stepping, tick = 0, seed = 0) {
+  const co = sp || PLAYER_SPRITE;
+  ctx.fillStyle = PAL.shadow;
+  ctx.beginPath(); ctx.ellipse(px + TILE / 2, py + TILE - 3, 9, 3, 0, 0, Math.PI * 2); ctx.fill();
+  const yo = stepping ? -1 : bobFor(false, tick, seed);
+  // head
+  ctx.fillStyle = co.skin; ctx.fillRect(px + 10, py + 4 + yo, 12, 10);
+  ctx.fillStyle = "#D4A57E"; ctx.fillRect(px + 10, py + 12 + yo, 12, 2);
+  // hair
+  ctx.fillStyle = co.hair; ctx.fillRect(px + 10, py + 3 + yo, 12, 3);
+  // face by direction
+  ctx.fillStyle = "#2C2C2A";
+  if (facing === "down" || !facing) {
+    ctx.fillRect(px + 12, py + 8 + yo, 2, 2); ctx.fillRect(px + 18, py + 8 + yo, 2, 2);
+    ctx.fillStyle = "#FFF"; ctx.fillRect(px + 12, py + 8 + yo, 1, 1); ctx.fillRect(px + 18, py + 8 + yo, 1, 1);
+    ctx.fillStyle = "#993C1D"; ctx.fillRect(px + 14, py + 11 + yo, 4, 1);
+  } else if (facing === "up") {
+    ctx.fillStyle = co.hair; ctx.fillRect(px + 10, py + 4 + yo, 12, 3);
+  } else if (facing === "left") {
+    ctx.fillRect(px + 11, py + 8 + yo, 2, 2);
+  } else if (facing === "right") {
+    ctx.fillRect(px + 19, py + 8 + yo, 2, 2);
+  }
+  // glasses
+  if (co.glasses) {
+    ctx.strokeStyle = "#2C2C2A"; ctx.lineWidth = 1;
+    ctx.strokeRect(px + 11, py + 7 + yo, 4, 3); ctx.strokeRect(px + 17, py + 7 + yo, 4, 3);
+  }
+  // body
+  ctx.fillStyle = co.body; ctx.fillRect(px + 9, py + 14 + yo, 14, 12);
+  ctx.fillStyle = co.body2; ctx.fillRect(px + 9, py + 23 + yo, 14, 3);
+  ctx.fillStyle = co.accent; ctx.fillRect(px + 15, py + 16 + yo, 2, 4);
+  // arms
+  ctx.fillStyle = co.skin;
+  if (!stepping) { ctx.fillRect(px + 7, py + 18 + yo, 3, 6); ctx.fillRect(px + 22, py + 18 + yo, 3, 6); }
+  else { ctx.fillRect(px + 7, py + 17 + yo, 3, 5); ctx.fillRect(px + 22, py + 19 + yo, 3, 5); }
+  // legs / shoes
+  ctx.fillStyle = "#2C2C2A";
+  if (!stepping) { ctx.fillRect(px + 11, py + 26 + yo, 4, 4); ctx.fillRect(px + 17, py + 26 + yo, 4, 4); }
+  else { ctx.fillRect(px + 10, py + 26 + yo, 4, 4); ctx.fillRect(px + 18, py + 25 + yo, 4, 5); }
+}
+
+// Pick the best available sprite image for an id given facing + walk state.
+// Fallback chain (each step optional, so art can be added piecemeal):
+//   id_<facing>_<frame>  ->  id_<facing>  ->  id_down_<frame>  ->  id_down  ->  id
+// Walk frames let a generated 2-frame cycle animate while moving; absent that,
+// the single directional (or down) frame is used and we lean on the hop offset.
+function pickSprite(set, id, facing, stepping, tick) {
+  const frame = stepping ? (Math.floor(tick / 7) % 2) : 0; // 0/1 cadence while walking
+  const tries = [
+    `${id}_${facing}_${frame}`,
+    `${id}_${facing}`,
+    `${id}_down_${frame}`,
+    `${id}_down`,
+    id
+  ];
+  for (const k of tries) { const img = set[k]; if (img && img._ready) return img; }
+  return null;
+}
+
+function drawPerson(ctx, px, py, id, sp, facing, stepping, tick = 0, seed = 0) {
+  const img = pickSprite(ASSETS.sprites, id, facing, stepping, tick);
+  ctx.fillStyle = PAL.shadow;
+  ctx.beginPath(); ctx.ellipse(px + TILE / 2, py + TILE - 3, 9, 3, 0, 0, Math.PI * 2); ctx.fill();
+  if (img) {
+    const yo = stepping ? -1 : bobFor(false, tick, seed);
+    ctx.drawImage(img, px, py + yo, TILE, TILE);
+  } else {
+    drawPersonProc(ctx, px, py, sp, facing, stepping, tick, seed);
+  }
+}
+
+// ---- props ----
+function drawTicketMonitor(ctx, px, py, tick) {
+  if (ASSETS.props.ticket_monitor && ASSETS.props.ticket_monitor._ready) {
+    ctx.drawImage(ASSETS.props.ticket_monitor, px, py, TILE, TILE); return;
+  }
+  const pulse = 0.5 + 0.5 * Math.sin(tick / 22);
+  ctx.fillStyle = `rgba(133,183,235,${0.16 + 0.16 * pulse})`;
+  ctx.fillRect(px - 1, py - 1, TILE + 2, TILE + 2);
+  ctx.fillStyle = PAL.monitorBezel; ctx.fillRect(px + 4, py + 4, TILE - 8, TILE - 12);
+  ctx.fillStyle = PAL.monitorScreen; ctx.fillRect(px + 6, py + 6, TILE - 12, TILE - 16);
+  ctx.fillStyle = "rgba(255,255,255,0.55)";
+  ctx.fillRect(px + 8, py + 9, TILE - 16, 1); ctx.fillRect(px + 8, py + 12, TILE - 16, 1); ctx.fillRect(px + 8, py + 15, TILE - 18, 1);
+  ctx.fillStyle = PAL.monitorBezel; ctx.fillRect(px + TILE / 2 - 2, py + TILE - 7, 4, 4);
+}
+
+function drawPrinter(ctx, px, py, tick, solved) {
+  if (ASSETS.props.printer && ASSETS.props.printer._ready) {
+    ctx.drawImage(ASSETS.props.printer, px, py, TILE, TILE); return;
+  }
+  ctx.fillStyle = PAL.shadow; ctx.beginPath(); ctx.ellipse(px + TILE / 2, py + TILE - 4, 10, 3, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = PAL.printerBody; ctx.fillRect(px + 4, py + 8, TILE - 8, TILE - 14);
+  ctx.fillStyle = PAL.printerDark; ctx.fillRect(px + 7, py + 12, TILE - 14, 4);
+  ctx.fillStyle = "rgba(0,0,0,0.15)"; ctx.fillRect(px + 4, py + TILE - 7, TILE - 8, 1);
+  if (!solved && Math.sin(tick / 12) > 0) {
+    ctx.fillStyle = PAL.inkBlink; ctx.fillRect(px + TILE - 9, py + 10, 2, 2);
+  }
+}
+
+// ---- SDV props (procedural; PNGs can override later via ASSETS.props) ----
+function drawCat(ctx, px, py, tick, seed, fed) {
+  const bob = Math.round(Math.sin((tick + seed) / 24) * 0.5 - 0.5);
+  const y = py + bob;
+  // shadow
+  ctx.fillStyle = PAL.shadow;
+  ctx.beginPath(); ctx.ellipse(px + TILE / 2, py + TILE - 4, 9, 3, 0, 0, Math.PI * 2); ctx.fill();
+  const fur = "#E8923A", furDark = "#C2701F", belly = "#F4C58A";
+  // tail (flicks slowly)
+  const flick = Math.sin(tick / 30 + seed) * 3;
+  ctx.fillStyle = furDark;
+  ctx.fillRect(px + 22, py + 18, 3, 8);
+  ctx.fillRect(px + 22 + flick, py + 15, 3, 4);
+  // body (loaf)
+  ctx.fillStyle = fur; ctx.fillRect(px + 8, y + 16, 14, 10);
+  ctx.fillStyle = belly; ctx.fillRect(px + 10, y + 22, 10, 3);
+  ctx.fillStyle = furDark; ctx.fillRect(px + 8, y + 19, 14, 1); ctx.fillRect(px + 8, y + 23, 14, 1);
+  // head
+  ctx.fillStyle = fur; ctx.fillRect(px + 9, y + 9, 11, 9);
+  // ears
+  ctx.fillStyle = furDark;
+  ctx.beginPath(); ctx.moveTo(px + 9, y + 9); ctx.lineTo(px + 9, y + 4); ctx.lineTo(px + 13, y + 9); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(px + 20, y + 9); ctx.lineTo(px + 20, y + 4); ctx.lineTo(px + 16, y + 9); ctx.fill();
+  // eyes
+  ctx.fillStyle = "#2C2C2A";
+  ctx.fillRect(px + 11, y + 12, 2, 2); ctx.fillRect(px + 16, y + 12, 2, 2);
+  // nose + whiskers
+  ctx.fillStyle = "#993C1D"; ctx.fillRect(px + 14, y + 14, 1, 1);
+  ctx.strokeStyle = "rgba(60,60,58,0.6)"; ctx.lineWidth = 0.5;
+  ctx.beginPath(); ctx.moveTo(px + 9, y + 14); ctx.lineTo(px + 5, y + 13); ctx.moveTo(px + 20, y + 14); ctx.lineTo(px + 24, y + 13); ctx.stroke();
+  // a content heart once fed
+  if (fed && Math.sin(tick / 40 + seed) > 0.7) {
+    ctx.fillStyle = "#D4537E";
+    ctx.fillRect(px + 22, py - 2, 2, 2); ctx.fillRect(px + 25, py - 2, 2, 2); ctx.fillRect(px + 23, py, 3, 2); ctx.fillRect(px + 24, py + 2, 1, 1);
+  }
+}
+
+function drawCabinet(ctx, px, py) {
+  ctx.fillStyle = PAL.shadow; ctx.beginPath(); ctx.ellipse(px + TILE / 2, py + TILE - 4, 10, 3, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#9AA0A6"; ctx.fillRect(px + 6, py + 4, TILE - 12, TILE - 8);
+  ctx.fillStyle = "#C2C7CC"; ctx.fillRect(px + 6, py + 4, TILE - 12, 2);
+  ctx.fillStyle = "#7A8086"; ctx.fillRect(px + 6, py + TILE - 6, TILE - 12, 2);
+  // three drawers w/ handles
+  for (let i = 0; i < 3; i++) {
+    const dy = py + 7 + i * 6;
+    ctx.fillStyle = "#7A8086"; ctx.fillRect(px + 8, dy, TILE - 16, 1);
+    ctx.fillStyle = "#2C2C2A"; ctx.fillRect(px + TILE / 2 - 3, dy + 2, 6, 1);
+  }
+}
+
+function drawStash(ctx, px, py, done) {
+  // an open ceiling-tile gap in the corner; a coin glints unless emptied
+  ctx.fillStyle = "#2C2C2A"; ctx.fillRect(px + 6, py + 4, TILE - 12, TILE - 12);
+  ctx.fillStyle = "#1a1a18"; ctx.fillRect(px + 8, py + 6, TILE - 16, TILE - 16);
+  ctx.strokeStyle = "#5F5E5A"; ctx.lineWidth = 1; ctx.strokeRect(px + 6, py + 4, TILE - 12, TILE - 12);
+  if (!done) {
+    ctx.fillStyle = "#FCDE5A"; ctx.fillRect(px + 13, py + 12, 5, 5);
+    ctx.fillStyle = "#EF9F27"; ctx.fillRect(px + 13, py + 16, 5, 1);
+    ctx.fillStyle = "rgba(255,255,255,0.7)"; ctx.fillRect(px + 14, py + 13, 1, 1);
+  }
+}
+
+function drawUsb(ctx, px, py, tick) {
+  ctx.fillStyle = PAL.shadow; ctx.beginPath(); ctx.ellipse(px + TILE / 2, py + TILE / 2 + 6, 7, 2, 0, 0, Math.PI * 2); ctx.fill();
+  // little USB stick lying flat
+  ctx.fillStyle = "#2C2C2A"; ctx.fillRect(px + 9, py + 14, 12, 6);
+  ctx.fillStyle = "#9AA0A6"; ctx.fillRect(px + 19, py + 15, 4, 4); // metal connector
+  ctx.fillStyle = "#85B7EB"; ctx.fillRect(px + 11, py + 16, 2, 2); // led
+  // faint glint to draw the eye
+  if (Math.sin(tick / 16) > 0.6) { ctx.fillStyle = "rgba(255,255,255,0.8)"; ctx.fillRect(px + 20, py + 15, 1, 1); }
+}
+
+// ---- which bubble (if any) floats over a prop ----
+function propBubbleKind(p, state) {
+  const kind = p.kind || (p.isMonitor ? "monitor" : p.isPrinter ? "printer" : "");
+  if (kind === "printer" || kind === "usb") {
+    return p.sideQuest ? (state.sqSolved.has(p.sideQuest) ? "done" : "sq") : null;
+  }
+  if (kind === "pet") return state.flags.has(p.doneFlag || "stashTaken") ? "done" : "quest";
+  if (kind === "search") {
+    if (!p.giveFlag) return null;
+    if (state.flags.has(p.giveFlag)) return "done";
+    if (p.needPriorFlag && !state.flags.has(p.needPriorFlag)) return null; // inert until the quest starts
+    return "sq";
+  }
+  if (kind === "chest") return state.flags.has(p.doneFlag) ? "done" : "quest";
+  return null;
+}
+
+// ---- head bubble (! quest / ? info-ish / check done) ----
+const MARKER_FILE = { quest: "marker_ticket", sq: "marker_sidequest", done: "marker_done" };
+
+function drawBubble(ctx, px, py, kind, tick) {
+  const bob = Math.sin(tick / 18) * 1.5;
+  const cx = px + TILE - 6;
+  const cy = py + bob;
+  // sprite override: drop marker_ticket / marker_sidequest / marker_done PNGs
+  const mImg = ASSETS.markers[MARKER_FILE[kind]];
+  if (mImg && mImg._ready) {
+    const s = 16;
+    ctx.drawImage(mImg, cx - s / 2, cy - s / 2, s, s);
+    return;
+  }
+  let ring, fill, glyph, glyphColor;
+  if (kind === "quest") { ring = "#EF9F27"; fill = "#FCDE5A"; glyph = "!"; glyphColor = "#412402"; }
+  else if (kind === "sq") { ring = "#185FA5"; fill = "#378ADD"; glyph = "?"; glyphColor = "#042C53"; }
+  else { ring = "#0F6E56"; fill = "#1D9E75"; glyph = ""; }
+  ctx.fillStyle = ring; ctx.beginPath(); ctx.arc(cx, cy, 8, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = fill; ctx.beginPath(); ctx.arc(cx, cy, 6, 0, Math.PI * 2); ctx.fill();
+  if (kind === "done") {
+    ctx.strokeStyle = "#04342C"; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(cx - 3, cy); ctx.lineTo(cx - 1, cy + 2); ctx.lineTo(cx + 3, cy - 3); ctx.stroke();
+  } else {
+    ctx.fillStyle = glyphColor; ctx.font = "bold 11px ui-monospace, monospace";
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(glyph, cx, cy + 0.5); ctx.textBaseline = "alphabetic"; ctx.textAlign = "start";
+  }
+}
+
+// ---- floating interact prompt over the faced NPC/prop ----
+function drawPrompt(ctx, px, py, tick) {
+  const bob = Math.sin(tick / 14) * 2;
+  ctx.font = "bold 9px ui-monospace, monospace";
+  const text = "E";
+  const w = ctx.measureText(text).width + 8;
+  const bx = px + TILE / 2 - w / 2;
+  const by = py - 16 + bob;
+  ctx.fillStyle = "rgba(20,20,18,0.92)";
+  roundRect(ctx, bx, by, w, 13, 3); ctx.fill();
+  ctx.fillStyle = "#FCDE5A"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText(text, px + TILE / 2, by + 7);
+  ctx.textBaseline = "alphabetic"; ctx.textAlign = "start";
+}
+
+function npcBubbleKind(n, state) {
+  if (n.ticket) return state.solved.has(n.ticket) ? "done" : "quest";
+  if (n.sideQuest) return state.sqSolved.has(n.sideQuest) ? "done" : "sq";
+  return null;
+}
+
+// ---- camera ----
+// Follow the player and clamp to the map edges. When the view is larger than
+// the map on an axis (big screens), center the map instead of pinning it to
+// the top-left corner.
+function clampCam(target, span, view) {
+  if (view >= span) return -(view - span) / 2; // center the smaller map
+  return Math.max(0, Math.min(span - view, target));
+}
+function cameraFor(state, cw, ch) {
+  const rx = state.renderX, ry = state.renderY;
+  const shakeX = state.shake ? (Math.random() - 0.5) * state.shake * 4 : 0;
+  const shakeY = state.shake ? (Math.random() - 0.5) * state.shake * 4 : 0;
+  const camX = clampCam(rx - cw / 2 + TILE / 2, MAP_W * TILE, cw) + shakeX;
+  const camY = clampCam(ry - ch / 2 + TILE / 2, MAP_H * TILE, ch) + shakeY;
+  return { camX, camY };
+}
+
+// ---- top-level draw ----
+function draw(ctx, state, facedTarget) {
+  const cw = ctx.canvas._cssW || ctx.canvas.width;
+  const ch = ctx.canvas._cssH || ctx.canvas.height;
+  const { camX, camY } = cameraFor(state, cw, ch);
+
+  ctx.fillStyle = "#0f0f0e";
+  ctx.fillRect(0, 0, cw, ch);
+
+  // blit cached map
+  ctx.save();
+  ctx.translate(-camX, -camY);
+  ctx.drawImage(getMapCanvas(state.map || "office"), 0, 0);
+  ctx.restore();
+
+  // props (under people)
+  for (const p of PROPS) {
+    if (p.needFlag && !state.flags.has(p.needFlag)) continue; // hidden until revealed
+    const sx = p.x * TILE - camX, sy = p.y * TILE - camY;
+    const kind = p.kind || (p.isMonitor ? "monitor" : p.isPrinter ? "printer" : "");
+    if (kind === "monitor") {
+      drawTicketMonitor(ctx, sx, sy, state.tick);
+    } else if (kind === "printer") {
+      drawPrinter(ctx, sx, sy, state.tick, state.sqSolved.has(p.sideQuest));
+    } else if (kind === "pet") {
+      drawCat(ctx, sx, sy, state.tick, seedFor(p.id), state.flags.has("catFed"));
+    } else if (kind === "search") {
+      drawCabinet(ctx, sx, sy);
+    } else if (kind === "chest") {
+      drawStash(ctx, sx, sy, state.flags.has(p.doneFlag));
+    } else if (kind === "usb") {
+      drawUsb(ctx, sx, sy, state.tick);
+    }
+    const bk = propBubbleKind(p, state);
+    if (bk) drawBubble(ctx, sx, sy, bk, state.tick);
+  }
+
+  // NPCs
+  for (const n of NPCS) {
+    const sx = n.x * TILE - camX, sy = n.y * TILE - camY;
+    drawPerson(ctx, sx, sy, `npc_${n.id}`, n.sprite, n.facing || "down", false, state.tick, seedFor(n.id));
+    const kind = npcBubbleKind(n, state);
+    if (kind) drawBubble(ctx, sx, sy, kind, state.tick);
+    // prompt over the faced target
+    if (facedTarget && facedTarget.kind === "npc" && facedTarget.target.id === n.id && !state.moving) {
+      drawPrompt(ctx, sx, sy, state.tick);
+    }
+  }
+
+  // prompt over a faced prop
+  if (facedTarget && ["monitor", "prop-sq", "pet", "search", "chest"].includes(facedTarget.kind) && !state.moving) {
+    const p = facedTarget.target;
+    drawPrompt(ctx, p.x * TILE - camX, p.y * TILE - camY, state.tick);
+  }
+
+  // player
+  drawPerson(ctx, state.renderX - camX, state.renderY - camY, "player", PLAYER_SPRITE, state.facing, state.moving, state.tick, 0);
+
+  // room labels
+  drawRoomLabels(ctx, camX, camY);
+
+  // lighting: a soft warm wash + corner vignette for depth
+  drawAmbientLight(ctx, cw, ch);
+  drawVignette(ctx, cw, ch);
+}
+
+// A faint warm overhead wash — gives the fluorescent office a touch of life
+// without washing out the pixel art. Cheap: one gradient per frame.
+function drawAmbientLight(ctx, cw, ch) {
+  const g = ctx.createLinearGradient(0, 0, 0, ch);
+  g.addColorStop(0, "rgba(255,244,214,0.06)");
+  g.addColorStop(0.5, "rgba(255,255,255,0)");
+  g.addColorStop(1, "rgba(20,24,40,0.07)");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, cw, ch);
+}
+
+// stable per-id seed so each NPC's idle bob is out of phase
+function seedFor(id) {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) & 0xffff;
+  return h % 64;
+}
+
+function drawRoomLabels(ctx, camX, camY) {
+  ctx.font = "bold 10px ui-sans-serif, system-ui, sans-serif";
+  ctx.textAlign = "left";
+  for (const r of ROOMS) {
+    const sx = r.x * TILE - camX, sy = r.y * TILE - camY;
+    const label = r.name.toUpperCase();
+    const w = ctx.measureText(label).width;
+    ctx.fillStyle = "rgba(0,0,0,0.5)";
+    roundRect(ctx, sx + 3, sy + 3, w + 9, 15, 3); ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    ctx.fillText(label, sx + 7, sy + 14);
+  }
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function drawVignette(ctx, cw, ch) {
+  const g = ctx.createRadialGradient(cw/2, ch/2, Math.min(cw,ch)*0.42, cw/2, ch/2, Math.max(cw,ch)*0.72);
+  g.addColorStop(0, "rgba(0,0,0,0)");
+  g.addColorStop(1, "rgba(0,0,0,0.4)");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, cw, ch);
+}
+
+/* ===== src/ui.js ===== */
+// UI layer: everything that happens inside the modal popup.
+
+
+
+
+
+
+
+const els = {};
+let state;
+let onClose;
+function initUI(globalState, onCloseCb) {
+  state = globalState;
+  onClose = onCloseCb;
+  els.bg = document.getElementById("modal-bg");
+  els.title = document.getElementById("modal-title");
+  els.subtitle = document.getElementById("modal-subtitle");
+  els.body = document.getElementById("modal-body");
+  els.avatar = document.getElementById("modal-avatar");
+  els.close = document.getElementById("modal-close");
+  els.close.addEventListener("click", closeModal);
+  els.bg.addEventListener("click", (e) => {
+    // click on the dimmed backdrop (not the modal itself) closes — unless intro
+    if (e.target === els.bg && !state.inIntro) closeModal();
+  });
+}
+
+function openModal(title, subtitle, avatarLetter, bodyHtml, opts = {}) {
+  els.title.textContent = title;
+  els.subtitle.textContent = subtitle;
+  els.avatar.textContent = avatarLetter || "?";
+  els.body.innerHTML = bodyHtml;
+  els.bg.hidden = false;
+  els.close.hidden = !!opts.hideClose;
+  // The modal is an inline panel beneath the game, so bring it into view —
+  // otherwise on a tall screen it can open below the fold, unseen.
+  requestAnimationFrame(() => {
+    try { els.bg.scrollIntoView({ behavior: "smooth", block: "center" }); } catch { els.bg.scrollIntoView(); }
+  });
+}
+
+function closeModal() {
+  els.bg.hidden = true;
+  els.close.hidden = false;
+  state.inScenario = false;
+  state.inSideQuest = false;
+  state.inTicketBoard = false;
+  state.inIntro = false;
+  state.inEndOfDay = false;
+  state.inDialog = false;
+  state.currentScenario = null;
+  state.scenarioSolved = false;
+  state.updateProgressUI();
+  onClose?.();
+}
+
+// Escape key handler shared with game.js. Closes whatever's open; for the
+// intro it commits a default name first so the player isn't stuck.
+function handleEscape() {
+  if (state.inIntro) {
+    const input = document.getElementById("intro-name");
+    const v = ((input && input.value) || "").trim() || "you";
+    state.setPlayerName(v);
+  }
+  closeModal();
+}
+
+// --- intro ----------------------------------------------------------------
+function openIntro() {
+  state.inIntro = true;
+  const nameVal = state.playerName || "";
+  openModal(
+    state.day > 1 ? `Day ${state.day}` : "Day one",
+    "IT support \u00b7 Floor 3",
+    "i",
+    `<div>
+       <p style="margin:0 0 10px;">Welcome to floor 3. You're the IT person.</p>
+       <p style="margin:0 0 10px;">There's a <strong>ticket monitor</strong> in your office showing the queue. Walk to it, see what's open, then find the people who filed the tickets.</p>
+       <p style="margin:0 0 14px;color:var(--text-muted);font-size:12px;">Side quests aren't on the board. You'll find them by walking around and noticing things.</p>
+       <label style="display:block;font-size:12px;color:var(--text-muted);margin-bottom:4px;">Your name</label>
+       <input id="intro-name" type="text" maxlength="20" value="${escapeAttr(nameVal)}" placeholder="What should they call you?" autocomplete="off" />
+       <div class="intro-foot">
+         <div class="intro-controls">Arrow keys / WASD to move \u00b7 E or space to interact</div>
+         <button id="intro-start" class="primary-btn">Start the day \u2192</button>
+       </div>
+     </div>`,
+    { hideClose: true }
+  );
+  const input = document.getElementById("intro-name");
+  const btn = document.getElementById("intro-start");
+  input.focus();
+  input.select();
+  const go = () => {
+    const v = (input.value || "").trim() || "you";
+    state.setPlayerName(v);
+    closeModal();
+  };
+  btn.addEventListener("click", go);
+  input.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); go(); } });
+}
+
+// --- end of day -----------------------------------------------------------
+function openEndOfDay() {
+  state.inEndOfDay = true;
+  const principles = Object.values(SCENARIOS).map((s) => s.principle);
+  const sqCount = state.sqSolved.size;
+  const sqTotal = Object.keys(SIDE_QUESTS).length;
+  const sharpCount = state.sharp.size;
+
+  const principleList = principles
+    .map((p) => `<li>${escapeHtml(p)}</li>`)
+    .join("");
+
+  const sqStatus = sqCount === sqTotal
+    ? "You found every side quest today. That's the rare 'actually pays attention' tier."
+    : sqCount > 0
+    ? `You found ${sqCount} of ${sqTotal} side quests. The rest are still out there \u2014 noticing them is its own skill.`
+    : "You didn't find any side quests today. Try walking through every room before clearing the queue next time.";
+
+  const sharpStatus = sharpCount === 7
+    ? "And you nailed every diagnosis on the first call. Clean sheet."
+    : sharpCount >= 4
+    ? `You called ${sharpCount} of 7 right on the first try \u2014 the evidence work is paying off.`
+    : `You called ${sharpCount} of 7 right on the first try. Investigating one more clue before committing usually settles it.`;
+
+  const name = escapeHtml(state.playerName || "you");
+
+  openModal(
+    `End of day ${state.day}`,
+    "Ticket monitor",
+    "i",
+    `<div style="margin-bottom:10px;">Nice work, ${name}. All seven tickets closed.</div>
+     <div style="margin-bottom:6px;color:var(--text-muted);font-size:12px;">${sqStatus}</div>
+     <div style="margin-bottom:14px;color:var(--text-muted);font-size:12px;">${sharpStatus}</div>
+
+     <div class="eod-stats">
+       <div class="eod-stat"><div class="eod-stat-num">${sharpCount}/7</div><div class="eod-stat-label">first-try calls</div></div>
+       <div class="eod-stat"><div class="eod-stat-num">${state.day}</div><div class="eod-stat-label">days worked</div></div>
+       <div class="eod-stat"><div class="eod-stat-num">${state.lifeTickets}</div><div class="eod-stat-label">tickets, all-time</div></div>
+       <div class="eod-stat"><div class="eod-stat-num">${state.lifeSideQuests}</div><div class="eod-stat-label">side quests, all-time</div></div>
+     </div>
+
+     <div class="scenario-section-label" style="margin-top:14px;">Principles you used today</div>
+     <ol class="principle-list">${principleList}</ol>
+
+     <div class="eod-actions">
+       <button id="eod-newday" class="primary-btn">Start day ${state.day + 1} \u2192</button>
+       <button id="eod-stay">Stay and wander</button>
+     </div>
+     <div style="font-size:11px;color:var(--text-faint);margin-top:8px;">A new day brings a fresh queue. Anyone you helped today will still have something to say if you visit them.</div>`
+  );
+
+  document.getElementById("eod-newday").addEventListener("click", () => {
+    state.startNewDay();
+    closeModal();
+  });
+  document.getElementById("eod-stay").addEventListener("click", closeModal);
+}
+
+// --- NPC casual chat ------------------------------------------------------
+function openNpcChat(n) {
+  const lines = n.chat || ["Everything's good here right now, thanks for checking in."];
+  const line = lines[Math.floor(Math.random() * lines.length)];
+  openModal(n.name, n.role, n.name[0], `<p style="margin:0;">${escapeHtml(line)}</p>`);
+}
+
+// --- Ticket monitor -------------------------------------------------------
+function openTicketBoard() {
+  state.inTicketBoard = true;
+  const rows = Object.entries(SCENARIOS).map(([id, s]) => {
+    const isSolved = state.solved.has(id);
+    const npc = NPCS.find((n) => n.ticket === id);
+    return `
+      <div class="ticket-row ${isSolved ? "solved" : ""}">
+        <span class="ticket-row-icon">${isSolved ? "\u2713" : "\u25cf"}</span>
+        <div class="ticket-row-main">
+          <div class="ticket-row-title">${escapeHtml(s.title)}</div>
+          <div class="ticket-row-meta">${escapeHtml(s.ticketMeta)}</div>
+        </div>
+        <span class="ticket-row-status">${isSolved ? "solved" : `find ${npc ? escapeHtml(npc.name) : ""}`}</span>
+      </div>`;
+  }).join("");
+
+  openModal(
+    "Ticket monitor",
+    `IT room \u00b7 Day ${state.day} queue`,
+    "i",
+    `<div>${rows}</div>
+     <div style="font-size:11px;color:var(--text-faint);margin-top:10px;padding-top:8px;border-top:0.5px solid var(--border);">
+       Walk to the person named on the ticket to take it on.
+     </div>`
+  );
+}
+
+// --- Side quest -----------------------------------------------------------
+function openSideQuest(id) {
+  state.inSideQuest = true;
+  const sq = SIDE_QUESTS[id];
+  const optsHtml = sq.options.map((o) =>
+    `<button class="dx-btn sq-opt" data-key="${o.key}">${escapeHtml(o.label)}</button>`
+  ).join("");
+
+  openModal(sq.title, sq.where, "?",
+    `<div style="margin-bottom:10px;">${escapeHtml(sq.body)}</div>
+     <div style="font-size:11px;color:var(--text-faint);margin-bottom:6px;">Side quest \u2014 one shot, quick call.</div>
+     <div id="sq-opts" class="btn-column">${optsHtml}</div>
+     <div id="sq-feedback"></div>`);
+
+  document.querySelectorAll("#sq-opts .sq-opt").forEach((b) => {
+    b.addEventListener("click", () => resolveSideQuest(id, b.dataset.key));
+  });
+}
+
+function resolveSideQuest(id, key) {
+  const sq = SIDE_QUESTS[id];
+  const opt = sq.options.find((o) => o.key === key);
+  // lock all options after first answer
+  document.querySelectorAll("#sq-opts .sq-opt").forEach((b) => {
+    if (b.dataset.key === key) b.classList.add(opt.correct ? "correct" : "wrong");
+    b.disabled = true;
+  });
+  const fb = document.getElementById("sq-feedback");
+  fb.className = "scenario-feedback " + (opt.correct ? "win" : "lose");
+  fb.innerHTML = `<div>${escapeHtml(opt.feedback)}</div>
+    <div style="margin-top:8px;"><button id="sq-close" class="primary-btn">${opt.correct ? "Done" : "Close"}</button></div>`;
+  document.getElementById("sq-close").addEventListener("click", closeModal);
+  if (opt.correct && !state.sqSolved.has(id)) {
+    state.sqSolved.add(id);
+    saveSet("sq-solved", state.sqSolved);
+    state.recordSideQuestSolved();
+    if (sq.reward) {
+      if (sq.reward.coins) state.addCoins(sq.reward.coins);
+      if (sq.reward.find) state.addFind(sq.reward.find);
+    }
+    state.updateProgressUI();
+  }
+}
+
+// --- Main scenario --------------------------------------------------------
+function openScenario(id) {
+  state.inScenario = true;
+  state.currentScenario = id;
+  state.scenarioSolved = false;
+  state.actionsLeft = SCENARIOS[id].actions;
+  state.investigated = new Set();
+  state.evidenceLog = [];
+  state.triedAnswers = new Set();
+  state.usedFollowups = new Set();
+  renderScenario();
+}
+
+function renderScenario() {
+  const s = SCENARIOS[state.currentScenario];
+  const poiBtns = s.pois.map((p) => {
+    const done = state.investigated.has(p.id);
+    return `<button class="dx-btn poi-btn" data-id="${p.id}" ${done ? 'data-done="1"' : ""}>
+      ${done ? "\u2713 " : ""}${escapeHtml(p.label)}
+    </button>`;
+  }).join("");
+  const dxBtns = s.diagnoses.map((d) =>
+    `<button class="dx-btn dxc-btn" data-key="${d.key}">${escapeHtml(d.label)}</button>`
+  ).join("");
+
+  openModal(s.title, `${s.ticketMeta} \u00b7 ${state.actionsLeft} actions left`, "i",
+    `<div class="scenario-grid">
+      <div>
+        <div class="scenario-section-label">Investigate</div>
+        <div class="btn-column" id="poi-col">${poiBtns}</div>
+        <div class="scenario-section-label">Diagnosis</div>
+        <div class="btn-column" id="dx-col">${dxBtns}</div>
+      </div>
+      <div>
+        <div class="scenario-section-label">Evidence</div>
+        <div id="ev-list" class="ev-list">${evidenceListHtml()}</div>
+        <div id="action-note"></div>
+        <div id="scenario-feedback"></div>
+        <div id="poi-detail"></div>
+      </div>
+    </div>`);
+
+  document.querySelectorAll(".poi-btn").forEach((b) => {
+    b.addEventListener("click", () => investigatePoi(b.dataset.id));
+  });
+  document.querySelectorAll(".dxc-btn").forEach((b) => {
+    b.addEventListener("click", () => commitDiagnosis(b.dataset.key));
+  });
+  updateActionNote();
+}
+
+function evidenceListHtml() {
+  if (state.evidenceLog.length === 0)
+    return `<div class="ev-empty">Nothing yet. Investigate the scene.</div>`;
+  return state.evidenceLog
+    .map((e) => `<div class="ev-item"><div class="ev-where">${escapeHtml(e.where)}</div><div>${escapeHtml(e.text)}</div></div>`)
+    .join("");
+}
+
+function updateActionNote() {
+  const note = document.getElementById("action-note");
+  if (!note) return;
+  if (state.scenarioSolved) { note.innerHTML = ""; return; }
+  if (state.actionsLeft <= 0) {
+    note.innerHTML = `<div class="action-note">Out of actions. Commit to your best diagnosis from the evidence you have.</div>`;
+  } else {
+    note.innerHTML = "";
+  }
+}
+
+function investigatePoi(poiId) {
+  if (state.scenarioSolved) return;
+  const s = SCENARIOS[state.currentScenario];
+  const poi = s.pois.find((p) => p.id === poiId);
+  if (!poi) return;
+  if (!state.investigated.has(poiId)) {
+    if (state.actionsLeft <= 0) return;
+    state.actionsLeft -= 1;
+    state.investigated.add(poiId);
+    state.evidenceLog.push({ where: poi.label, text: poi.evidence });
+  }
+
+  const fuHtml = (poi.followups || [])
+    .map((f, idx) => {
+      const fuKey = `${poiId}-${idx}`;
+      if (state.usedFollowups.has(fuKey)) return "";
+      return `<button class="fu-btn poi-fu" data-poi="${poiId}" data-idx="${idx}">${escapeHtml(f.label)}</button>`;
+    })
+    .join("");
+
+  document.getElementById("poi-detail").innerHTML =
+    `<div class="poi-detail">
+       <div class="poi-detail-title">${escapeHtml(poi.label)}</div>
+       <div class="poi-detail-body">${escapeHtml(poi.body)}</div>
+       ${fuHtml ? `<div class="poi-followups">${fuHtml}</div>` : ""}
+     </div>`;
+
+  document.querySelectorAll(".poi-fu").forEach((b) => {
+    b.addEventListener("click", () => doFollowup(b.dataset.poi, parseInt(b.dataset.idx, 10)));
+  });
+  refreshScenarioState();
+}
+
+function refreshScenarioState() {
+  const s = SCENARIOS[state.currentScenario];
+  els.subtitle.textContent = `${s.ticketMeta} \u00b7 ${state.actionsLeft} actions left`;
+  document.getElementById("ev-list").innerHTML = evidenceListHtml();
+  document.querySelectorAll(".poi-btn").forEach((b) => {
+    if (state.investigated.has(b.dataset.id)) {
+      b.dataset.done = "1";
+      if (!b.textContent.trim().startsWith("\u2713")) {
+        b.textContent = "\u2713 " + b.textContent.trim();
+      }
+    }
+  });
+  updateActionNote();
+}
+
+function doFollowup(poiId, idx) {
+  if (state.scenarioSolved) return;
+  const s = SCENARIOS[state.currentScenario];
+  const poi = s.pois.find((p) => p.id === poiId);
+  const fu = poi.followups[idx];
+  if (state.actionsLeft <= 0) return;
+  state.actionsLeft -= 1;
+  state.usedFollowups.add(`${poiId}-${idx}`);
+  if (fu.addEvidence) state.evidenceLog.push({ where: poi.label + " \u2192", text: fu.addEvidence });
+
+  const btn = document.querySelector(`.poi-fu[data-poi="${poiId}"][data-idx="${idx}"]`);
+  if (btn) btn.remove();
+  const detail = document.getElementById("poi-detail");
+  detail.innerHTML += `<div class="terminal">${escapeHtml(fu.result)}</div>`;
+  refreshScenarioState();
+}
+
+function lockScenarioButtons() {
+  document.querySelectorAll("#poi-col .poi-btn, #dx-col .dxc-btn, .poi-fu").forEach((b) => {
+    b.disabled = true;
+  });
+}
+
+function commitDiagnosis(key) {
+  if (state.scenarioSolved) return;
+  const s = SCENARIOS[state.currentScenario];
+  if (state.triedAnswers.has(key)) return;
+  state.triedAnswers.add(key);
+  const dx = s.diagnoses.find((d) => d.key === key);
+  document.querySelectorAll(".dxc-btn").forEach((b) => {
+    if (b.dataset.key === key) b.classList.add(dx.correct ? "correct" : "wrong");
+  });
+  const fb = document.getElementById("scenario-feedback");
+  fb.className = "scenario-feedback " + (dx.correct ? "win" : "lose");
+  if (dx.correct) {
+    state.scenarioSolved = true;
+    const firstTry = state.triedAnswers.size === 1; // only the correct key was tried
+    if (!state.solved.has(state.currentScenario)) {
+      state.solved.add(state.currentScenario);
+      saveSet("solved", state.solved);
+      state.recordTicketSolved();
+      if (firstTry) { state.sharp.add(state.currentScenario); saveSet("sharp", state.sharp); }
+    }
+    state.updateProgressUI();
+    lockScenarioButtons();
+    updateActionNote();
+    fb.innerHTML =
+      `<div><strong>Ticket closed.</strong></div>
+       <div style="margin:6px 0;">${escapeHtml(dx.feedback)}</div>
+       <div class="principle-callout">
+         <strong>Principle \u2014 ${escapeHtml(s.principle)}.</strong> ${escapeHtml(s.principleText)}
+       </div>
+       <div style="margin-top:10px;"><button id="dx-close" class="primary-btn">Done \u2192</button></div>`;
+    document.getElementById("dx-close").addEventListener("click", closeModal);
+  } else {
+    fb.innerHTML = `<div><strong>Ticket still open.</strong></div><div>${escapeHtml(dx.feedback)}</div>`;
+  }
+}
+
+// --- SDV: the pet (Mittens) -----------------------------------------------
+// A 3-beat befriend quest driven entirely by flags:
+//   meet -> bring food -> feed (reveals the stash) -> she nudges you to it.
+function openPet(p) {
+  state.inDialog = true;
+  const name = p.name || "the cat";
+  let title = name, sub = `${p.room || "Office"} \u00b7 stray`, body, btn = "Done";
+
+  if (!state.hasFlag("catMet")) {
+    state.setFlag("catMet");
+    sub = `${p.room} \u00b7 hungry`;
+    body = `A thin orange cat is sitting by an empty bowl. She looks up at you and meows \u2014 not pitifully, more like she's filing a ticket.<br><br>
+      Somebody used to feed her. There was a <strong>supply cabinet in the print room</strong> with a pouch of food in it, if it's still there.`;
+  } else if (!state.hasFlag("hasCatFood")) {
+    sub = `${p.room} \u00b7 hungry`;
+    body = `${name} headbutts the empty bowl and looks at you expectantly. You'll need to find that <strong>cat food in the print room supply cabinet</strong> first.`;
+  } else if (!state.hasFlag("catFed")) {
+    state.setFlag("catFed");
+    state.setFlag("catRevealed");
+    sub = `${p.room} \u00b7 friend`;
+    body = `You tip the food into the bowl. ${name} inhales it, then headbutts your shin hard enough to count as a hug.<br><br>
+      She trots to the corner, sits under a sagging ceiling tile, and <strong>paws at it until it tips</strong> \u2014 there's something taped up there. Better take a look.`;
+    btn = "Take a look \u2192";
+  } else if (!state.hasFlag("stashTaken")) {
+    sub = `${p.room} \u00b7 friend`;
+    body = `${name} is purring like a small motor. She keeps glancing at the <strong>loose ceiling tile</strong> in the corner. Whatever she found, she wants you to have it.`;
+  } else {
+    sub = `${p.room} \u00b7 friend`;
+    const lines = [
+      `${name} flops over so you can see her belly. It is a trap; you know it is a trap; you pet her anyway.`,
+      `${name} is asleep in a sunbeam on the carpet. All tickets can wait.`,
+      `${name} blinks at you slowly. In cat, that's "you're alright."`
+    ];
+    body = lines[Math.floor(Math.random() * lines.length)];
+  }
+
+  openModal(name, sub, "\u{1F408}", `<p style="margin:0;">${body}</p>
+    <div style="margin-top:12px;"><button id="pet-close" class="primary-btn">${btn}</button></div>`);
+  document.getElementById("pet-close").addEventListener("click", closeModal);
+}
+
+// --- SDV: a `search` prop (examine furniture; may grant a carry-flag) -------
+function openSearch(p) {
+  state.inDialog = true;
+  let body, btn = "Close";
+  if (p.giveFlag && state.hasFlag(p.giveFlag)) {
+    body = p.empty || "Nothing more in here.";
+  } else if (p.needPriorFlag && !state.hasFlag(p.needPriorFlag)) {
+    body = p.lockedText || "Nothing in here you need right now.";
+  } else {
+    body = p.take || "You find something.";
+    if (p.giveFlag) { state.setFlag(p.giveFlag); btn = "Take it"; }
+    if (p.findReward) state.addFind(p.findReward);
+  }
+  openModal(p.title || (p.label || "Cabinet").toUpperCase(), p.room || "", "\u{1F50E}",
+    `<p style="margin:0;">${escapeHtml(body)}</p>
+     <div style="margin-top:12px;"><button id="search-close" class="primary-btn">${btn}</button></div>`);
+  document.getElementById("search-close").addEventListener("click", closeModal);
+}
+
+// --- SDV: a hidden `chest` (the economy bootstrap) --------------------------
+function openChest(p) {
+  state.inDialog = true;
+  const already = state.hasFlag(p.doneFlag);
+  let body, rewardHtml = "";
+  if (already) {
+    body = p.done || "It's empty now.";
+  } else {
+    body = p.give || "You found a stash.";
+    const bits = [];
+    if (p.coins)  { state.addCoins(p.coins);  bits.push(`\u{1FA99} ${p.coins} coins`); }
+    if (p.tokens) { state.addTokens(p.tokens); bits.push(`\u{1F39F}\uFE0F ${p.tokens} break-room token`); }
+    if (p.findReward && FINDS[p.findReward] && state.addFind(p.findReward)) {
+      bits.push(`${FINDS[p.findReward].icon} ${FINDS[p.findReward].name}`);
+    }
+    state.setFlag(p.doneFlag);
+    rewardHtml = `<div class="reward-row">${bits.map((b) => `<span class="reward-chip">${b}</span>`).join("")}</div>
+      <div style="font-size:11px;color:var(--text-faint);margin-top:8px;">Tokens get you into the secret break-room. (That part's coming.)</div>`;
+  }
+  openModal(p.title || "STASH", p.room || "", "\u{1F4E6}",
+    `<p style="margin:0;">${escapeHtml(body)}</p>${rewardHtml}
+     <div style="margin-top:12px;"><button id="chest-close" class="primary-btn">Nice</button></div>`);
+  document.getElementById("chest-close").addEventListener("click", closeModal);
+}
+
+// --- SDV: the Field Companion / Discoveries gallery -------------------------
+function currentObjectives() {
+  const o = [];
+  if (!state.hasFlag("catMet")) o.push("Find the office cat (she's in the conf. room).");
+  else if (!state.hasFlag("hasCatFood")) o.push("Mittens is hungry \u2014 find cat food in the print room supply cabinet.");
+  else if (!state.hasFlag("catFed")) o.push("Bring the cat food back to Mittens.");
+  else if (state.hasFlag("catRevealed") && !state.hasFlag("stashTaken")) o.push("Check the loose ceiling tile Mittens pawed open.");
+  if (!state.sqSolved.has("usbDrop")) o.push("Deal with the mystery USB stick on the open-desk floor.");
+  if (o.length === 0) o.push("All side quests handled. Nice. (More coming soon.)");
+  return o;
+}
+function openDiscoveries() {
+  state.inDialog = true;
+  const cards = Object.entries(FINDS).map(([id, f]) => {
+    const got = state.finds.has(id);
+    return `<div class="find-card ${got ? "got" : "locked"}">
+      <div class="find-icon">${got ? f.icon : "\u2753"}</div>
+      <div class="find-text">
+        <div class="find-name">${got ? escapeHtml(f.name) : "\u2014 not found yet \u2014"}</div>
+        <div class="find-note">${got ? escapeHtml(f.note) : "Keep exploring the floor."}</div>
+      </div>
+    </div>`;
+  }).join("");
+
+  const objs = currentObjectives().map((t) => `<li>${escapeHtml(t)}</li>`).join("");
+
+  openModal("Field Companion", `${state.finds.size}/${FINDTOTAL} keepsakes`, "\u2605",
+    `<div class="companion-econ">
+       <span class="reward-chip">\u{1FA99} ${state.coins} coins</span>
+       <span class="reward-chip">\u{1F39F}\uFE0F ${state.tokens} token${state.tokens === 1 ? "" : "s"}</span>
+     </div>
+     <div class="scenario-section-label" style="margin-top:12px;">On your radar</div>
+     <ul class="principle-list">${objs}</ul>
+     <div class="scenario-section-label" style="margin-top:12px;">Discoveries</div>
+     <div class="find-grid">${cards}</div>`);
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[c]));
+}
+function escapeAttr(s) { return escapeHtml(s); }
+
+/* ===== src/game.js ===== */
+// Game loop and input — drives the ported renderer (renderX/renderY pixel
+// positions, facing, smooth lerp walking, held-key continuous movement).
+
+
+
+
+
+
+
+const DIRS = { up:[0,-1], down:[0,1], left:[-1,0], right:[1,0] };
+const KEY_TO_DIR = {
+  ArrowUp:"up", w:"up", W:"up",
+  ArrowDown:"down", s:"down", S:"down",
+  ArrowLeft:"left", a:"left", A:"left",
+  ArrowRight:"right", d:"right", D:"right"
+};
+
+const MOVE_MS = 140;
+const SHAKE_DECAY = 0.85;
+
+// Module-scoped pointer to the live game state, set at startGame(). Lets the
+// helpers below reason about prop visibility (a hidden chest must neither block
+// movement nor be interactable until its reveal flag is set).
+let S = null;
+function propVisible(p) {
+  if (!p) return false;
+  if (p.needFlag && !(S && S.flags.has(p.needFlag))) return false;
+  return true;
+}
+function npcAt(x, y) { return NPCS.find((n) => n.x === x && n.y === y); }
+function propAt(x, y) { return PROPS.find((p) => p.x === x && p.y === y && propVisible(p)); }
+// A prop only blocks if it's visible AND not explicitly walkable.
+function solidPropAt(x, y) { const p = propAt(x, y); return p && !p.walkable ? p : null; }
+
+// Sprite manifest. Keys are prefixed so render.js can bucket them:
+//   tile_<code>, npc_<id>[_dir][_frame], player_<dir>[_frame],
+//   marker_<kind>, or a bare prop name.
+//
+// EVERYTHING here is optional — a missing PNG silently falls back to the
+// procedural art, so you can drop assets in one at a time as you generate them.
+//
+// Naming convention your generator should target (24x24 PNG, alpha, top-down):
+//   Player (needed first):   player_down/up/left/right.png
+//   Player walk frames (opt): player_down_1.png ... (alternate frame; engine
+//                             cross-fades base<->_1 while moving)
+//   NPC down (v1):           npc_<id>.png            e.g. npc_karen.png
+//   NPC directional (opt):   npc_<id>_left.png, npc_<id>_up.png, ...
+//   NPC walk frames (opt):   npc_<id>_down_1.png
+//   Props:                   ticket_monitor.png, printer.png
+//   Markers (opt, override   marker_ticket.png   (the "!" over a ticket NPC)
+//     the procedural badge):  marker_sidequest.png ("?" over a side quest)
+//                             marker_done.png      (the check when solved)
+//   Tiles (opt):             tile_W wall, tile_. floor, tile_o carpet,
+//                             tile_e cool floor, tile_D desk, tile_c chair,
+//                             tile_S server  ->  e.g. tile_W: "./sprites/wall.png"
+const SPRITE_MANIFEST = {
+  // props
+  ticket_monitor: "./sprites/ticket_monitor.png",
+  printer: "./sprites/printer.png",
+  // player (4 dirs)
+  player_down: "./sprites/player_down.png",
+  player_up: "./sprites/player_up.png",
+  player_left: "./sprites/player_left.png",
+  player_right: "./sprites/player_right.png",
+  // NPCs (down-facing is enough; engine falls back to it for other dirs)
+  npc_karen: "./sprites/npc_karen.png",
+  npc_marcus: "./sprites/npc_marcus.png",
+  npc_priya: "./sprites/npc_priya.png",
+  npc_dana: "./sprites/npc_dana.png",
+  npc_jordan: "./sprites/npc_jordan.png",
+  npc_riley: "./sprites/npc_riley.png",
+  npc_chen: "./sprites/npc_chen.png",
+  npc_ed: "./sprites/npc_ed.png",
+  npc_lisa: "./sprites/npc_lisa.png"
+
+  // ---- optional, uncomment as you generate them ----
+  // , player_down_1: "./sprites/player_down_1.png"
+  // , marker_ticket: "./sprites/marker_ticket.png"
+  // , marker_sidequest: "./sprites/marker_sidequest.png"
+  // , marker_done: "./sprites/marker_done.png"
+  // , tile_W: "./sprites/wall.png"
+  // , tile_D: "./sprites/desk.png"
+};
+
+function makeStepSound() {
+  let AC = null;
+  return {
+    play(enabled) {
+      if (!enabled) return;
+      try {
+        AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+        if (AC.state === "suspended") AC.resume();
+        const t = AC.currentTime;
+        const o = AC.createOscillator(); const g = AC.createGain();
+        o.type = "square";
+        o.frequency.setValueAtTime(180 + Math.random() * 40, t);
+        g.gain.setValueAtTime(0.03, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
+        o.connect(g).connect(AC.destination);
+        o.start(t); o.stop(t + 0.07);
+      } catch { /* ignore */ }
+    }
+  };
+}
+async function startGame() {
+  await loadAssets(SPRITE_MANIFEST);
+
+  const canvas = document.getElementById("world");
+  const viewport = document.getElementById("viewport");
+  const ctx = canvas.getContext("2d");
+  ctx.imageSmoothingEnabled = false;
+
+  const state = {
+    map: "office",
+    px: PLAYER_START.x, py: PLAYER_START.y,
+    renderX: PLAYER_START.x * TILE, renderY: PLAYER_START.y * TILE,
+    facing: PLAYER_START.dir,
+    moving: false, moveT: 0,
+    fromX: 0, fromY: 0, toX: 0, toY: 0,
+    shake: 0, tick: 0,
+
+    solved: loadSet("solved"),
+    sqSolved: loadSet("sq-solved"),
+    sharp: loadSet("sharp"),
+    // SDV layer: open containers that persist with zero save-code changes.
+    flags: loadSet("flags"),     // a Set of "true" quest flags
+    finds: loadSet("finds"),     // collected keepsake ids
+    coins: loadNum("coins", 0),  // vending coins (earned on the floor)
+    tokens: loadNum("tokens", 0),// break-room tokens (gate the mini-game)
+    playerName: loadString("playerName", ""),
+    soundOn: loadBool("soundOn", false),
+    day: loadNum("day", 1),
+    lifeTickets: loadNum("lifeTickets", 0),
+    lifeSideQuests: loadNum("lifeSideQuests", 0),
+
+    started: false,
+
+    inScenario: false, inSideQuest: false, inTicketBoard: false,
+    inIntro: false, inEndOfDay: false, inDialog: false,
+    currentScenario: null, scenarioSolved: false,
+    actionsLeft: 0,
+    investigated: new Set(), evidenceLog: [],
+    triedAnswers: new Set(), usedFollowups: new Set(),
+
+    setPlayerName(n) { this.playerName = n; saveString("playerName", n); },
+    setSound(on) { this.soundOn = on; saveBool("soundOn", on); updateSoundUI(on); },
+    recordTicketSolved() { this.lifeTickets += 1; saveNum("lifeTickets", this.lifeTickets); },
+    recordSideQuestSolved() { this.lifeSideQuests += 1; saveNum("lifeSideQuests", this.lifeSideQuests); },
+    // --- SDV helpers ---
+    setFlag(name) { if (!this.flags.has(name)) { this.flags.add(name); saveSet("flags", this.flags); } },
+    hasFlag(name) { return this.flags.has(name); },
+    addFind(id) {
+      if (this.finds.has(id)) return false;
+      this.finds.add(id); saveSet("finds", this.finds); this.updateProgressUI(); return true;
+    },
+    addCoins(n) { this.coins += n; saveNum("coins", this.coins); this.updateProgressUI(); },
+    addTokens(n) { this.tokens += n; saveNum("tokens", this.tokens); this.updateProgressUI(); },
+    startNewDay() {
+      this.day += 1; saveNum("day", this.day);
+      this.solved = new Set(); this.sqSolved = new Set(); this.sharp = new Set();
+      saveSet("solved", this.solved); saveSet("sq-solved", this.sqSolved); saveSet("sharp", this.sharp);
+      this.px = PLAYER_START.x; this.py = PLAYER_START.y;
+      this.renderX = this.px * TILE; this.renderY = this.py * TILE;
+      this.facing = PLAYER_START.dir; this.moving = false;
+      this.updateProgressUI();
+    },
+    updateProgressUI() {
+      document.getElementById("day-pill").textContent = `Day ${this.day}`;
+      document.getElementById("ticket-progress").textContent = `${this.solved.size} / 7 tickets`;
+      const n = this.sqSolved.size;
+      document.getElementById("sq-progress").textContent = `${n} side quest${n === 1 ? "" : "s"}`;
+      document.getElementById("eod-hint").hidden = !(this.solved.size === 7) || this.inEndOfDay;
+      const fp = document.getElementById("finds-progress");
+      if (fp) fp.textContent = `\u2605 ${this.finds.size}/${FINDTOTAL}`;
+      const cp = document.getElementById("coins-progress");
+      if (cp) cp.textContent = `\u{1FA99} ${this.coins}${this.tokens ? ` \u00b7 \u{1F39F}\uFE0F ${this.tokens}` : ""}`;
+    }
+  };
+
+  const stepSound = makeStepSound();
+  S = state;  // expose to the module-level visibility helpers
+  function updateSoundUI(on) {
+    const b = document.getElementById("sound-btn"); if (b) b.textContent = on ? "Sound: on" : "Sound: off";
+  }
+  updateSoundUI(state.soundOn);
+
+  initUI(state, () => {});
+
+  function isModalOpen() {
+    return state.inScenario || state.inSideQuest || state.inTicketBoard || state.inIntro || state.inEndOfDay || state.inDialog;
+  }
+
+  // ---- held-key continuous movement ----
+  const held = new Set();
+  const order = [];
+  function pressDir(d) { if (!held.has(d)) { held.add(d); order.push(d); } }
+  function releaseDir(d) { held.delete(d); const i = order.indexOf(d); if (i >= 0) order.splice(i, 1); }
+  function heldDir() { for (let i = order.length - 1; i >= 0; i--) if (held.has(order[i])) return order[i]; return null; }
+
+  function facedTarget() {
+    const [dx, dy] = DIRS[state.facing];
+    const fx = state.px + dx, fy = state.py + dy;
+    const n = npcAt(fx, fy);
+    if (n) return { kind: "npc", target: n };
+    const p = propAt(fx, fy);
+    if (p) {
+      if (p.isMonitor || p.kind === "monitor") return { kind: "monitor", target: p };
+      if (p.kind === "pet") return { kind: "pet", target: p };
+      if (p.kind === "search") return { kind: "search", target: p };
+      if (p.kind === "chest") return { kind: "chest", target: p };
+      if (p.sideQuest) return { kind: "prop-sq", target: p };
+    }
+    return null;
+  }
+
+  function startMove(dir) {
+    state.facing = dir;
+    const [dx, dy] = DIRS[dir];
+    const nx = state.px + dx, ny = state.py + dy;
+    if (!isWalkable(nx, ny) || npcAt(nx, ny) || solidPropAt(nx, ny)) {
+      state.shake = 0.45;
+      return;
+    }
+    state.fromX = state.px * TILE; state.fromY = state.py * TILE;
+    state.px = nx; state.py = ny;            // logical position updates immediately
+    state.toX = nx * TILE; state.toY = ny * TILE;
+    state.moveT = 0; state.moving = true;
+    stepSound.play(state.soundOn);
+  }
+
+  function interact() {
+    if (isModalOpen() || state.moving) return;
+    const t = facedTarget();
+    if (!t) return;
+    if (t.kind === "npc") {
+      const n = t.target;
+      if (n.ticket && !state.solved.has(n.ticket)) openScenario(n.ticket);
+      else if (n.sideQuest && !state.sqSolved.has(n.sideQuest)) openSideQuest(n.sideQuest);
+      else openNpcChat(n);
+    } else if (t.kind === "monitor") {
+      if (state.solved.size === 7) openEndOfDay(); else openTicketBoard();
+    } else if (t.kind === "pet") {
+      openPet(t.target);
+    } else if (t.kind === "search") {
+      openSearch(t.target);
+    } else if (t.kind === "chest") {
+      openChest(t.target);
+    } else if (t.kind === "prop-sq") {
+      if (!state.sqSolved.has(t.target.sideQuest)) openSideQuest(t.target.sideQuest);
+      else openNpcChat({ name: "Already handled", role: "", chat: ["You already took care of that."] });
+    }
+  }
+
+  function updateInteractHint(t) {
+    const hintEl = document.getElementById("interact-hint");
+    const actBtn = document.getElementById("touch-action");
+    if (t && !isModalOpen() && !state.moving) {
+      let label = "Interact";
+      if (t.kind === "npc") label = `Talk to ${t.target.name}`;
+      else if (t.kind === "monitor") label = "Read ticket board";
+      else if (t.kind === "pet") label = `Approach ${t.target.name || "the cat"}`;
+      else if (t.kind === "search") label = `Examine ${t.target.label}`;
+      else if (t.kind === "chest") label = `Check ${t.target.label}`;
+      else if (t.kind === "prop-sq") label = t.target.label;
+      document.getElementById("interact-hint-text").textContent = `Press E: ${label}`;
+      hintEl.classList.add("visible");
+      if (actBtn) actBtn.classList.add("ready");
+    } else {
+      hintEl.classList.remove("visible");
+      if (actBtn) actBtn.classList.remove("ready");
+    }
+  }
+
+  // ---- main loop ----
+  let lastT = 0;
+  function loop(t) {
+    if (!lastT) lastT = t;
+    const dt = Math.min(50, t - lastT);  // clamp: tab-away then back won't teleport
+    lastT = t;
+    state.tick += 1;
+
+    if (state.moving) {
+      state.moveT += dt / MOVE_MS;
+      if (state.moveT >= 1) { state.moveT = 1; state.moving = false; }
+      state.renderX = state.fromX + (state.toX - state.fromX) * state.moveT;
+      state.renderY = state.fromY + (state.toY - state.fromY) * state.moveT;
+    } else {
+      state.renderX = state.px * TILE; state.renderY = state.py * TILE;
+      if (state.started && !isModalOpen()) {
+        const d = heldDir();
+        if (d) startMove(d);
+      }
+    }
+
+    if (state.shake > 0) { state.shake *= SHAKE_DECAY; if (state.shake < 0.05) state.shake = 0; }
+
+    const t2 = (state.started && !isModalOpen()) ? facedTarget() : null;
+    draw(ctx, state, t2);
+    updateInteractHint(t2);
+    requestAnimationFrame(loop);
+  }
+
+  // ---- keyboard ----
+  function isTyping(el) { return el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable); }
+
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") { if (isModalOpen()) { e.preventDefault(); handleEscape(); } return; }
+    if (isTyping(document.activeElement)) return;
+    if (isModalOpen()) return;
+    const dir = KEY_TO_DIR[e.key];
+    if (dir) { e.preventDefault(); pressDir(dir); }
+    else if (e.key === "e" || e.key === "E" || e.key === " " || e.key === "Enter") { e.preventDefault(); interact(); }
+  });
+  window.addEventListener("keyup", (e) => {
+    const dir = KEY_TO_DIR[e.key];
+    if (dir) releaseDir(dir);
+  });
+
+  // ---- touch controls ----
+  function bindTouch(id, onDown, onUp) {
+    const el = document.getElementById(id); if (!el) return;
+    el.addEventListener("pointerdown", (e) => { e.preventDefault(); onDown(); el.classList.add("pressed"); });
+    const up = (e) => { if (e) e.preventDefault(); el.classList.remove("pressed"); onUp && onUp(); };
+    el.addEventListener("pointerup", up); el.addEventListener("pointerleave", up); el.addEventListener("pointercancel", up);
+  }
+  bindTouch("touch-up", () => pressDir("up"), () => releaseDir("up"));
+  bindTouch("touch-down", () => pressDir("down"), () => releaseDir("down"));
+  bindTouch("touch-left", () => pressDir("left"), () => releaseDir("left"));
+  bindTouch("touch-right", () => pressDir("right"), () => releaseDir("right"));
+  bindTouch("touch-action", () => interact());
+
+  // ---- title screen start ----
+  function begin() {
+    if (state.started) return;
+    state.started = true;
+    const ts = document.getElementById("title-screen");
+    if (ts) ts.style.display = "none";
+    viewport.focus();
+    if (!state.playerName) openIntro();
+  }
+  const startBtn = document.getElementById("start-btn");
+  if (startBtn) startBtn.addEventListener("click", begin);
+  // also allow space/enter/click on the title
+  window.addEventListener("keydown", (e) => {
+    if (!state.started && (e.key === " " || e.key === "Enter")) { e.preventDefault(); begin(); }
+  });
+  const ts = document.getElementById("title-screen");
+  if (ts) ts.addEventListener("click", begin);
+
+  // ---- topbar ----
+  document.getElementById("reset-btn").addEventListener("click", () => {
+    if (!confirm("Clear ALL saved progress \u2014 day count, stats, and your name \u2014 and start completely over?")) return;
+    clearAll();
+    state.solved = new Set(); state.sqSolved = new Set(); state.sharp = new Set();
+    state.flags = new Set(); state.finds = new Set(); state.coins = 0; state.tokens = 0;
+    state.playerName = ""; state.day = 1; state.lifeTickets = 0; state.lifeSideQuests = 0;
+    state.px = PLAYER_START.x; state.py = PLAYER_START.y;
+    state.renderX = state.px * TILE; state.renderY = state.py * TILE;
+    state.facing = PLAYER_START.dir; state.moving = false;
+    state.updateProgressUI();
+    openIntro();
+  });
+  document.getElementById("sound-btn").addEventListener("click", () => state.setSound(!state.soundOn));
+  const compBtn = document.getElementById("companion-btn");
+  if (compBtn) compBtn.addEventListener("click", () => { if (!isModalOpen()) openDiscoveries(); });
+
+  function onResize() { sizeCanvas(canvas, viewport); }
+  window.addEventListener("resize", onResize);
+  sizeCanvas(canvas, viewport);
+
+  state.updateProgressUI();
+  // continue line on the title screen
+  const cont = document.getElementById("continue-line");
+  if (cont && state.solved.size > 0) cont.textContent = `Progress found: ${state.solved.size}/7 tickets solved today.`;
+
+  requestAnimationFrame(loop);
+}
+
+startGame();
+</script>
+</body>
+</html>

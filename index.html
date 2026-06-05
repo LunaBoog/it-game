@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>IT Support Game</title>
+    <link rel="stylesheet" href="./src/styles.css" />
+  </head>
+  <body>
+    <div class="topbar">
+      <div>
+        <div class="topbar-label">IT support &middot; Floor 3</div>
+        <div class="topbar-title" id="game-title">
+          Walk to a ticket. Arrow keys or WASD to move, space or E to interact.
+        </div>
+      </div>
+      <div class="progress">
+        <div class="pill pill-accent" id="day-pill">Day 1</div>
+        <div class="pill" id="ticket-progress">0 / 7 tickets</div>
+        <div class="pill" id="sq-progress">0 side quests</div>
+        <div class="pill" id="coins-progress" title="Vending coins &middot; break-room tokens">&#129689; 0</div>
+        <button class="pill pill-button" id="companion-btn" title="Open your Field Companion"><span id="finds-progress">&#9733; 0/2</span></button>
+        <button class="pill pill-button" id="sound-btn" title="Toggle step sound">Sound: off</button>
+        <button class="pill pill-button" id="reset-btn" title="Clear save and start over">Reset</button>
+      </div>
+    </div>
+
+    <div class="legend">
+      <span>[WASD/arrows] walk</span>
+      <span>[space/E] interact</span>
+      <span><span class="dot dot-ticket"></span> ticket</span>
+      <span><span class="dot dot-sq"></span> side quest</span>
+      <span><span class="dot dot-done"></span> done</span>
+    </div>
+
+    <div class="viewport-shell">
+      <div id="viewport" tabindex="0">
+        <canvas id="world"></canvas>
+
+        <!-- title screen: gates input until the player begins -->
+        <div id="title-screen" class="title-screen">
+          <div class="title-card">
+            <div class="title-kicker">FLOOR 3 &middot; HELP DESK</div>
+            <div class="title-name">THE TICKET QUEUE</div>
+            <div class="title-blurb">
+              You're the IT person. Read the ticket monitor, walk the office,
+              find who filed each ticket, and learn the principle behind every fix.
+            </div>
+            <button id="start-btn" class="title-start">&#9654;&nbsp; PRESS SPACE TO BEGIN</button>
+            <div id="continue-line" class="title-continue"></div>
+          </div>
+        </div>
+
+        <div id="interact-hint" class="interact-hint">
+          <span id="interact-hint-text">Press E to interact</span>
+        </div>
+
+        <div id="eod-hint" class="eod-hint" hidden>
+          All seven tickets are closed. Walk back to your ticket monitor.
+        </div>
+
+        <div class="touch-controls" id="touch-controls" aria-hidden="true">
+          <div class="dpad">
+            <button class="dpad-btn dpad-up" id="touch-up" aria-label="Move up">&#9650;</button>
+            <button class="dpad-btn dpad-left" id="touch-left" aria-label="Move left">&#9664;</button>
+            <button class="dpad-btn dpad-right" id="touch-right" aria-label="Move right">&#9654;</button>
+            <button class="dpad-btn dpad-down" id="touch-down" aria-label="Move down">&#9660;</button>
+          </div>
+          <button class="action-btn" id="touch-action" aria-label="Interact">E</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="modal-bg" class="modal-bg" hidden>
+      <div class="modal" role="dialog" aria-modal="true">
+        <div class="modal-head">
+          <div class="modal-avatar" id="modal-avatar">i</div>
+          <div class="modal-headtext">
+            <div class="modal-title" id="modal-title"></div>
+            <div class="modal-subtitle" id="modal-subtitle"></div>
+          </div>
+          <button id="modal-close" class="modal-close" aria-label="Close">&times;</button>
+        </div>
+        <div id="modal-body" class="modal-body"></div>
+      </div>
+    </div>
+
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>
