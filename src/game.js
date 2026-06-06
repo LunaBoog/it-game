@@ -18,7 +18,7 @@ import {
   openPet, openSearch, openChest, openDiscoveries,
   openElevator, openQuiz,
   openCharacterCreator, openSettings, openShop, openAchievements, showAchievementToast,
-  openOrientation
+  openOrientation, openResetMenu
 } from "./ui.js";
 import { FINDS, FINDTOTAL } from "./collectables.js";
 import { scenarioIdsForFloor, scenarioCountForFloor } from "./scenarios.js";
@@ -237,6 +237,29 @@ export async function startGame() {
       this.owned = new Set(); this.achievements = new Set(); this.xp = 0;
       this.playerName = ""; this.day = 1; this.lifeTickets = 0; this.lifeSideQuests = 0;
       this.playerSprite = { ...DEFAULT_SPRITE };
+      this.px = PLAYER_START.x; this.py = PLAYER_START.y;
+      this.renderX = this.px * TILE; this.renderY = this.py * TILE;
+      this.facing = PLAYER_START.dir; this.moving = false;
+      const lab = document.getElementById("loc-label");
+      if (lab) lab.textContent = LOC_LABEL;
+      this.updateProgressUI();
+    },
+    // "Replay for the first time": wipe the run (tickets, side quests, finds, day,
+    // gameplay flags so Floor 7 re-locks and the cat resets) but KEEP who you are —
+    // character, name, rank/XP, coins, owned cosmetics, achievements, lifetime stats.
+    newPlaythrough() {
+      setFloor("floor3");
+      this.floor = "floor3"; this.map = "floor3"; saveString("floor", "floor3");
+      this.solved = new Set(); saveSet("solved", this.solved);
+      this.sqSolved = new Set(); saveSet("sq-solved", this.sqSolved);
+      this.sharp = new Set(); saveSet("sharp", this.sharp);
+      this.finds = new Set(); saveSet("finds", this.finds);
+      // clear gameplay flags but keep the tutorial-seen flag so it doesn't replay
+      const keepOriented = this.flags.has("oriented");
+      this.flags = new Set();
+      if (keepOriented) this.flags.add("oriented");
+      saveSet("flags", this.flags);
+      this.day = 1; saveNum("day", this.day);
       this.px = PLAYER_START.x; this.py = PLAYER_START.y;
       this.renderX = this.px * TILE; this.renderY = this.py * TILE;
       this.facing = PLAYER_START.dir; this.moving = false;
@@ -516,7 +539,9 @@ export async function startGame() {
   function buildMenu() {
     const returning = !!state.playerName;
     menuItems = returning
-      ? [ { label: "CONTINUE", action: continueGame }, { label: "CHANGE CHARACTER", action: newCharacter } ]
+      ? [ { label: "CONTINUE", action: continueGame },
+          { label: "CHANGE CHARACTER", action: newCharacter },
+          { label: "RESET PROGRESS", action: () => openResetMenu() } ]
       : [ { label: "START GAME", action: newCharacter } ];
     menuIdx = 0;
     renderMenu();
@@ -551,11 +576,7 @@ export async function startGame() {
 
   // ---- topbar ----
   const resetBtn = document.getElementById("reset-btn");
-  if (resetBtn) resetBtn.addEventListener("click", () => {
-    if (!confirm("Clear ALL saved progress \u2014 day count, stats, character, and name \u2014 and start completely over?")) return;
-    state.doReset();
-    showTitle();
-  });
+  if (resetBtn) resetBtn.addEventListener("click", () => { if (!isModalOpen()) openResetMenu(); });
   const soundBtn = document.getElementById("sound-btn");
   if (soundBtn) soundBtn.addEventListener("click", () => state.setSound(!state.soundOn));
   const compBtn = document.getElementById("companion-btn");

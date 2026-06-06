@@ -874,6 +874,17 @@ body { max-width: 1440px; }
 .orient-dots { display: flex; gap: 6px; justify-content: center; margin: 14px 0 4px; }
 .orient-dots span { width: 7px; height: 7px; border-radius: 50%; background: var(--border-strong); }
 .orient-dots span.on { background: var(--info); }
+
+/* ---- start over / reset menu --------------------------------------------- */
+.reset-opt { padding: 2px 0 4px; }
+.reset-opt-head { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+.reset-opt-desc { font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-bottom: 10px; }
+.reset-opt .primary-btn, .reset-opt .danger-btn { width: 100%; cursor: pointer; padding: 9px 14px; border-radius: var(--radius-sm); font-size: 13px; }
+.danger-btn.armed, .primary-btn.armed {
+  animation: armpulse 0.7s ease-in-out infinite;
+  box-shadow: 0 0 0 2px var(--danger);
+}
+@keyframes armpulse { 0%,100%{opacity:1;} 50%{opacity:0.7;} }
 </style>
 </head>
 <body>
@@ -4316,7 +4327,7 @@ function openSettings() {
      <div id="set-file-msg" class="set-hint" style="margin-top:6px;"></div>
      <div class="set-hint" style="margin-top:4px;">Download a save to back up or move to another device, then load it here to continue.</div>
      <div class="set-divider"></div>
-     <button id="set-reset" class="danger-btn">Reset all progress</button>`
+     <button id="set-reset" class="danger-btn">\u21BA Start over / reset progress\u2026</button>`
   );
 
   document.querySelectorAll(".seg[data-theme]").forEach((b) => b.addEventListener("click", () => {
@@ -4352,11 +4363,7 @@ function openSettings() {
     reader.onerror = () => { msg.textContent = "Couldn't read that file."; msg.style.color = "var(--danger-text)"; };
     reader.readAsText(f);
   });
-  document.getElementById("set-reset").addEventListener("click", () => {
-    if (typeof confirm === "function" && !confirm("Clear ALL saved progress and start over?")) return;
-    state.doReset(); closeModal();
-    if (typeof state.toTitle === "function") state.toTitle(); else openCharacterCreator();
-  });
+  document.getElementById("set-reset").addEventListener("click", () => { closeModal(); openResetMenu(); });
   document.getElementById("set-edit-char").addEventListener("click", () => { closeModal(); openCharacterCreator({ mode: "edit" }); });
 }
 
@@ -4424,6 +4431,48 @@ function openAchievements() {
      </div>
      <div class="scenario-section-label" style="margin-top:12px;">Achievements \u00b7 ${got.size}/${ACHTOTAL}</div>
      <div class="ach-grid">${cards}</div>`);
+}
+
+// --- Start over: replay vs full wipe ---------------------------------------
+function openResetMenu() {
+  state.inDialog = true;
+  openModal("Start over", "Two ways to reset", "\u21BA",
+    `<div class="reset-opt">
+       <div class="reset-opt-head">\u{1F504} New playthrough</div>
+       <div class="reset-opt-desc">Replay everything "for the first time" \u2014 every ticket, side quest, and the cat reset to fresh, and Floor 7 re-locks until you clear Floor 3. You <strong>keep</strong> your character, rank, coins, and achievements. Great for extra study reps.</div>
+       <button id="reset-replay" class="primary-btn">Start a fresh playthrough</button>
+     </div>
+     <div class="set-divider"></div>
+     <div class="reset-opt">
+       <div class="reset-opt-head">\u{1F5D1}\uFE0F Full reset</div>
+       <div class="reset-opt-desc">Erase <strong>everything</strong> \u2014 character, name, rank, coins, achievements, and all progress \u2014 and return to the title screen as a brand-new player.</div>
+       <button id="reset-full" class="danger-btn">Erase everything</button>
+     </div>
+     <div class="set-hint" style="margin-top:10px;">Tip: before a full reset you can keep a copy via Settings \u2192 Save to file, then load it back anytime.</div>`);
+
+  armConfirm("reset-replay", "Tap again to confirm", () => {
+    state.newPlaythrough();
+    closeModal();
+    showAchievementToast({ icon: "\u{1F504}", name: "Fresh start", desc: "New playthrough \u2014 good luck!" });
+  });
+  armConfirm("reset-full", "Tap again to ERASE", () => {
+    state.doReset();
+    closeModal();
+    if (typeof state.toTitle === "function") state.toTitle();
+  });
+}
+
+// two-tap confirm so a reset is never one stray click; auto-disarms after 3s
+function armConfirm(id, confirmLabel, action) {
+  const btn = document.getElementById(id);
+  if (!btn) return;
+  const orig = btn.textContent;
+  let armed = false, timer = null;
+  btn.addEventListener("click", () => {
+    if (armed) { if (timer) clearTimeout(timer); action(); return; }
+    armed = true; btn.textContent = confirmLabel; btn.classList.add("armed");
+    timer = setTimeout(() => { armed = false; btn.textContent = orig; btn.classList.remove("armed"); }, 3000);
+  });
 }
 
 // --- Day 1 IT orientation (shown once, after the character is ready) -------
@@ -4704,6 +4753,29 @@ async function startGame() {
       if (lab) lab.textContent = LOC_LABEL;
       this.updateProgressUI();
     },
+    // "Replay for the first time": wipe the run (tickets, side quests, finds, day,
+    // gameplay flags so Floor 7 re-locks and the cat resets) but KEEP who you are —
+    // character, name, rank/XP, coins, owned cosmetics, achievements, lifetime stats.
+    newPlaythrough() {
+      setFloor("floor3");
+      this.floor = "floor3"; this.map = "floor3"; saveString("floor", "floor3");
+      this.solved = new Set(); saveSet("solved", this.solved);
+      this.sqSolved = new Set(); saveSet("sq-solved", this.sqSolved);
+      this.sharp = new Set(); saveSet("sharp", this.sharp);
+      this.finds = new Set(); saveSet("finds", this.finds);
+      // clear gameplay flags but keep the tutorial-seen flag so it doesn't replay
+      const keepOriented = this.flags.has("oriented");
+      this.flags = new Set();
+      if (keepOriented) this.flags.add("oriented");
+      saveSet("flags", this.flags);
+      this.day = 1; saveNum("day", this.day);
+      this.px = PLAYER_START.x; this.py = PLAYER_START.y;
+      this.renderX = this.px * TILE; this.renderY = this.py * TILE;
+      this.facing = PLAYER_START.dir; this.moving = false;
+      const lab = document.getElementById("loc-label");
+      if (lab) lab.textContent = LOC_LABEL;
+      this.updateProgressUI();
+    },
     exportSaveFile() {
       try {
         const text = serializeSave();
@@ -4976,7 +5048,9 @@ async function startGame() {
   function buildMenu() {
     const returning = !!state.playerName;
     menuItems = returning
-      ? [ { label: "CONTINUE", action: continueGame }, { label: "CHANGE CHARACTER", action: newCharacter } ]
+      ? [ { label: "CONTINUE", action: continueGame },
+          { label: "CHANGE CHARACTER", action: newCharacter },
+          { label: "RESET PROGRESS", action: () => openResetMenu() } ]
       : [ { label: "START GAME", action: newCharacter } ];
     menuIdx = 0;
     renderMenu();
@@ -5011,11 +5085,7 @@ async function startGame() {
 
   // ---- topbar ----
   const resetBtn = document.getElementById("reset-btn");
-  if (resetBtn) resetBtn.addEventListener("click", () => {
-    if (!confirm("Clear ALL saved progress \u2014 day count, stats, character, and name \u2014 and start completely over?")) return;
-    state.doReset();
-    showTitle();
-  });
+  if (resetBtn) resetBtn.addEventListener("click", () => { if (!isModalOpen()) openResetMenu(); });
   const soundBtn = document.getElementById("sound-btn");
   if (soundBtn) soundBtn.addEventListener("click", () => state.setSound(!state.soundOn));
   const compBtn = document.getElementById("companion-btn");

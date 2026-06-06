@@ -958,7 +958,7 @@ export function openSettings() {
      <div id="set-file-msg" class="set-hint" style="margin-top:6px;"></div>
      <div class="set-hint" style="margin-top:4px;">Download a save to back up or move to another device, then load it here to continue.</div>
      <div class="set-divider"></div>
-     <button id="set-reset" class="danger-btn">Reset all progress</button>`
+     <button id="set-reset" class="danger-btn">\u21BA Start over / reset progress\u2026</button>`
   );
 
   document.querySelectorAll(".seg[data-theme]").forEach((b) => b.addEventListener("click", () => {
@@ -994,11 +994,7 @@ export function openSettings() {
     reader.onerror = () => { msg.textContent = "Couldn't read that file."; msg.style.color = "var(--danger-text)"; };
     reader.readAsText(f);
   });
-  document.getElementById("set-reset").addEventListener("click", () => {
-    if (typeof confirm === "function" && !confirm("Clear ALL saved progress and start over?")) return;
-    state.doReset(); closeModal();
-    if (typeof state.toTitle === "function") state.toTitle(); else openCharacterCreator();
-  });
+  document.getElementById("set-reset").addEventListener("click", () => { closeModal(); openResetMenu(); });
   document.getElementById("set-edit-char").addEventListener("click", () => { closeModal(); openCharacterCreator({ mode: "edit" }); });
 }
 
@@ -1066,6 +1062,48 @@ export function openAchievements() {
      </div>
      <div class="scenario-section-label" style="margin-top:12px;">Achievements \u00b7 ${got.size}/${ACHTOTAL}</div>
      <div class="ach-grid">${cards}</div>`);
+}
+
+// --- Start over: replay vs full wipe ---------------------------------------
+export function openResetMenu() {
+  state.inDialog = true;
+  openModal("Start over", "Two ways to reset", "\u21BA",
+    `<div class="reset-opt">
+       <div class="reset-opt-head">\u{1F504} New playthrough</div>
+       <div class="reset-opt-desc">Replay everything "for the first time" \u2014 every ticket, side quest, and the cat reset to fresh, and Floor 7 re-locks until you clear Floor 3. You <strong>keep</strong> your character, rank, coins, and achievements. Great for extra study reps.</div>
+       <button id="reset-replay" class="primary-btn">Start a fresh playthrough</button>
+     </div>
+     <div class="set-divider"></div>
+     <div class="reset-opt">
+       <div class="reset-opt-head">\u{1F5D1}\uFE0F Full reset</div>
+       <div class="reset-opt-desc">Erase <strong>everything</strong> \u2014 character, name, rank, coins, achievements, and all progress \u2014 and return to the title screen as a brand-new player.</div>
+       <button id="reset-full" class="danger-btn">Erase everything</button>
+     </div>
+     <div class="set-hint" style="margin-top:10px;">Tip: before a full reset you can keep a copy via Settings \u2192 Save to file, then load it back anytime.</div>`);
+
+  armConfirm("reset-replay", "Tap again to confirm", () => {
+    state.newPlaythrough();
+    closeModal();
+    showAchievementToast({ icon: "\u{1F504}", name: "Fresh start", desc: "New playthrough \u2014 good luck!" });
+  });
+  armConfirm("reset-full", "Tap again to ERASE", () => {
+    state.doReset();
+    closeModal();
+    if (typeof state.toTitle === "function") state.toTitle();
+  });
+}
+
+// two-tap confirm so a reset is never one stray click; auto-disarms after 3s
+function armConfirm(id, confirmLabel, action) {
+  const btn = document.getElementById(id);
+  if (!btn) return;
+  const orig = btn.textContent;
+  let armed = false, timer = null;
+  btn.addEventListener("click", () => {
+    if (armed) { if (timer) clearTimeout(timer); action(); return; }
+    armed = true; btn.textContent = confirmLabel; btn.classList.add("armed");
+    timer = setTimeout(() => { armed = false; btn.textContent = orig; btn.classList.remove("armed"); }, 3000);
+  });
 }
 
 // --- Day 1 IT orientation (shown once, after the character is ready) -------

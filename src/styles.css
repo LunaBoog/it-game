@@ -864,3 +864,14 @@ body { max-width: 1440px; }
 .orient-dots { display: flex; gap: 6px; justify-content: center; margin: 14px 0 4px; }
 .orient-dots span { width: 7px; height: 7px; border-radius: 50%; background: var(--border-strong); }
 .orient-dots span.on { background: var(--info); }
+
+/* ---- start over / reset menu --------------------------------------------- */
+.reset-opt { padding: 2px 0 4px; }
+.reset-opt-head { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+.reset-opt-desc { font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-bottom: 10px; }
+.reset-opt .primary-btn, .reset-opt .danger-btn { width: 100%; cursor: pointer; padding: 9px 14px; border-radius: var(--radius-sm); font-size: 13px; }
+.danger-btn.armed, .primary-btn.armed {
+  animation: armpulse 0.7s ease-in-out infinite;
+  box-shadow: 0 0 0 2px var(--danger);
+}
+@keyframes armpulse { 0%,100%{opacity:1;} 50%{opacity:0.7;} }
