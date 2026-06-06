@@ -806,7 +806,9 @@ export function showAchievementToast(ach) {
 }
 
 // --- character creator: roster select → customizer ------------------------
-export function openCharacterCreator() {
+export function openCharacterCreator(opts = {}) {
+  const mode = opts.mode || "onboarding";   // "onboarding" | "edit"
+  const onReady = typeof opts.onReady === "function" ? opts.onReady : null;
   state.inIntro = true;
   // working sprite + chosen name; seed from existing if returning
   const draft = { sprite: normSprite(state.playerSprite), name: state.playerName || "" };
@@ -814,26 +816,30 @@ export function openCharacterCreator() {
 
   function renderRoster() {
     const cards = PRESETS.map((p) => {
-      const sp = p.random ? randomSprite() : normSprite(p.sprite);
-      return `<button class="roster-card" data-id="${escapeAttr(p.id)}">
+      return `<button class="roster-card" data-id="${escapeAttr(p.id)}" title="${escapeAttr(p.blurb || "")}">
         <canvas class="roster-canvas" width="72" height="72" data-pid="${escapeAttr(p.id)}"></canvas>
         <div class="roster-name">${escapeHtml(p.name)}</div>
         <div class="roster-role">${escapeHtml(p.role)}</div>
       </button>`;
     }).join("");
-    openModal("Choose your character", "Pick a fighter \u2014 you'll customize next", "\u{1F3AE}",
+    openModal("SELECT YOUR FIGHTER", mode === "edit" ? "Change your look" : "Choose a character \u2014 customize next", "\u{1F3AE}",
       `<div class="roster-grid">${cards}</div>
-       <div class="roster-foot">Each is just a starting look. You can recolor everything on the next screen.</div>`,
+       <div id="roster-blurb" class="roster-foot">Tap a fighter. Each is a starting look \u2014 you can recolor and rename on the next screen.</div>`,
       { hideClose: true });
     // paint previews + wire picks
     PRESETS.forEach((p) => {
       const c = document.querySelector(`canvas[data-pid="${p.id}"]`);
       if (c) drawSpritePreview(c, p.random ? randomSprite() : normSprite(p.sprite), "down", 2);
     });
+    const blurbEl = document.getElementById("roster-blurb");
     document.querySelectorAll(".roster-card").forEach((b) => {
+      const p = PRESETS.find((x) => x.id === b.dataset.id);
+      const showBlurb = () => { if (blurbEl && p) blurbEl.textContent = `${p.name} \u2014 ${p.blurb}`; };
+      b.addEventListener("mouseenter", showBlurb);
+      b.addEventListener("focus", showBlurb);
       b.addEventListener("click", () => {
-        const p = PRESETS.find((x) => x.id === b.dataset.id);
         draft.sprite = normSprite(p.random ? randomSprite() : p.sprite);
+        if (!draft.name) draft.name = p.name; // seed the fun name; player can edit
         renderCustomizer();
       });
     });
@@ -878,7 +884,7 @@ export function openCharacterCreator() {
            <input id="cc-name" type="text" maxlength="20" value="${escapeAttr(draft.name)}" placeholder="What should they call you?" autocomplete="off" />
            <div class="cc-foot">
              <button id="cc-back">\u2190 Roster</button>
-             <button id="cc-confirm" class="primary-btn">Start \u2192</button>
+             <button id="cc-confirm" class="primary-btn">${mode === "edit" ? "Save changes" : "READY \u25B6"}</button>
            </div>
            <div style="font-size:11px;color:var(--text-faint);margin-top:6px;">Unlock more shirts, shades, and hats in the Shop with coins you earn.</div>
          </div>
@@ -915,6 +921,7 @@ export function openCharacterCreator() {
       state.setPlayerName(nm);
       state.setPlayerSprite(draft.sprite);
       closeModal();
+      if (mode !== "edit" && onReady) onReady();
     });
   }
 }
@@ -989,9 +996,10 @@ export function openSettings() {
   });
   document.getElementById("set-reset").addEventListener("click", () => {
     if (typeof confirm === "function" && !confirm("Clear ALL saved progress and start over?")) return;
-    state.doReset(); closeModal(); openCharacterCreator();
+    state.doReset(); closeModal();
+    if (typeof state.toTitle === "function") state.toTitle(); else openCharacterCreator();
   });
-  document.getElementById("set-edit-char").addEventListener("click", () => { closeModal(); openCharacterCreator(); });
+  document.getElementById("set-edit-char").addEventListener("click", () => { closeModal(); openCharacterCreator({ mode: "edit" }); });
 }
 
 // --- cosmetics shop --------------------------------------------------------
@@ -1058,6 +1066,46 @@ export function openAchievements() {
      </div>
      <div class="scenario-section-label" style="margin-top:12px;">Achievements \u00b7 ${got.size}/${ACHTOTAL}</div>
      <div class="ach-grid">${cards}</div>`);
+}
+
+// --- Day 1 IT orientation (shown once, after the character is ready) -------
+export function openOrientation(onDone) {
+  state.inDialog = true;
+  const name = escapeHtml(state.playerName || "you");
+  const pages = [
+    { t: "Welcome to the team", a: "\u{1F44B}",
+      h: `<p style="margin:0 0 8px;">Morning, ${name}. Welcome to your first day in IT support. I'm your onboarding buddy \u2014 quick orientation, then you're on the floor.</p>
+          <p style="margin:0;color:var(--text-muted);">This whole job is one loop: a problem comes in, you investigate, you find the real cause, you fix it. Do that well and you'll be ready for the CompTIA exams without even trying.</p>` },
+    { t: "Your ticket monitor", a: "\u{1F5A5}\uFE0F",
+      h: `<p style="margin:0 0 8px;">That glowing screen in your office (the <strong>IT room</strong>) is your <strong>ticket monitor</strong>. Walk up to it and press <strong>E</strong> or <strong>Space</strong> to see what's open.</p>
+          <p style="margin:0;color:var(--text-muted);">People who filed a ticket have an orange <strong style="color:#EF9F27;">!</strong> over their head. Go find them, hear them out, and dig into the clues before you commit to a diagnosis. Guessing burns your action budget.</p>` },
+    { t: "Look around, not just up", a: "\u{1F50D}",
+      h: `<p style="margin:0 0 8px;">Not everything is on the board. A blue <strong style="color:#378ADD;">?</strong> marks a <strong>side quest</strong> \u2014 something you only notice by wandering. There's a cat somewhere, too. Be curious.</p>
+          <p style="margin:0;color:var(--text-muted);">Solving things earns <strong>XP</strong> (climb from Intern to CISO), <strong>coins</strong> (spend them in the Shop on drip), and <strong>achievements</strong>. Check the <strong>Career</strong> button up top anytime.</p>` },
+    { t: "Study on the clock", a: "\u{1F4DD}",
+      h: `<p style="margin:0 0 8px;">Hit <strong>Exam</strong> any time for a 5-question practice test on your current floor. Clear Floor 3's queue and the <strong>elevator</strong> unlocks Floor 7 \u2014 Security Operations.</p>
+          <p style="margin:0;color:var(--text-muted);">Everything saves automatically. You can back up or move your progress from <strong>\u2699\uFE0F Settings \u2192 Save to file</strong>. That's it \u2014 go be great.</p>` }
+  ];
+  let i = 0;
+  function render() {
+    const p = pages[i];
+    const last = i === pages.length - 1;
+    openModal(`Day 1 \u00b7 ${p.t}`, "IT Orientation", p.a,
+      `${p.h}
+       <div class="orient-dots">${pages.map((_, k) => `<span class="${k === i ? "on" : ""}"></span>`).join("")}</div>
+       <div class="cc-foot">
+         <button id="orient-skip">${last ? "" : "Skip"}</button>
+         <button id="orient-next" class="primary-btn">${last ? "Clock in \u25B6" : "Next \u2192"}</button>
+       </div>`,
+      { hideClose: true });
+    const skip = document.getElementById("orient-skip");
+    if (skip) skip.addEventListener("click", finish);
+    document.getElementById("orient-next").addEventListener("click", () => {
+      if (last) finish(); else { i += 1; render(); }
+    });
+  }
+  function finish() { closeModal(); if (typeof onDone === "function") onDone(); }
+  render();
 }
 
 function escapeHtml(s) {

@@ -814,6 +814,66 @@ body { max-width: 1440px; }
 .ach-icon { font-size: 20px; flex: 0 0 auto; width: 24px; text-align: center; }
 .ach-name { font-weight: 600; font-size: 13px; }
 .ach-desc { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+
+/* ===========================================================================
+   8-bit arcade title / start menu  +  orientation
+   =========================================================================== */
+.title-screen.crt {
+  background:
+    radial-gradient(ellipse at 50% 40%, rgba(40,40,70,0.55), rgba(8,8,12,0.96)),
+    #07070b;
+}
+.title-screen.crt::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 2;
+  background: repeating-linear-gradient(to bottom, rgba(0,0,0,0) 0 2px, rgba(0,0,0,0.18) 2px 4px);
+  mix-blend-mode: multiply; animation: crtflicker 5s infinite steps(60);
+}
+@keyframes crtflicker { 0%,97%{opacity:.9;} 98%{opacity:.65;} 100%{opacity:.9;} }
+
+.title-card.arcade {
+  position: relative; z-index: 3; text-align: center;
+  font-family: var(--mono); padding: 18px 22px; max-width: 560px;
+}
+.arcade-sub {
+  color: #FCDE5A; font-size: 12px; letter-spacing: 0.32em; font-weight: 700;
+  text-transform: uppercase; margin-bottom: 14px; text-shadow: 0 0 8px rgba(252,222,90,0.45);
+}
+.arcade-title {
+  font-family: var(--mono); font-weight: 800; font-size: clamp(28px, 6vw, 56px);
+  line-height: 1.05; letter-spacing: 0.04em; color: #6fe3ff; text-transform: uppercase;
+  text-shadow:
+     2px 0 #185FA5, -2px 0 #b5179e,
+     0 3px 0 #0b2a45, 0 0 18px rgba(111,227,255,0.55);
+  animation: arcadehue 6s linear infinite;
+}
+@keyframes arcadehue { 0%{filter:hue-rotate(0deg);} 50%{filter:hue-rotate(-18deg);} 100%{filter:hue-rotate(0deg);} }
+.arcade-tag {
+  color: #aab; font-size: 10.5px; letter-spacing: 0.18em; margin: 12px 0 22px; text-transform: uppercase;
+}
+.arcade-menu { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-bottom: 18px; }
+.arcade-item {
+  font-family: var(--mono); font-size: 18px; font-weight: 700; letter-spacing: 0.12em;
+  background: transparent; border: none; color: #c8c8d4; cursor: pointer;
+  text-transform: uppercase; padding: 4px 8px; transition: transform .08s ease, color .08s ease;
+}
+.arcade-item:hover { color: #fff; }
+.arcade-item.sel {
+  color: #FCDE5A; transform: scale(1.06);
+  text-shadow: 0 0 10px rgba(252,222,90,0.7); animation: arcadepulse 0.9s ease-in-out infinite;
+}
+@keyframes arcadepulse { 0%,100%{opacity:1;} 50%{opacity:0.72;} }
+.arcade-hint {
+  color: #8a8aa0; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+  animation: arcadeblink 1.1s steps(2) infinite;
+}
+@keyframes arcadeblink { 0%,50%{opacity:1;} 51%,100%{opacity:0.25;} }
+.title-continue { color: #7fd154; font-size: 11px; margin-top: 12px; font-family: var(--mono); letter-spacing: 0.08em; }
+.arcade-credit { color: #b5179e; font-size: 10px; letter-spacing: 0.22em; margin-top: 16px; text-transform: uppercase; animation: arcadeblink 1.6s steps(2) infinite; }
+
+/* orientation pager dots */
+.orient-dots { display: flex; gap: 6px; justify-content: center; margin: 14px 0 4px; }
+.orient-dots span { width: 7px; height: 7px; border-radius: 50%; background: var(--border-strong); }
+.orient-dots span.on { background: var(--info); }
 </style>
 </head>
 <body>
@@ -856,21 +916,16 @@ body { max-width: 1440px; }
         <div id="viewport" tabindex="0">
           <canvas id="world"></canvas>
 
-          <!-- title screen: gates input until the player begins -->
-          <div id="title-screen" class="title-screen">
-            <div class="title-card">
-              <div class="title-kicker">A PLAYABLE STUDY GUIDE &middot; FREE</div>
-              <div class="title-name">THE TICKET QUEUE</div>
-              <div class="title-blurb">
-                You're the IT person. Build your character, read the ticket monitor,
-                walk the office, find who filed each ticket, and learn the principle
-                behind every fix. Clear <strong>Floor 3</strong> (A+ / Network+), then
-                ride the elevator to <strong>Floor 7</strong> &mdash; Security Operations,
-                for Security+ and PenTest+. Earn XP, climb the career ladder, and spend
-                coins on drip. Let IT glow.
-              </div>
-              <button id="start-btn" class="title-start">&#9654;&nbsp; PRESS SPACE TO BEGIN</button>
+          <!-- title screen: 8-bit arcade start menu -->
+          <div id="title-screen" class="title-screen crt">
+            <div class="title-card arcade">
+              <div class="arcade-sub">&#9733; IT SUPPORT SIMULATOR &#9733;</div>
+              <div class="arcade-title" data-text="THE TICKET QUEUE">THE TICKET QUEUE</div>
+              <div class="arcade-tag">A FREE COMPTIA &middot; IT &middot; NETWORKING &middot; PENTEST STUDY GAME</div>
+              <div id="title-menu" class="arcade-menu"></div>
+              <div class="arcade-hint" id="title-hint">&#9650;&#9660; SELECT &nbsp;&middot;&nbsp; ENTER / SPACE: CONFIRM</div>
               <div id="continue-line" class="title-continue"></div>
+              <div class="arcade-credit">INSERT COIN &mdash; PLAYER 1</div>
             </div>
           </div>
 
@@ -2404,7 +2459,7 @@ function quizPoolSize(floorId) {
 // customizer, but presets set it explicitly for a hand-tuned look.
 const PRESETS = [
   { id: "helpdesk", name: "The Closer", role: "Help Desk Hero",
-    blurb: "Calm under a full queue. Has never once said 'have you tried turning it off and on' sarcastically.",
+    blurb: "Calm under a full queue. Never once said 'have you tried turning it off and on' sarcastically.",
     sprite: { body: "#2E6FB0", body2: "#1B4E84", accent: "#FCDE5A", hair: "#2C2C2A", skin: "#C9926B" } },
   { id: "sysadmin", name: "Root", role: "Sysadmin",
     blurb: "Lives in the server closet by choice. Backups tested, coffee strong.",
@@ -2422,9 +2477,21 @@ const PRESETS = [
     blurb: "Turns chaos into a checklist. The change log is sacred.",
     sprite: { body: "#7F77DD", body2: "#534AB7", accent: "#F4C0D1", hair: "#6B4A2A", skin: "#E0B080" } },
   { id: "intern", name: "Fresh", role: "The Intern",
-    blurb: "Day one energy. Asks great questions. Going places, fast.",
+    blurb: "Day-one energy. Asks great questions. Going places, fast.",
     sprite: { body: "#EF9F27", body2: "#BA7517", accent: "#FFF3D6", hair: "#2C2C2A", skin: "#D8B088" } },
-  { id: "wildcard", name: "Wildcard", role: "?",
+  { id: "riff", name: "Riff", role: "The Metalhead",
+    blurb: "Patches servers to a double-kick beat. The band tee is technically business casual.",
+    sprite: { body: "#1f1f1d", body2: "#0d0d0c", accent: "#C0392B", hair: "#1a1a18", skin: "#D8B088", shades: true } },
+  { id: "spike", name: "Spike", role: "The Punk",
+    blurb: "Green mohawk, zero patience for default passwords. DIY or die.",
+    sprite: { body: "#B5179E", body2: "#7E1070", accent: "#39FF14", hair: "#2BD43E", skin: "#C9926B" } },
+  { id: "ace", name: "Ace", role: "Arcade Legend",
+    blurb: "Grew up on quarters and high scores. Treats every ticket like a boss fight.",
+    sprite: { body: "#2D7DD2", body2: "#1B5896", accent: "#FCDE5A", hair: "#412402", skin: "#E0B080", hat: "#C0392B" } },
+  { id: "glitch", name: "Glitch", role: "The Hacker",
+    blurb: "Hoodie up, terminal green, talks to the network like it owes them money.",
+    sprite: { body: "#23262B", body2: "#121417", accent: "#39FF14", hair: "#2C2C2A", skin: "#A8744E", hat: "#23262B" } },
+  { id: "wildcard", name: "Wildcard", role: "???",
     blurb: "Rolls in with a totally random look. Reroll until it's perfect.",
     sprite: null, random: true }
 ];
@@ -4097,7 +4164,9 @@ function showAchievementToast(ach) {
 }
 
 // --- character creator: roster select → customizer ------------------------
-function openCharacterCreator() {
+function openCharacterCreator(opts = {}) {
+  const mode = opts.mode || "onboarding";   // "onboarding" | "edit"
+  const onReady = typeof opts.onReady === "function" ? opts.onReady : null;
   state.inIntro = true;
   // working sprite + chosen name; seed from existing if returning
   const draft = { sprite: normSprite(state.playerSprite), name: state.playerName || "" };
@@ -4105,26 +4174,30 @@ function openCharacterCreator() {
 
   function renderRoster() {
     const cards = PRESETS.map((p) => {
-      const sp = p.random ? randomSprite() : normSprite(p.sprite);
-      return `<button class="roster-card" data-id="${escapeAttr(p.id)}">
+      return `<button class="roster-card" data-id="${escapeAttr(p.id)}" title="${escapeAttr(p.blurb || "")}">
         <canvas class="roster-canvas" width="72" height="72" data-pid="${escapeAttr(p.id)}"></canvas>
         <div class="roster-name">${escapeHtml(p.name)}</div>
         <div class="roster-role">${escapeHtml(p.role)}</div>
       </button>`;
     }).join("");
-    openModal("Choose your character", "Pick a fighter \u2014 you'll customize next", "\u{1F3AE}",
+    openModal("SELECT YOUR FIGHTER", mode === "edit" ? "Change your look" : "Choose a character \u2014 customize next", "\u{1F3AE}",
       `<div class="roster-grid">${cards}</div>
-       <div class="roster-foot">Each is just a starting look. You can recolor everything on the next screen.</div>`,
+       <div id="roster-blurb" class="roster-foot">Tap a fighter. Each is a starting look \u2014 you can recolor and rename on the next screen.</div>`,
       { hideClose: true });
     // paint previews + wire picks
     PRESETS.forEach((p) => {
       const c = document.querySelector(`canvas[data-pid="${p.id}"]`);
       if (c) drawSpritePreview(c, p.random ? randomSprite() : normSprite(p.sprite), "down", 2);
     });
+    const blurbEl = document.getElementById("roster-blurb");
     document.querySelectorAll(".roster-card").forEach((b) => {
+      const p = PRESETS.find((x) => x.id === b.dataset.id);
+      const showBlurb = () => { if (blurbEl && p) blurbEl.textContent = `${p.name} \u2014 ${p.blurb}`; };
+      b.addEventListener("mouseenter", showBlurb);
+      b.addEventListener("focus", showBlurb);
       b.addEventListener("click", () => {
-        const p = PRESETS.find((x) => x.id === b.dataset.id);
         draft.sprite = normSprite(p.random ? randomSprite() : p.sprite);
+        if (!draft.name) draft.name = p.name; // seed the fun name; player can edit
         renderCustomizer();
       });
     });
@@ -4169,7 +4242,7 @@ function openCharacterCreator() {
            <input id="cc-name" type="text" maxlength="20" value="${escapeAttr(draft.name)}" placeholder="What should they call you?" autocomplete="off" />
            <div class="cc-foot">
              <button id="cc-back">\u2190 Roster</button>
-             <button id="cc-confirm" class="primary-btn">Start \u2192</button>
+             <button id="cc-confirm" class="primary-btn">${mode === "edit" ? "Save changes" : "READY \u25B6"}</button>
            </div>
            <div style="font-size:11px;color:var(--text-faint);margin-top:6px;">Unlock more shirts, shades, and hats in the Shop with coins you earn.</div>
          </div>
@@ -4206,6 +4279,7 @@ function openCharacterCreator() {
       state.setPlayerName(nm);
       state.setPlayerSprite(draft.sprite);
       closeModal();
+      if (mode !== "edit" && onReady) onReady();
     });
   }
 }
@@ -4280,9 +4354,10 @@ function openSettings() {
   });
   document.getElementById("set-reset").addEventListener("click", () => {
     if (typeof confirm === "function" && !confirm("Clear ALL saved progress and start over?")) return;
-    state.doReset(); closeModal(); openCharacterCreator();
+    state.doReset(); closeModal();
+    if (typeof state.toTitle === "function") state.toTitle(); else openCharacterCreator();
   });
-  document.getElementById("set-edit-char").addEventListener("click", () => { closeModal(); openCharacterCreator(); });
+  document.getElementById("set-edit-char").addEventListener("click", () => { closeModal(); openCharacterCreator({ mode: "edit" }); });
 }
 
 // --- cosmetics shop --------------------------------------------------------
@@ -4349,6 +4424,46 @@ function openAchievements() {
      </div>
      <div class="scenario-section-label" style="margin-top:12px;">Achievements \u00b7 ${got.size}/${ACHTOTAL}</div>
      <div class="ach-grid">${cards}</div>`);
+}
+
+// --- Day 1 IT orientation (shown once, after the character is ready) -------
+function openOrientation(onDone) {
+  state.inDialog = true;
+  const name = escapeHtml(state.playerName || "you");
+  const pages = [
+    { t: "Welcome to the team", a: "\u{1F44B}",
+      h: `<p style="margin:0 0 8px;">Morning, ${name}. Welcome to your first day in IT support. I'm your onboarding buddy \u2014 quick orientation, then you're on the floor.</p>
+          <p style="margin:0;color:var(--text-muted);">This whole job is one loop: a problem comes in, you investigate, you find the real cause, you fix it. Do that well and you'll be ready for the CompTIA exams without even trying.</p>` },
+    { t: "Your ticket monitor", a: "\u{1F5A5}\uFE0F",
+      h: `<p style="margin:0 0 8px;">That glowing screen in your office (the <strong>IT room</strong>) is your <strong>ticket monitor</strong>. Walk up to it and press <strong>E</strong> or <strong>Space</strong> to see what's open.</p>
+          <p style="margin:0;color:var(--text-muted);">People who filed a ticket have an orange <strong style="color:#EF9F27;">!</strong> over their head. Go find them, hear them out, and dig into the clues before you commit to a diagnosis. Guessing burns your action budget.</p>` },
+    { t: "Look around, not just up", a: "\u{1F50D}",
+      h: `<p style="margin:0 0 8px;">Not everything is on the board. A blue <strong style="color:#378ADD;">?</strong> marks a <strong>side quest</strong> \u2014 something you only notice by wandering. There's a cat somewhere, too. Be curious.</p>
+          <p style="margin:0;color:var(--text-muted);">Solving things earns <strong>XP</strong> (climb from Intern to CISO), <strong>coins</strong> (spend them in the Shop on drip), and <strong>achievements</strong>. Check the <strong>Career</strong> button up top anytime.</p>` },
+    { t: "Study on the clock", a: "\u{1F4DD}",
+      h: `<p style="margin:0 0 8px;">Hit <strong>Exam</strong> any time for a 5-question practice test on your current floor. Clear Floor 3's queue and the <strong>elevator</strong> unlocks Floor 7 \u2014 Security Operations.</p>
+          <p style="margin:0;color:var(--text-muted);">Everything saves automatically. You can back up or move your progress from <strong>\u2699\uFE0F Settings \u2192 Save to file</strong>. That's it \u2014 go be great.</p>` }
+  ];
+  let i = 0;
+  function render() {
+    const p = pages[i];
+    const last = i === pages.length - 1;
+    openModal(`Day 1 \u00b7 ${p.t}`, "IT Orientation", p.a,
+      `${p.h}
+       <div class="orient-dots">${pages.map((_, k) => `<span class="${k === i ? "on" : ""}"></span>`).join("")}</div>
+       <div class="cc-foot">
+         <button id="orient-skip">${last ? "" : "Skip"}</button>
+         <button id="orient-next" class="primary-btn">${last ? "Clock in \u25B6" : "Next \u2192"}</button>
+       </div>`,
+      { hideClose: true });
+    const skip = document.getElementById("orient-skip");
+    if (skip) skip.addEventListener("click", finish);
+    document.getElementById("orient-next").addEventListener("click", () => {
+      if (last) finish(); else { i += 1; render(); }
+    });
+  }
+  function finish() { closeModal(); if (typeof onDone === "function") onDone(); }
+  render();
 }
 
 function escapeHtml(s) {
@@ -4795,6 +4910,13 @@ async function startGame() {
   window.addEventListener("keydown", (e) => {
     if (e.key === "Escape") { if (isModalOpen()) { e.preventDefault(); handleEscape(); } return; }
     if (isTyping(document.activeElement)) return;
+    // title menu navigation (game not started, no modal yet)
+    if (!state.started && !isModalOpen()) {
+      if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") { e.preventDefault(); moveMenu(-1); }
+      else if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") { e.preventDefault(); moveMenu(1); }
+      else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); activateMenu(); }
+      return;
+    }
     if (isModalOpen()) return;
     const dir = KEY_TO_DIR[e.key];
     if (dir) { e.preventDefault(); pressDir(dir); }
@@ -4818,30 +4940,81 @@ async function startGame() {
   bindTouch("touch-right", () => pressDir("right"), () => releaseDir("right"));
   bindTouch("touch-action", () => interact());
 
-  // ---- title screen start ----
-  function begin() {
-    if (state.started) return;
+  // ---- title screen: 8-bit start menu -> character select -> orientation ----
+  const titleEl = document.getElementById("title-screen");
+  const menuEl = document.getElementById("title-menu");
+  let menuItems = [];
+  let menuIdx = 0;
+
+  function hideTitle() { if (titleEl) titleEl.style.display = "none"; }
+  function startPlay() {
     state.started = true;
-    const ts = document.getElementById("title-screen");
-    if (ts) ts.style.display = "none";
-    viewport.focus();
-    if (!state.playerName) openCharacterCreator();
+    hideTitle();
+    try { viewport.focus(); } catch { /* ignore */ }
   }
-  const startBtn = document.getElementById("start-btn");
-  if (startBtn) startBtn.addEventListener("click", begin);
-  // also allow space/enter/click on the title
-  window.addEventListener("keydown", (e) => {
-    if (!state.started && (e.key === " " || e.key === "Enter")) { e.preventDefault(); begin(); }
-  });
-  const ts = document.getElementById("title-screen");
-  if (ts) ts.addEventListener("click", begin);
+  // shown once, right after the character is locked in
+  function orientationThenPlay() {
+    if (!state.hasFlag("oriented")) openOrientation(() => state.setFlag("oriented"));
+  }
+  function newCharacter() {
+    // game goes "live" behind the modal (movement stays blocked while it's open)
+    state.started = true;
+    hideTitle();
+    openCharacterCreator({ mode: "onboarding", onReady: orientationThenPlay });
+  }
+  function continueGame() { startPlay(); }
+  function showTitle() {
+    state.started = false;
+    if (titleEl) titleEl.style.display = "";
+    buildMenu();
+    refreshContinueLine();
+  }
+  // expose the two entry points so Settings/Reset can route through them
+  state.toTitle = showTitle;
+  state.newGame = newCharacter;
+
+  function buildMenu() {
+    const returning = !!state.playerName;
+    menuItems = returning
+      ? [ { label: "CONTINUE", action: continueGame }, { label: "CHANGE CHARACTER", action: newCharacter } ]
+      : [ { label: "START GAME", action: newCharacter } ];
+    menuIdx = 0;
+    renderMenu();
+  }
+  function renderMenu() {
+    if (!menuEl) return;
+    menuEl.innerHTML = menuItems.map((m, i) =>
+      `<button class="arcade-item ${i === menuIdx ? "sel" : ""}" data-i="${i}">${i === menuIdx ? "\u25B6 " : "\u00A0\u00A0"}${m.label}</button>`
+    ).join("");
+    menuEl.querySelectorAll(".arcade-item").forEach((b) => {
+      b.addEventListener("click", () => { menuIdx = +b.dataset.i; menuItems[menuIdx].action(); });
+      b.addEventListener("mouseenter", () => { menuIdx = +b.dataset.i; renderMenu(); });
+    });
+  }
+  function moveMenu(d) { if (!menuItems.length) return; menuIdx = (menuIdx + d + menuItems.length) % menuItems.length; renderMenu(); }
+  function activateMenu() { if (menuItems[menuIdx]) menuItems[menuIdx].action(); }
+  function refreshContinueLine() {
+    const cont = document.getElementById("continue-line");
+    if (!cont) return;
+    if (state.playerName && state.solved.size > 0) {
+      const here = state.floor;
+      cont.textContent = `Welcome back, ${state.playerName} \u2014 ${state.solvedOnFloor(here)}/${scenarioCountForFloor(here)} tickets on ${FLOOR_META[here] ? FLOOR_META[here].name : here}.`;
+    } else if (state.playerName) {
+      cont.textContent = `Welcome back, ${state.playerName}.`;
+    } else {
+      cont.textContent = "";
+    }
+  }
+
+  buildMenu();
+  refreshContinueLine();
 
   // ---- topbar ----
   const resetBtn = document.getElementById("reset-btn");
   if (resetBtn) resetBtn.addEventListener("click", () => {
     if (!confirm("Clear ALL saved progress \u2014 day count, stats, character, and name \u2014 and start completely over?")) return;
     state.doReset();
-    openCharacterCreator();
+    showTitle();
   });
   const soundBtn = document.getElementById("sound-btn");
   if (soundBtn) soundBtn.addEventListener("click", () => state.setSound(!state.soundOn));
@@ -4861,12 +5034,6 @@ async function startGame() {
   sizeCanvas(canvas, viewport);
 
   state.updateProgressUI();
-  // continue line on the title screen
-  const cont = document.getElementById("continue-line");
-  if (cont && state.solved.size > 0) {
-    const here = state.floor;
-    cont.textContent = `Progress found: ${state.solvedOnFloor(here)}/${scenarioCountForFloor(here)} tickets on ${FLOOR_META[here] ? FLOOR_META[here].name : here}.`;
-  }
 
   requestAnimationFrame(loop);
 }

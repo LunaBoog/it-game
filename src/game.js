@@ -17,7 +17,8 @@ import {
   openScenario, openEndOfDay, openIntro, handleEscape,
   openPet, openSearch, openChest, openDiscoveries,
   openElevator, openQuiz,
-  openCharacterCreator, openSettings, openShop, openAchievements, showAchievementToast
+  openCharacterCreator, openSettings, openShop, openAchievements, showAchievementToast,
+  openOrientation
 } from "./ui.js";
 import { FINDS, FINDTOTAL } from "./collectables.js";
 import { scenarioIdsForFloor, scenarioCountForFloor } from "./scenarios.js";
@@ -449,6 +450,13 @@ export async function startGame() {
   window.addEventListener("keydown", (e) => {
     if (e.key === "Escape") { if (isModalOpen()) { e.preventDefault(); handleEscape(); } return; }
     if (isTyping(document.activeElement)) return;
+    // title menu navigation (game not started, no modal yet)
+    if (!state.started && !isModalOpen()) {
+      if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") { e.preventDefault(); moveMenu(-1); }
+      else if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") { e.preventDefault(); moveMenu(1); }
+      else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); activateMenu(); }
+      return;
+    }
     if (isModalOpen()) return;
     const dir = KEY_TO_DIR[e.key];
     if (dir) { e.preventDefault(); pressDir(dir); }
@@ -472,30 +480,81 @@ export async function startGame() {
   bindTouch("touch-right", () => pressDir("right"), () => releaseDir("right"));
   bindTouch("touch-action", () => interact());
 
-  // ---- title screen start ----
-  function begin() {
-    if (state.started) return;
+  // ---- title screen: 8-bit start menu -> character select -> orientation ----
+  const titleEl = document.getElementById("title-screen");
+  const menuEl = document.getElementById("title-menu");
+  let menuItems = [];
+  let menuIdx = 0;
+
+  function hideTitle() { if (titleEl) titleEl.style.display = "none"; }
+  function startPlay() {
     state.started = true;
-    const ts = document.getElementById("title-screen");
-    if (ts) ts.style.display = "none";
-    viewport.focus();
-    if (!state.playerName) openCharacterCreator();
+    hideTitle();
+    try { viewport.focus(); } catch { /* ignore */ }
   }
-  const startBtn = document.getElementById("start-btn");
-  if (startBtn) startBtn.addEventListener("click", begin);
-  // also allow space/enter/click on the title
-  window.addEventListener("keydown", (e) => {
-    if (!state.started && (e.key === " " || e.key === "Enter")) { e.preventDefault(); begin(); }
-  });
-  const ts = document.getElementById("title-screen");
-  if (ts) ts.addEventListener("click", begin);
+  // shown once, right after the character is locked in
+  function orientationThenPlay() {
+    if (!state.hasFlag("oriented")) openOrientation(() => state.setFlag("oriented"));
+  }
+  function newCharacter() {
+    // game goes "live" behind the modal (movement stays blocked while it's open)
+    state.started = true;
+    hideTitle();
+    openCharacterCreator({ mode: "onboarding", onReady: orientationThenPlay });
+  }
+  function continueGame() { startPlay(); }
+  function showTitle() {
+    state.started = false;
+    if (titleEl) titleEl.style.display = "";
+    buildMenu();
+    refreshContinueLine();
+  }
+  // expose the two entry points so Settings/Reset can route through them
+  state.toTitle = showTitle;
+  state.newGame = newCharacter;
+
+  function buildMenu() {
+    const returning = !!state.playerName;
+    menuItems = returning
+      ? [ { label: "CONTINUE", action: continueGame }, { label: "CHANGE CHARACTER", action: newCharacter } ]
+      : [ { label: "START GAME", action: newCharacter } ];
+    menuIdx = 0;
+    renderMenu();
+  }
+  function renderMenu() {
+    if (!menuEl) return;
+    menuEl.innerHTML = menuItems.map((m, i) =>
+      `<button class="arcade-item ${i === menuIdx ? "sel" : ""}" data-i="${i}">${i === menuIdx ? "\u25B6 " : "\u00A0\u00A0"}${m.label}</button>`
+    ).join("");
+    menuEl.querySelectorAll(".arcade-item").forEach((b) => {
+      b.addEventListener("click", () => { menuIdx = +b.dataset.i; menuItems[menuIdx].action(); });
+      b.addEventListener("mouseenter", () => { menuIdx = +b.dataset.i; renderMenu(); });
+    });
+  }
+  function moveMenu(d) { if (!menuItems.length) return; menuIdx = (menuIdx + d + menuItems.length) % menuItems.length; renderMenu(); }
+  function activateMenu() { if (menuItems[menuIdx]) menuItems[menuIdx].action(); }
+  function refreshContinueLine() {
+    const cont = document.getElementById("continue-line");
+    if (!cont) return;
+    if (state.playerName && state.solved.size > 0) {
+      const here = state.floor;
+      cont.textContent = `Welcome back, ${state.playerName} \u2014 ${state.solvedOnFloor(here)}/${scenarioCountForFloor(here)} tickets on ${FLOOR_META[here] ? FLOOR_META[here].name : here}.`;
+    } else if (state.playerName) {
+      cont.textContent = `Welcome back, ${state.playerName}.`;
+    } else {
+      cont.textContent = "";
+    }
+  }
+
+  buildMenu();
+  refreshContinueLine();
 
   // ---- topbar ----
   const resetBtn = document.getElementById("reset-btn");
   if (resetBtn) resetBtn.addEventListener("click", () => {
     if (!confirm("Clear ALL saved progress \u2014 day count, stats, character, and name \u2014 and start completely over?")) return;
     state.doReset();
-    openCharacterCreator();
+    showTitle();
   });
   const soundBtn = document.getElementById("sound-btn");
   if (soundBtn) soundBtn.addEventListener("click", () => state.setSound(!state.soundOn));
@@ -515,12 +574,6 @@ export async function startGame() {
   sizeCanvas(canvas, viewport);
 
   state.updateProgressUI();
-  // continue line on the title screen
-  const cont = document.getElementById("continue-line");
-  if (cont && state.solved.size > 0) {
-    const here = state.floor;
-    cont.textContent = `Progress found: ${state.solvedOnFloor(here)}/${scenarioCountForFloor(here)} tickets on ${FLOOR_META[here] ? FLOOR_META[here].name : here}.`;
-  }
 
   requestAnimationFrame(loop);
 }

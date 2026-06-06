@@ -9,7 +9,7 @@
 // customizer, but presets set it explicitly for a hand-tuned look.
 export const PRESETS = [
   { id: "helpdesk", name: "The Closer", role: "Help Desk Hero",
-    blurb: "Calm under a full queue. Has never once said 'have you tried turning it off and on' sarcastically.",
+    blurb: "Calm under a full queue. Never once said 'have you tried turning it off and on' sarcastically.",
     sprite: { body: "#2E6FB0", body2: "#1B4E84", accent: "#FCDE5A", hair: "#2C2C2A", skin: "#C9926B" } },
   { id: "sysadmin", name: "Root", role: "Sysadmin",
     blurb: "Lives in the server closet by choice. Backups tested, coffee strong.",
@@ -27,9 +27,21 @@ export const PRESETS = [
     blurb: "Turns chaos into a checklist. The change log is sacred.",
     sprite: { body: "#7F77DD", body2: "#534AB7", accent: "#F4C0D1", hair: "#6B4A2A", skin: "#E0B080" } },
   { id: "intern", name: "Fresh", role: "The Intern",
-    blurb: "Day one energy. Asks great questions. Going places, fast.",
+    blurb: "Day-one energy. Asks great questions. Going places, fast.",
     sprite: { body: "#EF9F27", body2: "#BA7517", accent: "#FFF3D6", hair: "#2C2C2A", skin: "#D8B088" } },
-  { id: "wildcard", name: "Wildcard", role: "?",
+  { id: "riff", name: "Riff", role: "The Metalhead",
+    blurb: "Patches servers to a double-kick beat. The band tee is technically business casual.",
+    sprite: { body: "#1f1f1d", body2: "#0d0d0c", accent: "#C0392B", hair: "#1a1a18", skin: "#D8B088", shades: true } },
+  { id: "spike", name: "Spike", role: "The Punk",
+    blurb: "Green mohawk, zero patience for default passwords. DIY or die.",
+    sprite: { body: "#B5179E", body2: "#7E1070", accent: "#39FF14", hair: "#2BD43E", skin: "#C9926B" } },
+  { id: "ace", name: "Ace", role: "Arcade Legend",
+    blurb: "Grew up on quarters and high scores. Treats every ticket like a boss fight.",
+    sprite: { body: "#2D7DD2", body2: "#1B5896", accent: "#FCDE5A", hair: "#412402", skin: "#E0B080", hat: "#C0392B" } },
+  { id: "glitch", name: "Glitch", role: "The Hacker",
+    blurb: "Hoodie up, terminal green, talks to the network like it owes them money.",
+    sprite: { body: "#23262B", body2: "#121417", accent: "#39FF14", hair: "#2C2C2A", skin: "#A8744E", hat: "#23262B" } },
+  { id: "wildcard", name: "Wildcard", role: "???",
     blurb: "Rolls in with a totally random look. Reroll until it's perfect.",
     sprite: null, random: true }
 ];

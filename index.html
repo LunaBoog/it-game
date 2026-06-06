@@ -46,21 +46,16 @@
         <div id="viewport" tabindex="0">
           <canvas id="world"></canvas>
 
-          <!-- title screen: gates input until the player begins -->
-          <div id="title-screen" class="title-screen">
-            <div class="title-card">
-              <div class="title-kicker">A PLAYABLE STUDY GUIDE &middot; FREE</div>
-              <div class="title-name">THE TICKET QUEUE</div>
-              <div class="title-blurb">
-                You're the IT person. Build your character, read the ticket monitor,
-                walk the office, find who filed each ticket, and learn the principle
-                behind every fix. Clear <strong>Floor 3</strong> (A+ / Network+), then
-                ride the elevator to <strong>Floor 7</strong> &mdash; Security Operations,
-                for Security+ and PenTest+. Earn XP, climb the career ladder, and spend
-                coins on drip. Let IT glow.
-              </div>
-              <button id="start-btn" class="title-start">&#9654;&nbsp; PRESS SPACE TO BEGIN</button>
+          <!-- title screen: 8-bit arcade start menu -->
+          <div id="title-screen" class="title-screen crt">
+            <div class="title-card arcade">
+              <div class="arcade-sub">&#9733; IT SUPPORT SIMULATOR &#9733;</div>
+              <div class="arcade-title" data-text="THE TICKET QUEUE">THE TICKET QUEUE</div>
+              <div class="arcade-tag">A FREE COMPTIA &middot; IT &middot; NETWORKING &middot; PENTEST STUDY GAME</div>
+              <div id="title-menu" class="arcade-menu"></div>
+              <div class="arcade-hint" id="title-hint">&#9650;&#9660; SELECT &nbsp;&middot;&nbsp; ENTER / SPACE: CONFIRM</div>
               <div id="continue-line" class="title-continue"></div>
+              <div class="arcade-credit">INSERT COIN &mdash; PLAYER 1</div>
             </div>
           </div>
 
