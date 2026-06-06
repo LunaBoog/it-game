@@ -19,9 +19,29 @@ export const FINDS = {
     icon: "\u{1F6E1}\uFE0F",
     name: "USB-Wise badge",
     note: "You handed a mystery USB to security instead of plugging it in. Attackers really do scatter these in parking lots hoping someone gets curious."
+  },
+
+  // ---- Floor 7: Security Operations keepsakes ----
+  hardener: {
+    icon: "\u{1F510}",
+    name: "Hardened badge",
+    note: "You found a switch on admin/admin and locked it down \u2014 strong creds, Telnet off, SSH on. Default credentials are how infrastructure gets owned."
+  },
+  surfaceShrink: {
+    icon: "\u{1F9F1}",
+    name: "Attack-Surface badge",
+    note: "You pulled Remote Desktop off the open internet and put it behind a VPN with MFA. Exposed RDP is a favorite ransomware front door."
+  },
+  secretSweeper: {
+    icon: "\u{1F511}",
+    name: "Secret-Sweeper badge",
+    note: "You caught a live API key committed to a public repo and rotated it before purging history. A leaked secret is compromised the moment it's public."
+  },
+  badgeChallenger: {
+    icon: "\u{1FAAA}",
+    name: "Badge-Challenger badge",
+    note: "You stopped a tailgater and walked them to reception. Physical access defeats every digital control, and challenging strangers is the job."
   }
-  // ---- more keepsakes land here as content grows ----
-  // breakroomAce: { icon:"\u{1F3C6}", name:"Break-room Ace", note:"Top run in the secret break-room game." }
 };
 
 export const FINDTOTAL = Object.keys(FINDS).length;

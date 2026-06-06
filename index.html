@@ -3,22 +3,24 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>IT Support Game</title>
+    <title>The Ticket Queue &mdash; a free CompTIA / IT / pentesting study game</title>
     <link rel="stylesheet" href="./src/styles.css" />
   </head>
   <body>
     <div class="topbar">
       <div>
-        <div class="topbar-label">IT support &middot; Floor 3</div>
+        <div class="topbar-label" id="loc-label">IT SUPPORT &middot; FLOOR 3</div>
         <div class="topbar-title" id="game-title">
-          Walk to a ticket. Arrow keys or WASD to move, space or E to interact.
+          A free, playable study guide for CompTIA, IT, networking &amp; pentesting. Arrow keys / WASD to move, E or space to interact.
         </div>
       </div>
       <div class="progress">
         <div class="pill pill-accent" id="day-pill">Day 1</div>
+        <div class="pill pill-floor" id="floor-pill" title="Current floor">Floor 3</div>
         <div class="pill" id="ticket-progress">0 / 7 tickets</div>
         <div class="pill" id="sq-progress">0 side quests</div>
         <div class="pill" id="coins-progress" title="Vending coins &middot; break-room tokens">&#129689; 0</div>
+        <button class="pill pill-button" id="exam-btn" title="Take a 5-question practice test on this floor">&#128221; Exam</button>
         <button class="pill pill-button" id="companion-btn" title="Open your Field Companion"><span id="finds-progress">&#9733; 0/2</span></button>
         <button class="pill pill-button" id="sound-btn" title="Toggle step sound">Sound: off</button>
         <button class="pill pill-button" id="reset-btn" title="Clear save and start over">Reset</button>
@@ -31,6 +33,7 @@
       <span><span class="dot dot-ticket"></span> ticket</span>
       <span><span class="dot dot-sq"></span> side quest</span>
       <span><span class="dot dot-done"></span> done</span>
+      <span>&#128221; Exam = practice test</span>
     </div>
 
     <div class="viewport-shell">
@@ -40,11 +43,15 @@
         <!-- title screen: gates input until the player begins -->
         <div id="title-screen" class="title-screen">
           <div class="title-card">
-            <div class="title-kicker">FLOOR 3 &middot; HELP DESK</div>
+            <div class="title-kicker">A PLAYABLE STUDY GUIDE &middot; FREE</div>
             <div class="title-name">THE TICKET QUEUE</div>
             <div class="title-blurb">
-              You're the IT person. Read the ticket monitor, walk the office,
-              find who filed each ticket, and learn the principle behind every fix.
+              You're the IT person. Read the ticket monitor, walk the office, find
+              who filed each ticket, and learn the principle behind every fix.
+              Clear <strong>Floor 3</strong> (A+ / Network+ fundamentals), then ride
+              the elevator to <strong>Floor 7</strong> &mdash; Security Operations, for
+              Security+ and PenTest+. Hit <strong>Exam</strong> anytime to practice-test
+              the whole floor. Let IT glow.
             </div>
             <button id="start-btn" class="title-start">&#9654;&nbsp; PRESS SPACE TO BEGIN</button>
             <div id="continue-line" class="title-continue"></div>
@@ -56,7 +63,7 @@
         </div>
 
         <div id="eod-hint" class="eod-hint" hidden>
-          All seven tickets are closed. Walk back to your ticket monitor.
+          Every ticket on this floor is closed. Walk back to your ticket monitor.
         </div>
 
         <div class="touch-controls" id="touch-controls" aria-hidden="true">

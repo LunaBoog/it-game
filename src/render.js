@@ -333,10 +333,62 @@ function drawUsb(ctx, px, py, tick) {
   if (Math.sin(tick / 16) > 0.6) { ctx.fillStyle = "rgba(255,255,255,0.8)"; ctx.fillRect(px + 20, py + 15, 1, 1); }
 }
 
+function drawElevator(ctx, px, py, tick) {
+  // a brushed-steel elevator door set in the wall, with a call light and arrows
+  ctx.fillStyle = "#3A3A38"; ctx.fillRect(px + 2, py + 1, TILE - 4, TILE - 2);          // frame
+  ctx.fillStyle = "#9AA0A6"; ctx.fillRect(px + 4, py + 3, TILE - 8, TILE - 5);          // doors
+  ctx.fillStyle = "#7E848A"; ctx.fillRect(px + TILE / 2 - 1, py + 3, 2, TILE - 5);      // seam
+  // brushed highlights
+  ctx.fillStyle = "#B7BDC2"; ctx.fillRect(px + 6, py + 4, 2, TILE - 7);
+  ctx.fillStyle = "#B7BDC2"; ctx.fillRect(px + TILE - 9, py + 4, 2, TILE - 7);
+  // call panel + blinking up light
+  ctx.fillStyle = "#2C2C2A"; ctx.fillRect(px + TILE - 6, py + 6, 3, 7);
+  const on = Math.sin(tick / 14) > 0;
+  ctx.fillStyle = on ? "#FCDE5A" : "#5A5208"; ctx.fillRect(px + TILE - 5, py + 7, 1, 2);
+  ctx.fillStyle = "#63B370"; ctx.fillRect(px + TILE - 5, py + 10, 1, 2);
+  // little up-arrow above the doors
+  ctx.fillStyle = "#FCDE5A";
+  ctx.fillRect(px + TILE / 2 - 1, py + 1, 2, 1);
+  ctx.fillRect(px + TILE / 2 - 2, py + 2, 4, 1);
+}
+
+function drawDevice(ctx, px, py, device, tick) {
+  // rack-mounted gear lying on a desk: switch / firewall / terminal each get a look
+  ctx.fillStyle = PAL.shadow; ctx.beginPath();
+  ctx.ellipse(px + TILE / 2, py + TILE - 5, 11, 3, 0, 0, Math.PI * 2); ctx.fill();
+  const blink = Math.sin(tick / 9) > 0;
+  if (device === "switch") {
+    // flat 1U switch with a row of link LEDs
+    ctx.fillStyle = "#2C2C2A"; ctx.fillRect(px + 4, py + 12, TILE - 8, 11);
+    ctx.fillStyle = "#1a1a18"; ctx.fillRect(px + 4, py + 12, TILE - 8, 2);
+    for (let i = 0; i < 6; i++) {
+      ctx.fillStyle = (i % 2 === 0) === blink ? "#63B370" : "#1d5a30";
+      ctx.fillRect(px + 7 + i * 3, py + 16, 2, 2);
+    }
+    ctx.fillStyle = "#9AA0A6"; ctx.fillRect(px + TILE - 9, py + 15, 3, 5); // uplink port
+  } else if (device === "firewall") {
+    // chunkier box, red status bar — the perimeter guardian
+    ctx.fillStyle = "#33312E"; ctx.fillRect(px + 5, py + 9, TILE - 10, 14);
+    ctx.fillStyle = "#1a1a18"; ctx.fillRect(px + 5, py + 9, TILE - 10, 3);
+    ctx.fillStyle = "#C0392B"; ctx.fillRect(px + 8, py + 14, TILE - 16, 2);   // brand stripe
+    ctx.fillStyle = blink ? "#F2C94C" : "#5A4708"; ctx.fillRect(px + 8, py + 18, 2, 2);
+    ctx.fillStyle = "#63B370"; ctx.fillRect(px + 12, py + 18, 2, 2);
+  } else {
+    // terminal: a little monitor showing a blinking prompt
+    ctx.fillStyle = "#2C2C2A"; ctx.fillRect(px + 6, py + 6, TILE - 12, 14);
+    ctx.fillStyle = "#0c1f14"; ctx.fillRect(px + 8, py + 8, TILE - 16, 10);
+    ctx.fillStyle = "#63B370"; ctx.fillRect(px + 10, py + 10, 5, 1);          // a line of text
+    ctx.fillStyle = "#63B370"; ctx.fillRect(px + 10, py + 13, 8, 1);
+    if (blink) { ctx.fillStyle = "#9FE1CB"; ctx.fillRect(px + 19, py + 13, 2, 2); } // cursor
+    ctx.fillStyle = "#5F5E5A"; ctx.fillRect(px + 11, py + 20, TILE - 22, 2);  // stand
+  }
+}
+
 // ---- which bubble (if any) floats over a prop ----
 function propBubbleKind(p, state) {
   const kind = p.kind || (p.isMonitor ? "monitor" : p.isPrinter ? "printer" : "");
-  if (kind === "printer" || kind === "usb") {
+  if (kind === "elevator") return null; // the lift never wears a marker
+  if (kind === "printer" || kind === "usb" || kind === "device") {
     return p.sideQuest ? (state.sqSolved.has(p.sideQuest) ? "done" : "sq") : null;
   }
   if (kind === "pet") return state.flags.has(p.doneFlag || "stashTaken") ? "done" : "quest";
@@ -450,6 +502,10 @@ export function draw(ctx, state, facedTarget) {
       drawStash(ctx, sx, sy, state.flags.has(p.doneFlag));
     } else if (kind === "usb") {
       drawUsb(ctx, sx, sy, state.tick);
+    } else if (kind === "elevator") {
+      drawElevator(ctx, sx, sy, state.tick);
+    } else if (kind === "device") {
+      drawDevice(ctx, sx, sy, p.device, state.tick);
     }
     const bk = propBubbleKind(p, state);
     if (bk) drawBubble(ctx, sx, sy, bk, state.tick);
@@ -468,7 +524,7 @@ export function draw(ctx, state, facedTarget) {
   }
 
   // prompt over a faced prop
-  if (facedTarget && ["monitor", "prop-sq", "pet", "search", "chest"].includes(facedTarget.kind) && !state.moving) {
+  if (facedTarget && ["monitor", "prop-sq", "pet", "search", "chest", "elevator"].includes(facedTarget.kind) && !state.moving) {
     const p = facedTarget.target;
     drawPrompt(ctx, p.x * TILE - camX, p.y * TILE - camY, state.tick);
   }

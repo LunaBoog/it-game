@@ -1,7 +1,10 @@
 // Game loop and input — drives the ported renderer (renderX/renderY pixel
 // positions, facing, smooth lerp walking, held-key continuous movement).
 
-import { isWalkable, NPCS, PROPS, PLAYER_START, TILE, MAP_W, MAP_H } from "./world.js";
+import {
+  isWalkable, NPCS, PROPS, PLAYER_START, TILE, MAP_W, MAP_H,
+  setFloor, FLOOR_ID, FLOOR_META, FLOOR_ORDER, LOC_LABEL
+} from "./world.js";
 import { draw, sizeCanvas, loadAssets } from "./render.js";
 import {
   loadSet, saveSet, clearAll,
@@ -12,9 +15,11 @@ import {
 import {
   initUI, openNpcChat, openTicketBoard, openSideQuest,
   openScenario, openEndOfDay, openIntro, handleEscape,
-  openPet, openSearch, openChest, openDiscoveries
+  openPet, openSearch, openChest, openDiscoveries,
+  openElevator, openQuiz
 } from "./ui.js";
 import { FINDS, FINDTOTAL } from "./collectables.js";
+import { scenarioIdsForFloor, scenarioCountForFloor } from "./scenarios.js";
 
 const DIRS = { up:[0,-1], down:[0,1], left:[-1,0], right:[1,0] };
 const KEY_TO_DIR = {
@@ -120,8 +125,14 @@ export async function startGame() {
   const ctx = canvas.getContext("2d");
   ctx.imageSmoothingEnabled = false;
 
+  // Restore which floor the player was on BEFORE we read PLAYER_START, so the
+  // spawn point and live MAP/NPCS/PROPS bindings all reflect the right floor.
+  const savedFloor = loadString("floor", "floor3");
+  setFloor(savedFloor);
+
   const state = {
-    map: "office",
+    map: FLOOR_ID,
+    floor: FLOOR_ID,
     px: PLAYER_START.x, py: PLAYER_START.y,
     renderX: PLAYER_START.x * TILE, renderY: PLAYER_START.y * TILE,
     facing: PLAYER_START.dir,
@@ -174,12 +185,42 @@ export async function startGame() {
       this.facing = PLAYER_START.dir; this.moving = false;
       this.updateProgressUI();
     },
+    // --- floors ---
+    // how many of THIS floor's tickets are solved (solved Set is shared across floors)
+    solvedOnFloor(floorId) {
+      return scenarioIdsForFloor(floorId).filter((id) => this.solved.has(id)).length;
+    },
+    floorCleared(floorId) {
+      return this.solvedOnFloor(floorId) >= scenarioCountForFloor(floorId);
+    },
+    goToFloor(id) {
+      setFloor(id);
+      this.floor = id; this.map = id; saveString("floor", id);
+      this.px = PLAYER_START.x; this.py = PLAYER_START.y;
+      this.renderX = this.px * TILE; this.renderY = this.py * TILE;
+      this.facing = PLAYER_START.dir; this.moving = false;
+      const lab = document.getElementById("loc-label");
+      if (lab) lab.textContent = LOC_LABEL;
+      const fp = document.getElementById("floor-pill");
+      if (fp) fp.textContent = FLOOR_META[id] ? FLOOR_META[id].name : id;
+      this.updateProgressUI();
+    },
     updateProgressUI() {
       document.getElementById("day-pill").textContent = `Day ${this.day}`;
-      document.getElementById("ticket-progress").textContent = `${this.solved.size} / 7 tickets`;
+      // Mark Floor 3 cleared (gates the elevator to Floor 7) the moment its
+      // tickets are all solved — idempotent, so safe to check every frame-ish.
+      if (this.floorCleared("floor3")) this.setFlag("floor3Cleared");
+      const here = this.floor;
+      const total = scenarioCountForFloor(here);
+      const done = this.solvedOnFloor(here);
+      document.getElementById("ticket-progress").textContent = `${done} / ${total} tickets`;
       const n = this.sqSolved.size;
       document.getElementById("sq-progress").textContent = `${n} side quest${n === 1 ? "" : "s"}`;
-      document.getElementById("eod-hint").hidden = !(this.solved.size === 7) || this.inEndOfDay;
+      document.getElementById("eod-hint").hidden = !(done === total) || this.inEndOfDay;
+      const fpill = document.getElementById("floor-pill");
+      if (fpill) fpill.textContent = FLOOR_META[here] ? FLOOR_META[here].name : here;
+      const lab = document.getElementById("loc-label");
+      if (lab) lab.textContent = LOC_LABEL;
       const fp = document.getElementById("finds-progress");
       if (fp) fp.textContent = `\u2605 ${this.finds.size}/${FINDTOTAL}`;
       const cp = document.getElementById("coins-progress");
@@ -215,6 +256,7 @@ export async function startGame() {
     const p = propAt(fx, fy);
     if (p) {
       if (p.isMonitor || p.kind === "monitor") return { kind: "monitor", target: p };
+      if (p.kind === "elevator") return { kind: "elevator", target: p };
       if (p.kind === "pet") return { kind: "pet", target: p };
       if (p.kind === "search") return { kind: "search", target: p };
       if (p.kind === "chest") return { kind: "chest", target: p };
@@ -248,7 +290,9 @@ export async function startGame() {
       else if (n.sideQuest && !state.sqSolved.has(n.sideQuest)) openSideQuest(n.sideQuest);
       else openNpcChat(n);
     } else if (t.kind === "monitor") {
-      if (state.solved.size === 7) openEndOfDay(); else openTicketBoard();
+      if (state.floorCleared(state.floor)) openEndOfDay(); else openTicketBoard();
+    } else if (t.kind === "elevator") {
+      openElevator(t.target);
     } else if (t.kind === "pet") {
       openPet(t.target);
     } else if (t.kind === "search") {
@@ -268,6 +312,7 @@ export async function startGame() {
       let label = "Interact";
       if (t.kind === "npc") label = `Talk to ${t.target.name}`;
       else if (t.kind === "monitor") label = "Read ticket board";
+      else if (t.kind === "elevator") label = "Take the elevator";
       else if (t.kind === "pet") label = `Approach ${t.target.name || "the cat"}`;
       else if (t.kind === "search") label = `Examine ${t.target.label}`;
       else if (t.kind === "chest") label = `Check ${t.target.label}`;
@@ -361,18 +406,24 @@ export async function startGame() {
   document.getElementById("reset-btn").addEventListener("click", () => {
     if (!confirm("Clear ALL saved progress \u2014 day count, stats, and your name \u2014 and start completely over?")) return;
     clearAll();
+    setFloor("floor3");
+    state.floor = "floor3"; state.map = "floor3";
     state.solved = new Set(); state.sqSolved = new Set(); state.sharp = new Set();
     state.flags = new Set(); state.finds = new Set(); state.coins = 0; state.tokens = 0;
     state.playerName = ""; state.day = 1; state.lifeTickets = 0; state.lifeSideQuests = 0;
     state.px = PLAYER_START.x; state.py = PLAYER_START.y;
     state.renderX = state.px * TILE; state.renderY = state.py * TILE;
     state.facing = PLAYER_START.dir; state.moving = false;
+    const lab = document.getElementById("loc-label");
+    if (lab) lab.textContent = LOC_LABEL;
     state.updateProgressUI();
     openIntro();
   });
   document.getElementById("sound-btn").addEventListener("click", () => state.setSound(!state.soundOn));
   const compBtn = document.getElementById("companion-btn");
   if (compBtn) compBtn.addEventListener("click", () => { if (!isModalOpen()) openDiscoveries(); });
+  const examBtn = document.getElementById("exam-btn");
+  if (examBtn) examBtn.addEventListener("click", () => { if (!isModalOpen()) openQuiz(); });
 
   function onResize() { sizeCanvas(canvas, viewport); }
   window.addEventListener("resize", onResize);
@@ -381,7 +432,10 @@ export async function startGame() {
   state.updateProgressUI();
   // continue line on the title screen
   const cont = document.getElementById("continue-line");
-  if (cont && state.solved.size > 0) cont.textContent = `Progress found: ${state.solved.size}/7 tickets solved today.`;
+  if (cont && state.solved.size > 0) {
+    const here = state.floor;
+    cont.textContent = `Progress found: ${state.solvedOnFloor(here)}/${scenarioCountForFloor(here)} tickets on ${FLOOR_META[here] ? FLOOR_META[here].name : here}.`;
+  }
 
   requestAnimationFrame(loop);
 }

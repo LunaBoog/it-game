@@ -21,6 +21,7 @@ const MODULE_ORDER = [
   "scenarios.js",
   "sideQuests.js",
   "collectables.js",
+  "quiz.js",
   "render.js",
   "ui.js",
   "game.js"

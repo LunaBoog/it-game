@@ -569,21 +569,105 @@ input[type="text"]:focus { outline: none; border-color: var(--info); }
 .find-text { min-width: 0; }
 .find-name { font-weight: 600; font-size: 13px; }
 .find-note { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+/* --- Floor pill + Exam button (topbar) ------------------------------------ */
+.pill-floor {
+  background: #e9f7f4; color: #0e6d62; font-weight: 600;
+  border: 0.5px solid rgba(14, 109, 98, 0.25);
+}
+#exam-btn {
+  border-color: rgba(24, 95, 165, 0.5);
+  color: var(--info-text); font-weight: 600;
+}
+#exam-btn:hover { background: var(--info-bg); }
+
+/* --- Elevator / floor selector ------------------------------------------- */
+.floor-list { display: flex; flex-direction: column; gap: 10px; }
+.floor-card {
+  padding: 12px 14px; border-radius: var(--radius-md);
+  background: var(--surface-2); border: 0.5px solid var(--border);
+}
+.floor-card.is-here { border-color: rgba(14, 109, 98, 0.5); background: #eef8f5; }
+.floor-card.is-locked { opacity: 0.7; }
+.floor-card-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+}
+.floor-card-name { font-weight: 700; font-size: 15px; }
+.floor-card-tag { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+.floor-card-blurb { font-size: 12px; color: var(--text-faint); margin: 6px 0 10px; }
+.floor-chip {
+  font-size: 10px; padding: 2px 8px; border-radius: 999px; white-space: nowrap;
+  text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600;
+}
+.floor-chip.here { background: #d7efe9; color: #0e6d62; }
+.floor-chip.locked { background: var(--surface); color: var(--text-faint); border: 0.5px solid var(--border); }
+.floor-chip.open { background: var(--info-bg); color: var(--info-text); }
+.floor-btn {
+  width: 100%; padding: 8px 12px; border-radius: var(--radius-sm);
+  font-family: inherit; font-size: 13px; cursor: pointer;
+  border: 0.5px solid var(--border-strong); background: var(--surface); color: var(--text-muted);
+}
+.floor-btn[disabled] { opacity: 0.55; cursor: default; }
+.floor-btn.primary-btn { background: #185fa5; color: #fff; border: none; }
+.floor-btn.primary-btn:hover { background: #14528f; }
+
+/* --- Ticket-board cert chip ---------------------------------------------- */
+.ticket-cert {
+  font-size: 9px; vertical-align: middle; margin-left: 4px;
+  padding: 1px 6px; border-radius: 999px;
+  background: var(--info-bg); color: var(--info-text);
+  text-transform: uppercase; letter-spacing: 0.03em; font-weight: 600;
+}
+
+/* --- Practice Test (quiz) ------------------------------------------------- */
+.quiz-progress-row {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 11px; color: var(--text-faint); text-transform: uppercase;
+  letter-spacing: 0.04em; margin-bottom: 8px;
+}
+.quiz-cert {
+  padding: 1px 7px; border-radius: 999px;
+  background: var(--info-bg); color: var(--info-text); font-weight: 600;
+}
+.quiz-question { font-size: 15px; font-weight: 600; line-height: 1.4; margin-bottom: 12px; }
+.quiz-opts { margin-bottom: 4px; }
+.quiz-opt {
+  width: 100%; text-align: left; padding: 9px 12px; border-radius: var(--radius-sm);
+  font-family: inherit; font-size: 13px; cursor: pointer; line-height: 1.35;
+  border: 0.5px solid var(--border-strong); background: var(--surface); color: var(--text);
+}
+.quiz-opt:hover:not([disabled]) { background: var(--surface-2); }
+.quiz-opt[disabled] { cursor: default; }
+.quiz-opt.correct { background: var(--success-bg); color: var(--success-text); border-color: var(--success); font-weight: 600; }
+.quiz-opt.wrong   { background: var(--danger-bg);  color: var(--danger-text);  border-color: var(--danger); }
+
+.quiz-score-wrap { text-align: center; padding: 8px 0 4px; }
+.quiz-score-num { font-size: 34px; font-weight: 800; line-height: 1; }
+.quiz-score-pct { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+.quiz-score-bar {
+  height: 8px; border-radius: 999px; background: var(--surface-2);
+  margin: 12px auto 10px; max-width: 280px; overflow: hidden;
+}
+.quiz-score-bar > span { display: block; height: 100%; background: #2bb3a3; border-radius: 999px; }
+.quiz-score-verdict { font-size: 13px; color: var(--text-muted); max-width: 320px; margin: 0 auto; }
+.quiz-best { font-size: 12px; font-weight: 600; color: var(--info-text); margin-top: 8px; }
 </style>
 </head>
 <body>
 <div class="topbar">
       <div>
-        <div class="topbar-label">IT support &middot; Floor 3</div>
+        <div class="topbar-label" id="loc-label">IT SUPPORT &middot; FLOOR 3</div>
         <div class="topbar-title" id="game-title">
-          Walk to a ticket. Arrow keys or WASD to move, space or E to interact.
+          A free, playable study guide for CompTIA, IT, networking &amp; pentesting. Arrow keys / WASD to move, E or space to interact.
         </div>
       </div>
       <div class="progress">
         <div class="pill pill-accent" id="day-pill">Day 1</div>
+        <div class="pill pill-floor" id="floor-pill" title="Current floor">Floor 3</div>
         <div class="pill" id="ticket-progress">0 / 7 tickets</div>
         <div class="pill" id="sq-progress">0 side quests</div>
         <div class="pill" id="coins-progress" title="Vending coins &middot; break-room tokens">&#129689; 0</div>
+        <button class="pill pill-button" id="exam-btn" title="Take a 5-question practice test on this floor">&#128221; Exam</button>
         <button class="pill pill-button" id="companion-btn" title="Open your Field Companion"><span id="finds-progress">&#9733; 0/2</span></button>
         <button class="pill pill-button" id="sound-btn" title="Toggle step sound">Sound: off</button>
         <button class="pill pill-button" id="reset-btn" title="Clear save and start over">Reset</button>
@@ -596,6 +680,7 @@ input[type="text"]:focus { outline: none; border-color: var(--info); }
       <span><span class="dot dot-ticket"></span> ticket</span>
       <span><span class="dot dot-sq"></span> side quest</span>
       <span><span class="dot dot-done"></span> done</span>
+      <span>&#128221; Exam = practice test</span>
     </div>
 
     <div class="viewport-shell">
@@ -605,11 +690,15 @@ input[type="text"]:focus { outline: none; border-color: var(--info); }
         <!-- title screen: gates input until the player begins -->
         <div id="title-screen" class="title-screen">
           <div class="title-card">
-            <div class="title-kicker">FLOOR 3 &middot; HELP DESK</div>
+            <div class="title-kicker">A PLAYABLE STUDY GUIDE &middot; FREE</div>
             <div class="title-name">THE TICKET QUEUE</div>
             <div class="title-blurb">
-              You're the IT person. Read the ticket monitor, walk the office,
-              find who filed each ticket, and learn the principle behind every fix.
+              You're the IT person. Read the ticket monitor, walk the office, find
+              who filed each ticket, and learn the principle behind every fix.
+              Clear <strong>Floor 3</strong> (A+ / Network+ fundamentals), then ride
+              the elevator to <strong>Floor 7</strong> &mdash; Security Operations, for
+              Security+ and PenTest+. Hit <strong>Exam</strong> anytime to practice-test
+              the whole floor. Let IT glow.
             </div>
             <button id="start-btn" class="title-start">&#9654;&nbsp; PRESS SPACE TO BEGIN</button>
             <div id="continue-line" class="title-continue"></div>
@@ -621,7 +710,7 @@ input[type="text"]:focus { outline: none; border-color: var(--info); }
         </div>
 
         <div id="eod-hint" class="eod-hint" hidden>
-          All seven tickets are closed. Walk back to your ticket monitor.
+          Every ticket on this floor is closed. Walk back to your ticket monitor.
         </div>
 
         <div class="touch-controls" id="touch-controls" aria-hidden="true">
@@ -727,7 +816,13 @@ function clearAll() {
 
 /* ===== src/world.js ===== */
 // World data: the map, the rooms, the people, the things you can interact with.
-// Edit this file to change the office layout or to add new NPCs / props.
+//
+// The game now has TWO playable floors, reached by an elevator:
+//   floor3 = Help Desk (fundamentals)   floor7 = Security Operations (advanced)
+//
+// MAP / ROOMS / NPCS / PROPS / PLAYER_START / LOC_LABEL / FLOOR_ID are exported
+// as `let` and reassigned by setFloor(id). ES-module live bindings mean the
+// renderer and engine see the swap automatically \u2014 no per-floor branching.
 const TILE = 32;
 const MAP_W = 30;
 const MAP_H = 22;
@@ -735,10 +830,7 @@ const MAP_H = 22;
 // Tile codes:
 //   W wall   . office floor   o open-plan carpet   e cool/exam floor
 //   D desk (solid)   c chair (walkable)   S server rack (solid)
-//   X exit/door marker (walkable, cosmetic)
 // The map is built programmatically so every row is guaranteed uniform width.
-// Rooms are carved as rectangles, then furniture is stamped in.
-
 function blank() {
   const m = [];
   for (let y = 0; y < MAP_H; y++) {
@@ -756,54 +848,64 @@ function carve(m, x0, y0, w, h, tile) {
 function door(m, x, y) { if (m[y] && m[y][x] !== undefined) m[y][x] = "."; }
 function stamp(m, x, y, tile) { if (m[y] && m[y][x] !== undefined) m[y][x] = tile; }
 
-function buildMap() {
+// Shared office skeleton. Both floors share the proven, fully-reachable layout;
+// floor 7 only re-skins non-blocking floor tiles for a data-center feel, so its
+// walkability is identical to floor 3.
+function buildOfficeMap() {
   const m = blank();
-
-  // Rooms separated by wall columns 6 & 19 and wall rows 7 & 14.
   // Top band (rows 1-6)
-  carve(m, 1, 1, 5, 6, ".");     // IT room        (x 1..5)
-  carve(m, 7, 1, 12, 6, ".");    // Reception      (x 7..18)
-  carve(m, 20, 1, 8, 6, "e");    // Open desks     (x 20..27)
+  carve(m, 1, 1, 5, 6, ".");     // lobby / IT room
+  carve(m, 7, 1, 12, 6, ".");    // reception / SOC bullpen
+  carve(m, 20, 1, 8, 6, "e");    // open desks / threat intel
   // Middle band (rows 8-13)
-  carve(m, 1, 8, 5, 6, ".");     // Print room     (x 1..5)
-  carve(m, 7, 8, 12, 6, "o");    // Open desks 2   (x 7..18)
-  carve(m, 20, 8, 8, 6, "o");    // Manager        (x 20..27)
+  carve(m, 1, 8, 5, 6, ".");     // print room / network closet
+  carve(m, 7, 8, 12, 6, "o");    // open desks 2 / analyst pit
+  carve(m, 20, 8, 8, 6, "o");    // manager / wireless lab
   // Bottom band (rows 15-20)
-  carve(m, 1, 15, 5, 6, ".");    // Server closet  (x 1..5)
-  carve(m, 7, 15, 9, 6, "e");    // Conf room      (x 7..15)
-  carve(m, 17, 15, 11, 6, "o");  // Accounting     (x 17..27)
+  carve(m, 1, 15, 5, 6, ".");    // server closet / data center
+  carve(m, 7, 15, 9, 6, "e");    // conf room / IR war room
+  carve(m, 17, 15, 11, 6, "o");  // accounting / red-team lab
 
-  // Two-tile doorways through the separating walls (wider = easier to navigate)
-  door(m, 6, 3);  door(m, 6, 4);    door(m, 19, 3); door(m, 19, 4);   // top horizontals
-  door(m, 6, 10); door(m, 6, 11);   door(m, 19, 10); door(m, 19, 11); // middle horizontals
-  door(m, 6, 18); door(m, 6, 17);   door(m, 16, 18); door(m, 16, 17); // bottom horizontals
-  door(m, 3, 7);  door(m, 4, 7);    door(m, 12, 7); door(m, 13, 7);  door(m, 24, 7);  door(m, 25, 7);  // top<->mid
-  door(m, 3, 14); door(m, 4, 14);   door(m, 11, 14); door(m, 12, 14); door(m, 24, 14); door(m, 25, 14); // mid<->bottom
+  // Doorways
+  door(m, 6, 3);  door(m, 6, 4);    door(m, 19, 3); door(m, 19, 4);
+  door(m, 6, 10); door(m, 6, 11);   door(m, 19, 10); door(m, 19, 11);
+  door(m, 6, 18); door(m, 6, 17);   door(m, 16, 18); door(m, 16, 17);
+  door(m, 3, 7);  door(m, 4, 7);    door(m, 12, 7); door(m, 13, 7);  door(m, 24, 7);  door(m, 25, 7);
+  door(m, 3, 14); door(m, 4, 14);   door(m, 11, 14); door(m, 12, 14); door(m, 24, 14); door(m, 25, 14);
 
-  // Furniture
-  stamp(m, 2, 2, "D"); stamp(m, 3, 2, "D"); stamp(m, 2, 4, "c");                 // IT
+  // Furniture (solid: D, S \u00b7 walkable: c)
+  stamp(m, 2, 2, "D"); stamp(m, 3, 2, "D"); stamp(m, 2, 4, "c");
   for (let x = 9; x <= 15; x++) stamp(m, x, 2, "D");
-  stamp(m, 9, 4, "c"); stamp(m, 15, 4, "c");                                     // Reception
-  stamp(m, 22, 2, "D"); stamp(m, 26, 2, "D"); stamp(m, 22, 5, "D"); stamp(m, 26, 5, "D"); // Open desks
-  stamp(m, 2, 9, "D");                                                           // Print
+  stamp(m, 9, 4, "c"); stamp(m, 15, 4, "c");
+  stamp(m, 22, 2, "D"); stamp(m, 26, 2, "D"); stamp(m, 22, 5, "D"); stamp(m, 26, 5, "D");
+  stamp(m, 2, 9, "D");
   stamp(m, 9, 9, "D"); stamp(m, 12, 9, "D"); stamp(m, 15, 9, "D");
-  stamp(m, 9, 12, "D"); stamp(m, 15, 12, "D");                                   // Open desks 2
-  stamp(m, 22, 9, "D"); stamp(m, 25, 9, "D"); stamp(m, 25, 12, "c");             // Manager
-  stamp(m, 2, 16, "S"); stamp(m, 4, 16, "S"); stamp(m, 2, 19, "S"); stamp(m, 4, 19, "S"); // Server
+  stamp(m, 9, 12, "D"); stamp(m, 15, 12, "D");
+  stamp(m, 22, 9, "D"); stamp(m, 25, 9, "D"); stamp(m, 25, 12, "c");
+  stamp(m, 2, 16, "S"); stamp(m, 4, 16, "S"); stamp(m, 2, 19, "S"); stamp(m, 4, 19, "S");
   for (let x = 9; x <= 13; x++) stamp(m, x, 17, "D");
-  stamp(m, 9, 19, "c"); stamp(m, 13, 19, "c");                                   // Conf
-  stamp(m, 19, 16, "D"); stamp(m, 26, 16, "D"); stamp(m, 19, 19, "D"); stamp(m, 26, 19, "D"); // Accounting
+  stamp(m, 9, 19, "c"); stamp(m, 13, 19, "c");
+  stamp(m, 19, 16, "D"); stamp(m, 26, 16, "D"); stamp(m, 19, 19, "D"); stamp(m, 26, 19, "D");
 
   return m.map((row) => row.join(""));
 }
-const MAP = buildMap();
+
+// Cosmetic only: recolor open carpet to "cool" data-center floor for floor 7.
+// Touches NON-blocking floor glyphs only, so walkability never changes.
+function coolifyFloor(rows) {
+  return rows.map((row) =>
+    row.split("").map((ch) => (ch === "o" ? "e" : ch === "." ? "e" : ch)).join("")
+  );
+}
+
+const OFFICE = buildOfficeMap();
+const SOC = coolifyFloor(OFFICE);
 
 const BLOCKING = new Set(["W", "D", "S"]);
-function isWalkable(x, y) {
-  if (x < 0 || y < 0 || x >= MAP_W || y >= MAP_H) return false;
-  return !BLOCKING.has(MAP[y][x]);
-}
-const ROOMS = [
+const PLAYER_SPRITE = { body:"#2E6FB0", body2:"#1B4E84", accent:"#FCDE5A", hair:"#2C2C2A", skin:"#C9926B" };
+
+// ---- FLOOR 3 rooms / people / props (the original Help Desk) --------------
+const ROOMS3 = [
   { name: "IT room",       x: 1,  y: 1,  w: 5,  h: 6 },
   { name: "Reception",     x: 7,  y: 1,  w: 12, h: 6 },
   { name: "Open desks",    x: 20, y: 1,  w: 8,  h: 6 },
@@ -815,156 +917,158 @@ const ROOMS = [
   { name: "Accounting",    x: 17, y: 15, w: 11, h: 6 }
 ];
 
-// NPCs each get a `sprite` identity so the renderer draws a real pixel person.
-const NPCS = [
-  {
-    id: "karen", name: "Karen", role: "Receptionist",
-    x: 13, y: 4, ticket: "monitor",
+const NPCS3 = [
+  { id: "karen", name: "Karen", role: "Receptionist", x: 13, y: 4, ticket: "monitor",
     sprite: { body:"#D4537E", body2:"#993556", accent:"#FCDE5A", hair:"#6B4A2A", skin:"#E0B080" },
-    chat: [
-      "Thanks for fixing my screen last week.",
-      "Phones have been quiet today, knock on wood.",
-      "Don't roll your chair over your cables. Lesson learned."
-    ]
-  },
-  {
-    id: "marcus", name: "Marcus", role: "Open desks",
-    x: 22, y: 3, ticket: "internet-down",
+    chat: ["Thanks for fixing my screen last week.","Phones have been quiet today, knock on wood.","Don't roll your chair over your cables. Lesson learned."] },
+  { id: "marcus", name: "Marcus", role: "Open desks", x: 22, y: 3, ticket: "internet-down",
     sprite: { body:"#1D9E75", body2:"#0F6E56", accent:"#9FE1CB", hair:"#2C2C2A", skin:"#8A5A3A" },
-    chat: [
-      "Yeah, I know now \u2014 scope before blaming the wifi.",
-      "Slack works, internet works, I was being dramatic. Sorry.",
-      "If I file a ticket again, ask me what else is broken first."
-    ]
-  },
-  {
-    id: "priya", name: "Priya", role: "Open desks",
-    x: 26, y: 4, ticket: "dns",
+    chat: ["Yeah, I know now \u2014 scope before blaming the wifi.","Slack works, internet works, I was being dramatic. Sorry.","If I file a ticket again, ask me what else is broken first."] },
+  { id: "priya", name: "Priya", role: "Open desks", x: 26, y: 4, ticket: "dns",
     sprite: { body:"#7F77DD", body2:"#534AB7", accent:"#F4C0D1", hair:"#1a1a18", skin:"#C9926B" },
-    chat: [
-      "Hostnames are not the same as IPs. I get it now.",
-      "Fileshare's been solid since you flushed DNS.",
-      "I made a sticky note: ping by IP first."
-    ]
-  },
-  {
-    id: "dana", name: "Dana", role: "Print room",
-    x: 3, y: 10, ticket: "printer",
+    chat: ["Hostnames are not the same as IPs. I get it now.","Fileshare's been solid since you flushed DNS.","I made a sticky note: ping by IP first."] },
+  { id: "dana", name: "Dana", role: "Print room", x: 3, y: 10, ticket: "printer",
     sprite: { body:"#BA7517", body2:"#854F0B", accent:"#FCDE5A", hair:"#888780", skin:"#D8B088" },
-    chat: [
-      "Windows updates strike again, huh.",
-      "Driver's been good since you fixed it. Thanks.",
-      "I tell people now: 'check the queue first.'"
-    ]
-  },
-  {
-    id: "jordan", name: "Jordan", role: "Open desks 2",
-    x: 12, y: 10, ticket: "slow",
+    chat: ["Windows updates strike again, huh.","Driver's been good since you fixed it. Thanks.","I tell people now: 'check the queue first.'"] },
+  { id: "jordan", name: "Jordan", role: "Open desks 2", x: 12, y: 10, ticket: "slow",
     sprite: { body:"#0F6E56", body2:"#085041", accent:"#85B7EB", hair:"#412402", skin:"#8A5A3A" },
-    chat: [
-      "I close my tabs now. Mostly.",
-      "Wasn't the wifi. Got it.",
-      "Task Manager is my friend. Reluctantly."
-    ]
-  },
-  {
-    id: "riley", name: "Riley", role: "Open desks 2",
-    x: 15, y: 11, ticket: "permissions",
+    chat: ["I close my tabs now. Mostly.","Wasn't the wifi. Got it.","Task Manager is my friend. Reluctantly."] },
+  { id: "riley", name: "Riley", role: "Open desks 2", x: 15, y: 11, ticket: "permissions",
     sprite: { body:"#D85A30", body2:"#993C1D", accent:"#FCDE5A", hair:"#BA7517", skin:"#E0B080" },
-    chat: [
-      "Color access went through, thanks.",
-      "Operations finally got added to the group. Took a week.",
-      "If Sam can do it and I can't, it's me, not the printer."
-    ]
-  },
-  {
-    id: "chen", name: "Mgr Chen", role: "Manager",
-    x: 24, y: 12, ticket: "change",
+    chat: ["Color access went through, thanks.","Operations finally got added to the group. Took a week.","If Sam can do it and I can't, it's me, not the printer."] },
+  { id: "chen", name: "Mgr Chen", role: "Manager", x: 24, y: 12, ticket: "change",
     sprite: { body:"#378ADD", body2:"#185FA5", accent:"#F1EFE8", hair:"#2C2C2A", skin:"#B08050", glasses:true },
-    chat: [
-      "Email's good. Change-log's now a daily check.",
-      "DNS migrations on a Friday. Lesson learned for everyone.",
-      "Thanks for being calm when I was not."
-    ]
-  },
-  {
-    id: "ed", name: "Ed", role: "Accounting",
-    x: 19, y: 18, sideQuest: "unplugged",
+    chat: ["Email's good. Change-log's now a daily check.","DNS migrations on a Friday. Lesson learned for everyone.","Thanks for being calm when I was not."] },
+  { id: "ed", name: "Ed", role: "Accounting", x: 19, y: 18, sideQuest: "unplugged",
     sprite: { body:"#888780", body2:"#5F5E5A", accent:"#B5D4F4", hair:"#C8C4B4", skin:"#D8B088", glasses:true },
-    chat: [
-      "I check the power strip first now. Every time.",
-      "Don't tell anyone what the problem was.",
-      "I keep tape over the strip switch. No more accidents."
-    ]
-  },
-  {
-    id: "lisa", name: "Lisa", role: "Accounting",
-    x: 26, y: 18, sideQuest: "monitorStandby",
+    chat: ["I check the power strip first now. Every time.","Don't tell anyone what the problem was.","I keep tape over the strip switch. No more accidents."] },
+  { id: "lisa", name: "Lisa", role: "Accounting", x: 26, y: 18, sideQuest: "monitorStandby",
     sprite: { body:"#534AB7", body2:"#3C3489", accent:"#F4C0D1", hair:"#2C2C2A", skin:"#C9926B" },
-    chat: [
-      "Amber means asleep. Got it.",
-      "I wiggle the mouse before panicking now.",
-      "It's amazing how much I assumed was broken."
-    ]
-  }
+    chat: ["Amber means asleep. Got it.","I wiggle the mouse before panicking now.","It's amazing how much I assumed was broken."] }
 ];
-const PLAYER_SPRITE = { body:"#2E6FB0", body2:"#1B4E84", accent:"#FCDE5A", hair:"#2C2C2A", skin:"#C9926B" };
 
-// Props are interactable objects dispatched by `kind` (see game.js / render.js).
-// Kinds in use:  monitor | printer | pet | search | chest | usb
-//   monitor  the ticket board (opens the queue / end-of-day)
-//   printer  the low-ink side quest prop
-//   pet      a companion you befriend over several steps; bootstraps the economy
-//   search   furniture you examine; can grant a carry-flag and/or a collectable
-//   chest     a hidden stash, invisible until `needFlag` is set; pays out the economy
-//   usb       a found object that opens a one-shot awareness side quest
-// Optional fields:
-//   walkable:true   prop does NOT block its tile (small floor objects like a USB)
-//   needFlag        prop is invisible/non-blocking until state.flags has this
-//   doneFlag        once set, the prop reads as "done"
-const PROPS = [
-  { id: "ticket-monitor", x: 4, y: 4,  label: "Ticket monitor",     room: "IT room",    kind: "monitor", isMonitor: true },
-  { id: "sq-printer-ink", x: 4, y: 10, label: "Printer (low ink?)",  room: "Print room", kind: "printer", sideQuest: "printerInk", isPrinter: true },
-
-  // --- SDV layer: the pet + economy bootstrap ---------------------------------
-  // Mittens the office cat. Meet her hungry, find her food, feed her; she pays
-  // you back by pawing open a hidden ceiling-tile stash (the `chest` below).
+// Props are interactable objects dispatched by `kind`. Kinds:
+//   monitor | printer | pet | search | chest | usb | elevator | device
+// Optional: walkable, needFlag, doneFlag, sideQuest, device (art for `device`).
+const PROPS3 = [
+  { id: "ticket-monitor", x: 4, y: 4,  label: "Ticket monitor", room: "IT room", kind: "monitor", isMonitor: true },
+  { id: "elevator-3", x: 5, y: 1, label: "the elevator", room: "IT room", kind: "elevator" },
+  { id: "sq-printer-ink", x: 4, y: 10, label: "Printer (low ink?)", room: "Print room", kind: "printer", sideQuest: "printerInk", isPrinter: true },
   { id: "cat", x: 8, y: 18, label: "the office cat", room: "Conf. room", kind: "pet", name: "Mittens" },
-
-  // Cat food lives in a supply cabinet over in the print room (so befriending
-  // her makes you walk the floor — the whole point of side quests).
   { id: "cat-food", x: 4, y: 12, label: "supply cabinet", room: "Print room", kind: "search",
-    title: "SUPPLY CABINET",
-    giveFlag: "hasCatFood", needPriorFlag: "catMet",
+    title: "SUPPLY CABINET", giveFlag: "hasCatFood", needPriorFlag: "catMet",
     lockedText: "Toner, pens, a stack of paper. Nothing you need yet.",
     take: "Behind the toner: an unopened pouch of cat food. Somebody used to look after her.",
     empty: "You already grabbed the cat food. The rest is just toner." },
-
-  // The hidden stash. Invisible (and non-blocking) until Mittens reveals it.
   { id: "cat-stash", x: 14, y: 16, label: "loose ceiling tile", room: "Conf. room", kind: "chest",
     walkable: true, needFlag: "catRevealed", doneFlag: "stashTaken",
-    coins: 15, tokens: 1, findReward: "charm",
-    title: "LOOSE CEILING TILE",
+    coins: 15, tokens: 1, findReward: "charm", title: "LOOSE CEILING TILE",
     give: "Mittens bats a sagging ceiling tile until it tips. Taped above it is an old admin's stash: a fistful of vending coins, one break-room token, and her spare collar charm.",
     done: "Empty now. Mittens looks extremely pleased with herself." },
-
-  // A mystery USB stick on the open-plan carpet. Walkable so it doesn't wall off
-  // the floor; opens a phishing-awareness one-shot (see sideQuests.js: usbDrop).
-  { id: "usb-drop", x: 9, y: 11, label: "a USB stick on the floor", room: "Open desks 2",
-    kind: "usb", walkable: true, sideQuest: "usbDrop" }
+  { id: "usb-drop", x: 9, y: 11, label: "a USB stick on the floor", room: "Open desks 2", kind: "usb", walkable: true, sideQuest: "usbDrop" }
 ];
-const PLAYER_START = { x: 2, y: 5, dir: "down" };
-const LOC_LABEL = "IT SUPPORT \u00b7 FLOOR 3";
+
+// ---- FLOOR 7 rooms / people / props (Security Operations) -----------------
+const ROOMS7 = [
+  { name: "Elevator lobby", x: 1,  y: 1,  w: 5,  h: 6 },
+  { name: "SOC bullpen",    x: 7,  y: 1,  w: 12, h: 6 },
+  { name: "Threat intel",   x: 20, y: 1,  w: 8,  h: 6 },
+  { name: "Network closet", x: 1,  y: 8,  w: 5,  h: 6 },
+  { name: "Analyst pit",    x: 7,  y: 8,  w: 12, h: 6 },
+  { name: "Wireless lab",   x: 20, y: 8,  w: 8,  h: 6 },
+  { name: "Data center",    x: 1,  y: 15, w: 5,  h: 6 },
+  { name: "IR war room",    x: 7,  y: 15, w: 9,  h: 6 },
+  { name: "Red-team lab",   x: 17, y: 15, w: 11, h: 6 }
+];
+
+const NPCS7 = [
+  { id: "sofia", name: "Sofia", role: "SOC analyst", x: 13, y: 4, ticket: "phish-ir",
+    sprite: { body:"#2BB3A3", body2:"#178277", accent:"#D6FFF8", hair:"#2C2C2A", skin:"#C9926B" },
+    chat: ["Revoke the session, not just the email. Lesson learned.","I check Reply-To and SPF on every 'IT' email now.","Tokens can be replayed \u2014 MFA isn't a magic shield."] },
+  { id: "wes", name: "Wes", role: "Red teamer", x: 22, y: 3, ticket: "privesc",
+    sprite: { body:"#C0392B", body2:"#8E261B", accent:"#2C2C2A", hair:"#1a1a18", skin:"#8A5A3A" },
+    chat: ["sudo -l before anything fancy. Always.","Misconfig over exploit. Cleaner and it actually works.","Respect the scope. That's the whole job."] },
+  { id: "nadia", name: "Nadia", role: "Detection eng", x: 26, y: 4, ticket: "lateral",
+    sprite: { body:"#6C5CE7", body2:"#4A3FB0", accent:"#E6E1FF", hair:"#2C2C2A", skin:"#E0B080" },
+    chat: ["One source, many targets, 2am. That's the alert I tuned.","Service account in Domain Admins? Not anymore.","NTLM Type-3 fan-out is my favorite signature."] },
+  { id: "tomas", name: "Tomas", role: "Network eng", x: 3, y: 10, ticket: "segmentation",
+    sprite: { body:"#2D7DD2", body2:"#1B5896", accent:"#CFE6FF", hair:"#412402", skin:"#D8B088" },
+    chat: ["Cameras live on their own VLAN now.","Any/any is gone. Least privilege east-west.","A /24 is 254 usable. I'll never forget it now."] },
+  { id: "grace", name: "Grace", role: "PKI / sysadmin", x: 12, y: 10, ticket: "tls-chain",
+    sprite: { body:"#27AE60", body2:"#1B7A43", accent:"#DDFBE8", hair:"#6B4A2A", skin:"#C9926B" },
+    chat: ["Always bundle the intermediate. Half my users thank you.","The leaf was fine \u2014 the chain was short.","I test with openssl s_client before I call it done."] },
+  { id: "omar", name: "Omar", role: "IR lead", x: 15, y: 11, ticket: "ransomware",
+    sprite: { body:"#E67E22", body2:"#A85B12", accent:"#FFE3C2", hair:"#2C2C2A", skin:"#8A5A3A" },
+    chat: ["Isolate first. Always contain before you clean.","Immutable backups beat ransoms every time.","Never reboot during active encryption \u2014 evidence and keys."] },
+  { id: "bex", name: "Bex", role: "Wireless / phys-sec", x: 24, y: 12, ticket: "rogue-ap",
+    sprite: { body:"#B5179E", body2:"#7E1070", accent:"#FFD6F4", hair:"#1a1a18", skin:"#E0B080" },
+    chat: ["Two BSSIDs, one SSID, deauths \u2014 evil twin every time.","We moved to WPA2-Enterprise. Clients validate the cert now.","Found the rogue in a backpack. People hide them well."] },
+  { id: "stranger", name: "Stranger", role: "no visible badge", x: 19, y: 18, sideQuest: "tailgater",
+    sprite: { body:"#7A7A78", body2:"#54534F", accent:"#B7B6AF", hair:"#3A3A38", skin:"#C9926B" },
+    chat: ["...thanks again for holding the door earlier.","Reception sorted me out with a visitor badge.","No hard feelings \u2014 you were right to ask."] }
+];
+
+const PROPS7 = [
+  { id: "ticket-monitor-7", x: 4, y: 4, label: "SOC queue board", room: "Elevator lobby", kind: "monitor", isMonitor: true },
+  { id: "elevator-7", x: 5, y: 1, label: "the elevator", room: "Elevator lobby", kind: "elevator" },
+  { id: "sw-default", x: 4, y: 12, label: "the network switch", room: "Network closet", kind: "device", device: "switch", walkable: true, sideQuest: "defaultCreds" },
+  { id: "fw-rdp", x: 9, y: 11, label: "the firewall console", room: "Analyst pit", kind: "device", device: "firewall", walkable: true, sideQuest: "exposedRdp" },
+  { id: "osint-repo", x: 26, y: 18, label: "the OSINT terminal", room: "Red-team lab", kind: "device", device: "terminal", walkable: true, sideQuest: "secretInRepo" }
+];
+
+// ---- floor registry + live-binding switch ---------------------------------
+const FLOOR_ORDER = ["floor3", "floor7"];
+const FLOOR_META = {
+  floor3: { id: "floor3", name: "Floor 3", short: "F3", label: "IT SUPPORT \u00b7 FLOOR 3",
+            tag: "Help Desk", blurb: "Fundamentals: A+ and Network+ triage.", locked: false },
+  floor7: { id: "floor7", name: "Floor 7", short: "F7", label: "SECURITY OPS \u00b7 FLOOR 7",
+            tag: "Security Operations", blurb: "Advanced: Security+, PenTest+, Network+.", locked: true }
+};
+
+const FLOORS = {
+  floor3: { map: OFFICE, rooms: ROOMS3, npcs: NPCS3, props: PROPS3, start: { x: 2, y: 5, dir: "down" }, label: FLOOR_META.floor3.label },
+  floor7: { map: SOC,    rooms: ROOMS7, npcs: NPCS7, props: PROPS7, start: { x: 2, y: 5, dir: "down" }, label: FLOOR_META.floor7.label }
+};
+
+// Live bindings reassigned by setFloor.
+let MAP = FLOORS.floor3.map;
+let ROOMS = FLOORS.floor3.rooms;
+let NPCS = FLOORS.floor3.npcs;
+let PROPS = FLOORS.floor3.props;
+let PLAYER_START = FLOORS.floor3.start;
+let LOC_LABEL = FLOORS.floor3.label;
+let FLOOR_ID = "floor3";
+function setFloor(id) {
+  const f = FLOORS[id] || FLOORS.floor3;
+  FLOOR_ID = FLOORS[id] ? id : "floor3";
+  MAP = f.map; ROOMS = f.rooms; NPCS = f.npcs; PROPS = f.props;
+  PLAYER_START = f.start; LOC_LABEL = f.label;
+  return FLOOR_ID;
+}
+function isWalkable(x, y) {
+  if (x < 0 || y < 0 || x >= MAP_W || y >= MAP_H) return false;
+  return !BLOCKING.has(MAP[y][x]);
+}
 
 /* ===== src/scenarios.js ===== */
-// The seven main tickets. Each maps to one IT principle.
+// The main tickets. Each maps to one teaching principle and a CompTIA objective.
+//
 // Schema:
 //   title, principle, principleText, ticket, ticketMeta, actions
+//   floor:  "floor3" | "floor7"   (which floor the ticket lives on)
+//   cert:   short exam-objective tag, e.g. "Network+ \u00b7 1.4 Switching"
 //   pois[]:      { id, label, body, evidence, followups?[] }
 //   followups[]: { label, result, addEvidence? }
 //   diagnoses[]: { key, label, correct, feedback }
+//
+// FLOOR 3 = Help Desk fundamentals (A+ / Network+ triage).
+// FLOOR 7 = Security Operations / Red-Team lab (Security+ / PenTest+ / Network+).
 const SCENARIOS = {
+  // ===================================================================
+  // FLOOR 3 — HELP DESK (fundamentals)
+  // ===================================================================
   "monitor": {
+    floor: "floor3", cert: "A+ \u00b7 5.4 Display issues",
     title: "Reception monitor is black",
     principle: "Physical layer first",
     principleText:
@@ -1031,6 +1135,7 @@ const SCENARIOS = {
   },
 
   "internet-down": {
+    floor: "floor3", cert: "Network+ \u00b7 5.2 Troubleshooting methodology",
     title: "\"The internet is down\"",
     principle: "Scope the problem",
     principleText:
@@ -1068,6 +1173,7 @@ const SCENARIOS = {
   },
 
   "dns": {
+    floor: "floor3", cert: "Network+ \u00b7 1.6 DNS",
     title: "Can't reach the file share",
     principle: "Name vs IP (DNS)",
     principleText:
@@ -1110,6 +1216,7 @@ const SCENARIOS = {
   },
 
   "printer": {
+    floor: "floor3", cert: "A+ \u00b7 3.6 Printers",
     title: "\"The printer won't print\"",
     principle: "Three-system print stack",
     principleText:
@@ -1144,6 +1251,7 @@ const SCENARIOS = {
   },
 
   "slow": {
+    floor: "floor3", cert: "A+ \u00b7 5.2 Performance",
     title: "\"The internet is so slow today\"",
     principle: "Resource vs network",
     principleText:
@@ -1183,6 +1291,7 @@ const SCENARIOS = {
   },
 
   "permissions": {
+    floor: "floor3", cert: "Security+ \u00b7 4.6 Access control",
     title: "\"Why can he print and I can't?\"",
     principle: "Environment vs user",
     principleText:
@@ -1220,6 +1329,7 @@ const SCENARIOS = {
   },
 
   "change": {
+    floor: "floor3", cert: "Security+ \u00b7 1.2 SPF/DKIM/DMARC \u00b7 Change mgmt",
     title: "\"Email broke overnight\"",
     principle: "Change management",
     principleText:
@@ -1254,16 +1364,316 @@ const SCENARIOS = {
       { key: "server-down", label: "Mail server is down", correct: false,
         feedback: "Internal email works, outbound SMTP connects. Server is fine." }
     ]
+  },
+
+  // ===================================================================
+  // FLOOR 7 — SECURITY OPERATIONS / RED-TEAM LAB (advanced)
+  // ===================================================================
+  "phish-ir": {
+    floor: "floor7", cert: "Security+ \u00b7 2.4 Social engineering / 4.x IR",
+    title: "User entered creds on a lookalike site",
+    principle: "Contain the credential, not just the email",
+    principleText:
+      "Credential phishing is solved by killing the credential \u2014 reset password, revoke active sessions and tokens, re-enroll MFA. Blocking the sender alone leaves the attacker logged in.",
+    ticket: "\"A user replied to our 'IT' email and typed their password into a portal. The email looked legit.\"",
+    ticketMeta: "P2 \u00b7 SOC \u00b7 Sofia",
+    actions: 6,
+    pois: [
+      { id: "sofia", label: "Talk to Sofia (SOC)",
+        body: "'User got a 'password expiring' email, clicked, logged in. Twenty minutes ago. The MFA push got approved.'",
+        evidence: "Creds entered ~20 min ago; an MFA push was approved." },
+      { id: "headers", label: "Email headers",
+        body: "From: it-helpdesk@c0mpany-portal.com. SPF: fail. DMARC: fail. Reply-To differs from From.",
+        evidence: "Sender spoofed: SPF fail, DMARC fail, mismatched Reply-To." },
+      { id: "url", label: "The link / landing page",
+        body: "Domain is company-partal.com (homoglyph). Page is a pixel-perfect clone of the SSO login.",
+        evidence: "Look-alike (homoglyph) domain hosting a cloned SSO page.",
+        followups: [
+          { label: "Check the proxy log",
+            result: "> proxy\nPOST company-partal.com/login  user=jdoe  (credentials submitted)\nthen: token replay to mail.company.com from 185.x (foreign ASN)",
+            addEvidence: "Creds POSTed to attacker host; session token replayed from a foreign IP." }
+        ] },
+      { id: "edr", label: "EDR on the endpoint",
+        body: "No malware, no new processes. The browser visited the page; nothing was downloaded.",
+        evidence: "No malware on the host \u2014 this is pure credential theft, not a dropper." },
+      { id: "ti", label: "Threat-intel lookup",
+        body: "The domain was registered 2 days ago behind privacy protection. Cert issued this morning.",
+        evidence: "Attacker domain freshly registered \u2014 targeted, not background spam." }
+    ],
+    diagnoses: [
+      { key: "block", label: "Block the sender and move on", correct: false,
+        feedback: "That stops the next email but not this attacker \u2014 they already have a live session token. The credential is still hot." },
+      { key: "reimage", label: "Reimage the workstation immediately", correct: false,
+        feedback: "There's no malware on the host (EDR is clean). Reimaging treats the wrong layer and ignores the stolen session." },
+      { key: "contain-cred", label: "Reset password + revoke all sessions/tokens + re-enroll MFA", correct: true,
+        feedback: "Right. The token was already replayed from a foreign IP \u2014 only invalidating the credential and live sessions evicts the attacker. Then block the domain and hunt for mailbox rules." },
+      { key: "ignore", label: "Low risk \u2014 MFA will protect the account", correct: false,
+        feedback: "MFA was already satisfied (the user approved the push, and tokens can be replayed). MFA isn't a free pass once the session exists." }
+    ]
+  },
+
+  "privesc": {
+    floor: "floor7", cert: "PenTest+ \u00b7 3.x Privilege escalation",
+    title: "Pentest: low-priv shell on a Linux host",
+    principle: "Check configuration before reaching for an exploit",
+    principleText:
+      "On an authorized engagement, enumerate the easy wins first: sudo rights, SUID binaries, writable cron jobs, stored secrets. A misconfiguration beats a fragile kernel exploit almost every time.",
+    ticket: "\"Authorized internal pentest. We have a www-data shell on app-07. Find a path to root, document it.\"",
+    ticketMeta: "Engagement \u00b7 Red-team lab \u00b7 Wes",
+    actions: 6,
+    pois: [
+      { id: "wes", label: "Talk to Wes (lead)",
+        body: "'Rules of engagement say no destructive exploits. Find the cleanest documented path. Scope is app-07 only.'",
+        evidence: "RoE: no destructive exploits; prefer a clean, documented path; scope limited to app-07." },
+      { id: "sudo", label: "Run: sudo -l",
+        body: "> sudo -l\nUser www-data may run the following commands:\n  (root) NOPASSWD: /usr/bin/find",
+        evidence: "www-data can run /usr/bin/find as root with NOPASSWD." },
+      { id: "suid", label: "Hunt SUID binaries",
+        body: "> find / -perm -4000 2>/dev/null\nStandard set only (passwd, sudo, mount). Nothing custom.",
+        evidence: "SUID set is standard \u2014 no custom SUID escalation here." },
+      { id: "kernel", label: "Check kernel version",
+        body: "> uname -r\n5.15.0-91-generic  (patched last month)",
+        evidence: "Kernel is current/patched \u2014 a kernel exploit would be fragile and likely fail." },
+      { id: "cron", label: "Inspect cron jobs",
+        body: "A root cron runs /opt/scripts/backup.sh every 5 min. The script is owned by www-data and world-writable.",
+        evidence: "Root cron executes a www-data-writable script every 5 minutes.",
+        followups: [
+          { label: "Confirm the sudo find path",
+            result: "GTFOBins: find . -exec /bin/sh -p \\; -quit  \u2014 run via the NOPASSWD sudo find, spawns a root shell. Clean, documented, non-destructive.",
+            addEvidence: "sudo find -> -exec /bin/sh gives an immediate documented root shell." }
+        ] }
+    ],
+    diagnoses: [
+      { key: "kernel", label: "Run a kernel exploit", correct: false,
+        feedback: "The kernel is patched and RoE forbids destructive exploits. You'd risk crashing the box for a path that probably fails." },
+      { key: "brute", label: "Brute-force the root password", correct: false,
+        feedback: "Noisy, slow, and likely locks accounts \u2014 and you don't need it. Two clean config paths are sitting right there." },
+      { key: "sudo-find", label: "Abuse sudo NOPASSWD on find (or the writable root cron)", correct: true,
+        feedback: "Right. sudo find -exec /bin/sh -p gives an instant root shell; the world-writable root cron is a second clean path. Both are documented misconfigs, exactly what the RoE wants." },
+      { key: "scope", label: "Pivot to the domain controller", correct: false,
+        feedback: "Out of scope. Pivoting beyond app-07 violates the rules of engagement \u2014 a fast way to fail a real engagement." }
+    ]
+  },
+
+  "lateral": {
+    floor: "floor7", cert: "Security+ \u00b7 4.1 Detection / lateral movement",
+    title: "One host is authenticating to everything",
+    principle: "One source, many targets, odd hours = lateral movement",
+    principleText:
+      "A single workstation logging into dozens of hosts with the same account in minutes is the signature of pass-the-hash / credential reuse. Isolate the source, reset the account, then hunt.",
+    ticket: "\"SIEM lit up overnight. WKSTN-14 is touching half the server subnet. Is this normal?\"",
+    ticketMeta: "P1 \u00b7 SOC \u00b7 Nadia",
+    actions: 6,
+    pois: [
+      { id: "nadia", label: "Talk to Nadia (detection)",
+        body: "'Started 02:10. WKSTN-14 authenticated to 38 hosts in nine minutes. The user clocked out at 6pm.'",
+        evidence: "WKSTN-14 hit 38 hosts in 9 min at 02:10 \u2014 user was offline." },
+      { id: "auth", label: "Auth logs",
+        body: "Event 4624 Logon Type 3 (network) from WKSTN-14 to many hosts using svc_backup \u2014 NTLM, not Kerberos.",
+        evidence: "Type-3 NTLM logons fanning out from one source using a service account." },
+      { id: "account", label: "The account: svc_backup",
+        body: "Service account, password unchanged 3 years, member of Domain Admins (it shouldn't be).",
+        evidence: "Over-privileged service account (Domain Admin), stale password." },
+      { id: "net", label: "Network flows",
+        body: "445/SMB from WKSTN-14 to each target right before each logon. Then nothing exfiltrated yet.",
+        evidence: "SMB (445) to each target precedes each logon; no exfil observed yet \u2014 still spreading." },
+      { id: "edr", label: "EDR on WKSTN-14",
+        body: "A tool dumped LSASS at 02:08, two minutes before the spread began.",
+        evidence: "LSASS dumped at 02:08 \u2014 hashes harvested, then reused.",
+        followups: [
+          { label: "Pull the parent process",
+            result: "LSASS access by rundll32 spawned from a macro in Q4_Invoice.xlsm opened at 17:55.",
+            addEvidence: "Initial access: malicious macro at 17:55 -> LSASS dump -> pass-the-hash." }
+        ] }
+    ],
+    diagnoses: [
+      { key: "normal", label: "Normal scheduled backup activity", correct: false,
+        feedback: "Backups don't dump LSASS or fan out over NTLM to 38 hosts in 9 minutes. The pattern is the tell." },
+      { key: "ddos", label: "Inbound DDoS", correct: false,
+        feedback: "This is outbound authentication from one internal host, not a flood of inbound traffic." },
+      { key: "lateral", label: "Pass-the-hash lateral movement \u2014 isolate WKSTN-14, reset svc_backup", correct: true,
+        feedback: "Right. Dumped hashes + Type-3 NTLM from one source to many = lateral movement. Isolate the host, disable/reset the account, then hunt for footholds on the touched servers." },
+      { key: "patch", label: "Push a patch to all 38 hosts", correct: false,
+        feedback: "Patching doesn't evict an attacker who already has valid hashes. Contain the credential and the source first." }
+    ]
+  },
+
+  "segmentation": {
+    floor: "floor7", cert: "Network+ \u00b7 2.1 Segmentation / subnetting",
+    title: "A lobby camera can reach Finance",
+    principle: "Segment by trust",
+    principleText:
+      "Flat networks let a $40 camera talk to your crown jewels. Put untrusted/IoT devices on their own VLAN and let firewall rules \u2014 not luck \u2014 decide who reaches Finance.",
+    ticket: "\"Audit flagged it: the lobby IP camera can open a session to the Finance database. How?\"",
+    ticketMeta: "Audit finding \u00b7 Network lab \u00b7 Tomas",
+    actions: 6,
+    pois: [
+      { id: "tomas", label: "Talk to Tomas (neteng)",
+        body: "'Everything came up on VLAN 1 when we moved offices. Never re-segmented. Camera's at 10.10.0.55, Finance DB at 10.10.2.10.'",
+        evidence: "Whole site on VLAN 1; camera and Finance DB share one broadcast domain." },
+      { id: "switch", label: "Switch config",
+        body: "All access ports: switchport access vlan 1. No voice/IoT VLANs. No private VLANs.",
+        evidence: "No VLAN separation configured \u2014 one flat L2 domain." },
+      { id: "fw", label: "Firewall rules",
+        body: "Inter-subnet policy: permit ip any any. It logs nothing.",
+        evidence: "Firewall is any/any \u2014 no east-west filtering." },
+      { id: "camera", label: "The camera itself",
+        body: "Default creds admin/admin, telnet open, firmware 3 years old. Reachable from anywhere.",
+        evidence: "IoT camera: default creds, telnet open, unpatched \u2014 a soft pivot point." },
+      { id: "subnet", label: "Whiteboard the addressing",
+        body: "Proposed: cameras 10.10.0.0/24, users 10.10.1.0/24, Finance 10.10.2.0/24, with ACLs between.",
+        evidence: "A /24 per zone gives 254 hosts each and clean ACL boundaries.",
+        followups: [
+          { label: "How many usable hosts in a /24?",
+            result: "/24 = 256 addresses, minus network + broadcast = 254 usable. Plenty per zone, and the boundary is where you write the ACL.",
+            addEvidence: "/24 -> 254 usable hosts; the subnet boundary is the enforcement point." }
+        ] }
+    ],
+    diagnoses: [
+      { key: "replace", label: "Replace the camera with a newer model", correct: false,
+        feedback: "A newer camera on the same flat network can still reach Finance. The device isn't the root cause \u2014 the topology is." },
+      { key: "dns", label: "It's a DNS misconfiguration", correct: false,
+        feedback: "Reachability here is pure L2/L3 with an any/any firewall. DNS isn't in the path." },
+      { key: "segment", label: "Missing segmentation \u2014 VLAN the IoT off + ACLs to Finance", correct: true,
+        feedback: "Right. Put the camera on an IoT VLAN, replace any/any with least-privilege ACLs, and Finance is no longer one hop from the lobby. (Fix the default creds too.)" },
+      { key: "bandwidth", label: "Add bandwidth / a faster switch", correct: false,
+        feedback: "This is an access-control problem, not a throughput problem. More bandwidth just lets the camera reach Finance faster." }
+    ]
+  },
+
+  "tls-chain": {
+    floor: "floor7", cert: "Security+ \u00b7 3.x PKI / certificates",
+    title: "Cert warnings after a renewal",
+    principle: "A cert is only as valid as its chain",
+    principleText:
+      "Browsers must build a path from the server cert up to a trusted root. If the server doesn't send the intermediate, clients that don't already have it cached throw an 'incomplete chain' error \u2014 even though the cert itself is fine.",
+    ticket: "\"We renewed the cert on the internal portal. Now half of users get a security warning, half don't.\"",
+    ticketMeta: "P2 \u00b7 PKI / sysadmin \u00b7 Grace",
+    actions: 6,
+    pois: [
+      { id: "grace", label: "Talk to Grace (sysadmin)",
+        body: "'New cert from the CA, installed it, restarted. Some browsers are fine, some say 'can't verify'. Same URL.'",
+        evidence: "Inconsistent trust across clients for the same renewed cert." },
+      { id: "cert", label: "Inspect the leaf cert",
+        body: "CN/SAN = portal.company.com (matches). Dates valid (issued today, 1-year). Signed by 'Company Issuing CA G2'.",
+        evidence: "Leaf cert: SAN matches host, dates valid \u2014 the leaf itself is good." },
+      { id: "chain", label: "Test the served chain",
+        body: "> openssl s_client -connect portal:443\nVerify error: unable to get local issuer certificate.\nServer sent ONLY the leaf \u2014 no intermediate.",
+        evidence: "Server presents the leaf only; intermediate CA is missing from the chain." },
+      { id: "client", label: "Compare two clients",
+        body: "The 'working' machines are old build images that happen to cache the G2 intermediate. Fresh installs don't have it.",
+        evidence: "Only clients that already cached the intermediate succeed \u2014 explains the split." },
+      { id: "root", label: "Check the root store",
+        body: "The CA root is present and trusted in every client. Not a root problem.",
+        evidence: "Root is trusted everywhere \u2014 rules out an untrusted/expired root." }
+    ],
+    diagnoses: [
+      { key: "root", label: "Expired or untrusted root CA", correct: false,
+        feedback: "The root is present and trusted on every client. The break is one link down: the missing intermediate." },
+      { key: "san", label: "SAN/hostname mismatch", correct: false,
+        feedback: "The SAN matches portal.company.com on the leaf. A name mismatch would fail on every client, not half." },
+      { key: "chain", label: "Incomplete chain \u2014 install the intermediate on the server", correct: true,
+        feedback: "Right. The server only sent the leaf; clients without a cached intermediate can't build a path to the root. Bundle the intermediate with the server cert and all clients verify." },
+      { key: "self-signed", label: "Someone deployed a self-signed cert", correct: false,
+        feedback: "It's CA-issued by 'Company Issuing CA G2', not self-signed. The leaf is legitimate \u2014 only the chain is short." }
+    ]
+  },
+
+  "ransomware": {
+    floor: "floor7", cert: "Security+ \u00b7 4.x Incident response",
+    title: "A file share is encrypting itself",
+    principle: "Isolate first, then eradicate",
+    principleText:
+      "IR has an order: prepare, identify, contain, eradicate, recover, lessons-learned. When ransomware is live, containment (isolate the host) comes before anything else. Backups beat ransoms; rebooting and paying make it worse.",
+    ticket: "\"Files on the Marketing share are turning into .lockd with a ransom note. It's spreading right now.\"",
+    ticketMeta: "P1 \u00b7 IR war room \u00b7 Omar",
+    actions: 6,
+    pois: [
+      { id: "omar", label: "Talk to Omar (IR lead)",
+        body: "'It's actively encrypting. One host is doing the writes. We have backups \u2014 question is what we do in the next two minutes.'",
+        evidence: "Active encryption in progress, traced to a single writing host; backups exist." },
+      { id: "edr", label: "EDR timeline",
+        body: "WKSTN-22: vssadmin delete shadows, then mass file writes to the mapped Marketing share. Parent: a macro in 'Invoice.docm'.",
+        evidence: "WKSTN-22 deleted shadow copies then began mass-encrypting the share; entry via a macro doc." },
+      { id: "scope", label: "Scope the blast radius",
+        body: "Only the Marketing share (mapped on WKSTN-22) is affected. Finance/HR shares untouched. No second host writing yet.",
+        evidence: "Damage limited to WKSTN-22's mapped share; no lateral spread yet \u2014 a window to contain." },
+      { id: "backups", label: "Check backups",
+        body: "Immutable backup completed 02:00, isolated from the domain, verified restorable.",
+        evidence: "Clean, immutable, offline backup from 02:00 is restorable." },
+      { id: "note", label: "Read the ransom note",
+        body: "Bitcoin demand, 72-hour timer, 'contact us to decrypt'. Known commodity strain.",
+        evidence: "Commodity ransom note \u2014 paying funds crime with no guarantee of a working decryptor." }
+    ],
+    diagnoses: [
+      { key: "pay", label: "Pay the ransom to stop it", correct: false,
+        feedback: "Paying doesn't stop live encryption, often yields a broken decryptor, funds the attacker, and you already have a clean backup." },
+      { key: "reboot", label: "Reboot all affected machines", correct: false,
+        feedback: "Rebooting can destroy volatile evidence (and in-memory keys) and won't stop the on-disk encryption. Don't reboot during active ransomware." },
+      { key: "isolate", label: "Isolate WKSTN-22 now, then eradicate and restore from backup", correct: true,
+        feedback: "Right. Pull WKSTN-22 off the network to halt the writes (containment), preserve evidence, remove the malware (eradicate), then restore from the 02:00 immutable backup. No ransom needed." },
+      { key: "delete", label: "Delete the encrypted files to save space", correct: false,
+        feedback: "Never destroy the affected data during an incident \u2014 it's evidence, and in some strains partially-recoverable. Contain first." }
+    ]
+  },
+
+  "rogue-ap": {
+    floor: "floor7", cert: "Security+ \u00b7 2.4 Wireless attacks",
+    title: "Two 'CorpWiFi' networks, one is fake",
+    principle: "Same SSID, two BSSIDs, deauths = evil twin",
+    principleText:
+      "An evil twin broadcasts your SSID from a rogue radio, often forcing clients off the real AP with deauth frames so they reconnect to the attacker. Locate and remove the rogue; move to WPA2/WPA3-Enterprise so clients authenticate the network, not just a password.",
+    ticket: "\"People are getting a login page on CorpWiFi that asks for their AD password. We don't have a captive portal.\"",
+    ticketMeta: "P1 \u00b7 Wireless / physical \u00b7 Bex",
+    actions: 6,
+    pois: [
+      { id: "bex", label: "Talk to Bex (wireless)",
+        body: "'Started this morning on the 3rd floor. A portal pops up asking for the domain password. Ours is WPA2-PSK, no portal.'",
+        evidence: "Bogus captive portal harvesting AD creds on a network that has no real portal." },
+      { id: "survey", label: "Run a wireless survey",
+        body: "SSID 'CorpWiFi' is broadcasting from TWO BSSIDs. One matches your Aruba APs; the other is a random MAC, vendor OUI = a USB wifi chipset.",
+        evidence: "One SSID, two BSSIDs \u2014 the extra radio uses a consumer USB-wifi OUI." },
+      { id: "deauth", label: "Capture the air",
+        body: "Bursts of 802.11 deauthentication frames are knocking clients off the legit BSSID; they reassociate to the rogue.",
+        evidence: "Deauth floods force clients off the real AP onto the rogue \u2014 classic evil-twin push." },
+      { id: "locate", label: "Walk the signal down",
+        body: "RSSI on the rogue peaks near a meeting room; a backpack under the table holds a Pi with a battery and a USB antenna.",
+        evidence: "Rogue radio physically located: a battery-powered Pi hidden in a meeting room." },
+      { id: "rf", label: "Check for plain RF interference",
+        body: "Spectrum is clean \u2014 no microwave/Bluetooth noise. This isn't interference; it's a second access point.",
+        evidence: "No RF interference \u2014 the problem is an unauthorized AP, not noise." }
+    ],
+    diagnoses: [
+      { key: "interference", label: "RF interference \u2014 change the channel", correct: false,
+        feedback: "The spectrum is clean and the 'portal' is harvesting passwords. Changing channels does nothing to a rogue AP impersonating your SSID." },
+      { key: "weak", label: "Weak coverage \u2014 add another AP", correct: false,
+        feedback: "Coverage isn't the issue; an attacker is deauthing clients onto a fake AP. Adding APs won't stop the impersonation." },
+      { key: "evil-twin", label: "Evil twin / rogue AP \u2014 locate & remove it, move to WPA2-Enterprise", correct: true,
+        feedback: "Right. Two BSSIDs for one SSID + deauth bursts + a creds-harvesting portal = evil twin. Remove the rogue, then 802.1X/WPA2-Enterprise so clients validate a server cert instead of trusting any AP with the right name." },
+      { key: "isp", label: "ISP outage downstream", correct: false,
+        feedback: "An ISP problem wouldn't broadcast your SSID from a second radio or ask for AD passwords. This is on-prem and hostile." }
+    ]
   }
 };
+
+// ---- floor-aware helpers (used by UI + engine; no behavior change for floor3)
+function scenarioIdsForFloor(floorId) {
+  return Object.keys(SCENARIOS).filter((id) => (SCENARIOS[id].floor || "floor3") === floorId);
+}
+function scenarioCountForFloor(floorId) {
+  return scenarioIdsForFloor(floorId).length;
+}
 
 /* ===== src/sideQuests.js ===== */
 // Side quests are one-shot quick-solves. No evidence chain, no debrief screen.
 // Walk past, notice the marker, pick an answer, get a one-line lesson.
-// Schema: { title, body, where, options[] }
+// Schema: { title, body, where, floor, cert?, reward?, options[] }
 //   options: { key, label, correct, feedback }
+//   reward:  { find?, coins? }   (granted once, on the correct answer)
 const SIDE_QUESTS = {
+  // ---- FLOOR 3 (fundamentals) ---------------------------------------------
   "unplugged": {
+    floor: "floor3", cert: "A+ \u00b7 5.2 Power",
     title: "Ed: \"My PC won't turn on\"",
     body: "Ed (accountant): 'I've been trying for 10 minutes. Nothing happens. I think the hard drive is dead.' You glance under the desk.",
     where: "Accounting \u00b7 Ed's desk",
@@ -1278,6 +1688,7 @@ const SIDE_QUESTS = {
   },
 
   "monitorStandby": {
+    floor: "floor3", cert: "A+ \u00b7 5.4 Display",
     title: "Lisa: \"My screen is dead\"",
     body: "Lisa: 'It just went black. I think the monitor finally died.' The monitor's power button glows amber, gently pulsing.",
     where: "Accounting \u00b7 Lisa's desk",
@@ -1292,6 +1703,7 @@ const SIDE_QUESTS = {
   },
 
   "usbDrop": {
+    floor: "floor3", cert: "Security+ \u00b7 2.4 Social engineering",
     title: "A USB stick on the floor",
     body: "There's an unbranded USB stick on the carpet by the open desks. No name, no label. Someone could've dropped it \u2014 or someone could've left it there on purpose.",
     where: "Open desks 2",
@@ -1307,6 +1719,7 @@ const SIDE_QUESTS = {
   },
 
   "printerInk": {
+    floor: "floor3", cert: "A+ \u00b7 3.6 Printers",
     title: "Printer waving for ink",
     body: "The print room printer has a small yellow light blinking next to the cyan cartridge. Nobody filed a ticket. It still prints in monochrome.",
     where: "Print room",
@@ -1318,8 +1731,76 @@ const SIDE_QUESTS = {
       { key: "replace-all", label: "Replace all four cartridges", correct: false,
         feedback: "Wasteful. Only cyan was low. The blinking light specifically named the cartridge." }
     ]
+  },
+
+  // ---- FLOOR 7 (security ops) ---------------------------------------------
+  "defaultCreds": {
+    floor: "floor7", cert: "Security+ \u00b7 1.2 Hardening",
+    title: "Switch still on admin/admin",
+    body: "The network closet switch greets you with a web login. You try admin/admin out of habit \u2014 and you're in. Config-mode, full access, and Telnet is enabled.",
+    where: "Network closet",
+    reward: { find: "hardener", coins: 8 },
+    options: [
+      { key: "harden", label: "Change creds, disable Telnet, enable SSH", correct: true,
+        feedback: "Right. Default credentials are the #1 way IoT and infra get owned. Set a strong unique password, kill Telnet (plaintext!), enable SSH, and check who else has been logging in. (Keepsake: Hardened badge.)" },
+      { key: "note", label: "Leave a sticky note to fix it later", correct: false,
+        feedback: "'Later' is how default creds survive for years. A device this exposed gets fixed now, not on a Post-it." },
+      { key: "ignore", label: "It's internal-only, leave it", correct: false,
+        feedback: "'Internal-only' assumes nobody ever gets a foothold \u2014 and an admin/admin switch is exactly the pivot they'd use once they do. Defense in depth." }
+    ]
+  },
+
+  "exposedRdp": {
+    floor: "floor7", cert: "Security+ \u00b7 3.x Attack surface",
+    title: "RDP open to the whole internet",
+    body: "A firewall rule reads: permit tcp any -> 10.10.2.10 eq 3389. That's Remote Desktop on a server, reachable from anywhere on earth. Shodan would find it in minutes.",
+    where: "Firewall console",
+    reward: { find: "surfaceShrink", coins: 8 },
+    options: [
+      { key: "close", label: "Close 3389 at the edge; require VPN + MFA", correct: true,
+        feedback: "Right. Internet-facing RDP is relentlessly brute-forced and is a top ransomware entry point. Put it behind a VPN with MFA (or a bastion), and never expose 3389 to 'any'. (Keepsake: Attack-Surface badge.)" },
+      { key: "strong", label: "Just set a long password", correct: false,
+        feedback: "A strong password helps, but the port is still scanned, brute-forced, and exposed to every RDP CVE. Remove the exposure, don't just toughen it." },
+      { key: "portchange", label: "Move RDP to a non-standard port", correct: false,
+        feedback: "Security by obscurity. Scanners find services on any port in seconds. It must not be reachable from 'any' at all." }
+    ]
+  },
+
+  "secretInRepo": {
+    floor: "floor7", cert: "PenTest+ \u00b7 OSINT / Security+ \u00b7 2.3",
+    title: "An API key in a public repo",
+    body: "Recon on the company's public GitHub turns up a committed config file: AWS_SECRET_ACCESS_KEY = AKIA... \u2014 live, in plaintext, in the history.",
+    where: "Red-team lab \u00b7 OSINT station",
+    reward: { find: "secretSweeper", coins: 8 },
+    options: [
+      { key: "rotate", label: "Rotate the key now, then purge it from history", correct: true,
+        feedback: "Right. Once a secret is public, treat it as compromised: rotate/revoke it first (deleting the file isn't enough \u2014 it's in git history and likely already scraped), then purge history and add secret-scanning to CI. (Keepsake: Secret-Sweeper badge.)" },
+      { key: "delete", label: "Just delete the file and commit", correct: false,
+        feedback: "The key still lives in every prior commit and in clones/forks \u2014 and bots scrape new commits within seconds. You must rotate it, not just hide it." },
+      { key: "private", label: "Make the repo private", correct: false,
+        feedback: "It was already public; assume it's been harvested. Flipping to private doesn't un-leak the key \u2014 rotate it." }
+    ]
+  },
+
+  "tailgater": {
+    floor: "floor7", cert: "Security+ \u00b7 2.4 Physical / social eng",
+    title: "Someone tailgates the secure door",
+    body: "You badge into the SOC and a friendly stranger in a delivery polo slips in behind you, arms full of boxes. 'Thanks! Forgot my badge in the car.' No visible credential.",
+    where: "SOC entrance",
+    reward: { find: "badgeChallenger", coins: 8 },
+    options: [
+      { key: "challenge", label: "Politely stop them; walk them to reception to sign in", correct: true,
+        feedback: "Right. Tailgating bypasses every dollar of access control. Challenging unbadged people is awkward but correct \u2014 escort them to reception for a visitor badge and an escort. (Keepsake: Badge-Challenger.)" },
+      { key: "hold", label: "Hold the door \u2014 they've got their hands full", correct: false,
+        feedback: "Courtesy is exactly what social engineers weaponize. A real delivery gets signed in at reception; you don't grant unescorted access to a secure area on a smile." },
+      { key: "ignore", label: "Not your job \u2014 keep walking", correct: false,
+        feedback: "Physical security is everyone's job once you've badged someone in behind you. At minimum, report it; better, escort them to sign in." }
+    ]
   }
 };
+function sideQuestIdsForFloor(floorId) {
+  return Object.keys(SIDE_QUESTS).filter((id) => (SIDE_QUESTS[id].floor || "floor3") === floorId);
+}
 
 /* ===== src/collectables.js ===== */
 // Collectables registry — the SDV "keepsakes" layer.
@@ -1342,11 +1823,377 @@ const FINDS = {
     icon: "\u{1F6E1}\uFE0F",
     name: "USB-Wise badge",
     note: "You handed a mystery USB to security instead of plugging it in. Attackers really do scatter these in parking lots hoping someone gets curious."
+  },
+
+  // ---- Floor 7: Security Operations keepsakes ----
+  hardener: {
+    icon: "\u{1F510}",
+    name: "Hardened badge",
+    note: "You found a switch on admin/admin and locked it down \u2014 strong creds, Telnet off, SSH on. Default credentials are how infrastructure gets owned."
+  },
+  surfaceShrink: {
+    icon: "\u{1F9F1}",
+    name: "Attack-Surface badge",
+    note: "You pulled Remote Desktop off the open internet and put it behind a VPN with MFA. Exposed RDP is a favorite ransomware front door."
+  },
+  secretSweeper: {
+    icon: "\u{1F511}",
+    name: "Secret-Sweeper badge",
+    note: "You caught a live API key committed to a public repo and rotated it before purging history. A leaked secret is compromised the moment it's public."
+  },
+  badgeChallenger: {
+    icon: "\u{1FAAA}",
+    name: "Badge-Challenger badge",
+    note: "You stopped a tailgater and walked them to reception. Physical access defeats every digital control, and challenging strangers is the job."
   }
-  // ---- more keepsakes land here as content grows ----
-  // breakroomAce: { icon:"\u{1F3C6}", name:"Break-room Ace", note:"Top run in the secret break-room game." }
 };
 const FINDTOTAL = Object.keys(FINDS).length;
+
+/* ===== src/quiz.js ===== */
+// Practice-test question bank. Pure data + a sampler. Floor-tagged so the
+// "Exam" button can quiz the player on whatever floor they're standing on,
+// covering every concept on that floor (completed tickets and ones still ahead).
+//
+// Schema:  { id, floor, cert, q, explain, options:[{ t, correct }] }
+//   exactly one option per question has correct:true.
+// The sampler shuffles questions AND options each attempt, so retakes feel fresh.
+const QUESTIONS = [
+  // ===================== FLOOR 3 — fundamentals =====================
+  { id: "f3-nosig", floor: "floor3", cert: "A+ \u00b7 Display",
+    q: "A monitor shows \u201cNo signal\u201d on every input while the PC's fans, power LED, and drive light are all normal. What's the most likely cause to check first?",
+    explain: "A live tower plus 'no signal' on all inputs points at the signal path \u2014 a loose or wrong cable \u2014 long before drivers or the PSU. Physical layer first.",
+    options: [
+      { t: "A failed power supply", correct: false },
+      { t: "A loose or wrong-input video cable", correct: true },
+      { t: "A corrupt operating system", correct: false },
+      { t: "A network outage", correct: false } ] },
+
+  { id: "f3-scope", floor: "floor3", cert: "Network+ \u00b7 Methodology",
+    q: "A user says \u201cthe internet is down.\u201d What should you establish before touching anything?",
+    explain: "Scope the problem first: is it one user, one floor, or the whole building? It decides everything you do next \u2014 and stops you from rebooting a router over one person.",
+    options: [
+      { t: "How big the problem is (one user vs. everyone)", correct: true },
+      { t: "Whether to reboot the building router", correct: false },
+      { t: "Which ISP the company uses", correct: false },
+      { t: "The user's password", correct: false } ] },
+
+  { id: "f3-dns", floor: "floor3", cert: "Network+ \u00b7 DNS",
+    q: "Ping by IP (10.0.0.20) succeeds but ping by hostname (fileshare01) fails with \u201ccould not find host.\u201d What's broken?",
+    explain: "Reaching the IP but not the name is the textbook DNS-failure signature \u2014 connectivity is fine, name resolution isn't.",
+    options: [
+      { t: "The physical network link", correct: false },
+      { t: "Name resolution / DNS", correct: true },
+      { t: "File permissions on the share", correct: false },
+      { t: "The server's power supply", correct: false } ] },
+
+  { id: "f3-print", floor: "floor3", cert: "A+ \u00b7 Printers",
+    q: "One user's print jobs fail with \u201cdriver mismatch\u201d while everyone else prints fine to the same printer. Where is the fault?",
+    explain: "Others printing fine proves the printer, queue server, and network are healthy. The variable is that one user's PC \u2014 here, its driver.",
+    options: [
+      { t: "The printer hardware", correct: false },
+      { t: "The network path to the printer", correct: false },
+      { t: "The driver on that user's PC", correct: true },
+      { t: "The print server is down", correct: false } ] },
+
+  { id: "f3-printstack", floor: "floor3", cert: "A+ \u00b7 Printers",
+    q: "Printing is best understood as how many independent systems to test separately?",
+    explain: "Driver (user PC), queue (print server), and network path \u2014 three layers. Naming the failing layer (e.g. 'driver mismatch') tells you where to look.",
+    options: [
+      { t: "One \u2014 it's all the printer", correct: false },
+      { t: "Three: driver, queue/server, network path", correct: true },
+      { t: "Two: the cable and the toner", correct: false },
+      { t: "Five OSI layers", correct: false } ] },
+
+  { id: "f3-slow", floor: "floor3", cert: "A+ \u00b7 Performance",
+    q: "A user reports 'slow internet.' Their speed test pulls 380 Mbps, a neighbor on the same wifi is fine, but Task Manager shows CPU 100% and a runaway browser tab. What's the cause?",
+    explain: "Symptoms describe experience, not cause. A pegged CPU makes the browser feel slow, which the user calls 'slow internet.' It's local resource exhaustion.",
+    options: [
+      { t: "The wifi is slow", correct: false },
+      { t: "An ISP problem", correct: false },
+      { t: "Local resource exhaustion on the PC", correct: true },
+      { t: "A failing network card", correct: false } ] },
+
+  { id: "f3-perms", floor: "floor3", cert: "Security+ \u00b7 Access control",
+    q: "Two coworkers at adjacent desks try the same color printer. Sam succeeds; Riley gets 'access denied.' What does that point to?",
+    explain: "Same environment, different user, different outcome \u2014 the variable is the user account. Riley's group isn't on the printer's allow-list.",
+    options: [
+      { t: "A broken print driver", correct: false },
+      { t: "Riley's account/group lacks permission", correct: true },
+      { t: "A stuck print queue", correct: false },
+      { t: "A hardware fault in the printer", correct: false } ] },
+
+  { id: "f3-change", floor: "floor3", cert: "Security+ \u00b7 Change mgmt",
+    q: "External email starts bouncing with 'SPF check failed' overnight, though no user changed anything. What should you check?",
+    explain: "When something breaks with no user-side change, look at the system-side change log. Here a DNS migration purged the TXT record that held SPF.",
+    options: [
+      { t: "The IT change log for recent system changes", correct: true },
+      { t: "Each user's mailbox quota", correct: false },
+      { t: "The ISP's billing status", correct: false },
+      { t: "Whether the mail server is powered on", correct: false } ] },
+
+  { id: "f3-spf", floor: "floor3", cert: "Security+ \u00b7 Email auth",
+    q: "Which DNS record type holds an SPF policy?",
+    explain: "SPF is published as a TXT record. Delete the TXT records and receivers can no longer verify your sending hosts \u2014 mail bounces on SPF.",
+    options: [
+      { t: "A / AAAA record", correct: false },
+      { t: "MX record", correct: false },
+      { t: "TXT record", correct: true },
+      { t: "PTR record", correct: false } ] },
+
+  { id: "f3-standby", floor: "floor3", cert: "A+ \u00b7 Display",
+    q: "A monitor's power LED is glowing amber and gently pulsing, screen black. Most likely?",
+    explain: "Amber/pulsing usually means standby \u2014 the PC went to sleep. Wiggle the mouse before ordering a $200 replacement.",
+    options: [
+      { t: "The monitor has failed", correct: false },
+      { t: "The PC is asleep / monitor in standby", correct: true },
+      { t: "The video cable is dead", correct: false },
+      { t: "The GPU has crashed", correct: false } ] },
+
+  { id: "f3-usb", floor: "floor3", cert: "Security+ \u00b7 Social eng",
+    q: "You find an unlabeled USB stick on the office floor. Best action?",
+    explain: "Unknown USBs are a classic 'drop attack.' They can auto-run payloads or emulate a keyboard. Don't plug it in to find the owner \u2014 hand it to security for isolated inspection.",
+    options: [
+      { t: "Plug it into your PC to find the owner", correct: false },
+      { t: "Hand it to security to inspect safely", correct: true },
+      { t: "Leave it where it is", correct: false },
+      { t: "Plug it into a coworker's machine", correct: false } ] },
+
+  { id: "f3-ping", floor: "floor3", cert: "Network+ \u00b7 Tools",
+    q: "Which command quickly tests whether a host is reachable and shows round-trip latency?",
+    explain: "ping sends ICMP echo requests and reports replies + round-trip time \u2014 the fastest reachability/latency check. ipconfig shows local config; nslookup queries DNS.",
+    options: [
+      { t: "ipconfig /all", correct: false },
+      { t: "ping", correct: true },
+      { t: "chkdsk", correct: false },
+      { t: "format", correct: false } ] },
+
+  { id: "f3-osi1", floor: "floor3", cert: "Network+ \u00b7 OSI",
+    q: "Cables, connectors, and electrical signaling live at which OSI layer?",
+    explain: "Layer 1, Physical, is the wires and signals. 'Physical layer first' is why you check the cable before the driver.",
+    options: [
+      { t: "Layer 1 \u2014 Physical", correct: true },
+      { t: "Layer 3 \u2014 Network", correct: false },
+      { t: "Layer 4 \u2014 Transport", correct: false },
+      { t: "Layer 7 \u2014 Application", correct: false } ] },
+
+  { id: "f3-proactive", floor: "floor3", cert: "ITIL \u00b7 Proactive support",
+    q: "A printer blinks 'low cyan' but still prints in black and white and no one has complained. The pro move is to:",
+    explain: "Proactive beats reactive: a 30-second cartridge swap now prevents an urgent 'can't print the client deck' ticket later. Replacing all four cartridges is wasteful \u2014 the light named cyan.",
+    options: [
+      { t: "Ignore it \u2014 it still prints", correct: false },
+      { t: "Replace just the cyan cartridge now", correct: true },
+      { t: "Replace all four cartridges", correct: false },
+      { t: "Wait for a ticket", correct: false } ] },
+
+  // ===================== FLOOR 7 — security operations =====================
+  { id: "f7-phish", floor: "floor7", cert: "Security+ \u00b7 IR",
+    q: "A user typed their password into a look-alike SSO page and approved an MFA push 20 minutes ago. Logs show the session token replayed from a foreign IP. Best first containment?",
+    explain: "The attacker already has a live session, so blocking the email isn't enough. Reset the password and revoke all active sessions/tokens and re-enroll MFA to evict them.",
+    options: [
+      { t: "Block the sender address and move on", correct: false },
+      { t: "Reset password + revoke all sessions/tokens + re-enroll MFA", correct: true },
+      { t: "Reimage the workstation immediately", correct: false },
+      { t: "Nothing \u2014 MFA already protects the account", correct: false } ] },
+
+  { id: "f7-homoglyph", floor: "floor7", cert: "Security+ \u00b7 Social eng",
+    q: "A phishing link points to 'company-partal.com,' a near-copy of the real domain. This technique is called:",
+    explain: "Swapping/omitting characters to mimic a trusted domain is typosquatting / a homoglyph (look-alike) domain \u2014 a staple of credential phishing.",
+    options: [
+      { t: "A homoglyph / typosquatting domain", correct: true },
+      { t: "DNS poisoning", correct: false },
+      { t: "An SQL injection", correct: false },
+      { t: "A buffer overflow", correct: false } ] },
+
+  { id: "f7-emailauth", floor: "floor7", cert: "Security+ \u00b7 Email auth",
+    q: "Which trio of email-authentication mechanisms helps a receiver detect a spoofed sender domain?",
+    explain: "SPF (authorized senders), DKIM (signature), and DMARC (policy + alignment) together let receivers spot spoofing. In the phishing case all three failed.",
+    options: [
+      { t: "TLS, SSH, IPsec", correct: false },
+      { t: "SPF, DKIM, DMARC", correct: true },
+      { t: "WPA2, WPA3, WEP", correct: false },
+      { t: "RAID, LVM, ZFS", correct: false } ] },
+
+  { id: "f7-sudo", floor: "floor7", cert: "PenTest+ \u00b7 Privesc",
+    q: "On a Linux host you have a low-priv shell. Which command quickly reveals commands you're allowed to run as root?",
+    explain: "'sudo -l' lists your allowed sudo commands. A NOPASSWD entry on something like find or vim is a clean, documented privilege-escalation path (see GTFOBins).",
+    options: [
+      { t: "sudo -l", correct: true },
+      { t: "ls -la /root", correct: false },
+      { t: "whoami", correct: false },
+      { t: "passwd root", correct: false } ] },
+
+  { id: "f7-privconfig", floor: "floor7", cert: "PenTest+ \u00b7 Privesc",
+    q: "The target's kernel is fully patched, but a root cron job runs a world-writable script every 5 minutes. The best escalation path is to:",
+    explain: "Always prefer the misconfiguration over a fragile kernel exploit. A writable script executed by root lets you run your own code as root \u2014 clean and reliable.",
+    options: [
+      { t: "Run a kernel exploit anyway", correct: false },
+      { t: "Edit the world-writable root cron script", correct: true },
+      { t: "Brute-force the root password", correct: false },
+      { t: "Give up \u2014 a patched kernel is unexploitable", correct: false } ] },
+
+  { id: "f7-lateral", floor: "floor7", cert: "Security+ \u00b7 Detection",
+    q: "At 2am one workstation makes Type-3 (network) NTLM logons to 38 servers in nine minutes using a service account. This pattern is:",
+    explain: "One source authenticating to many targets off-hours \u2014 especially via NTLM after an LSASS dump \u2014 is classic pass-the-hash lateral movement. Isolate the source and reset the account.",
+    options: [
+      { t: "A normal nightly backup", correct: false },
+      { t: "Pass-the-hash lateral movement", correct: true },
+      { t: "An inbound DDoS attack", correct: false },
+      { t: "A DNS cache refresh", correct: false } ] },
+
+  { id: "f7-lsass", floor: "floor7", cert: "Security+ \u00b7 Attacks",
+    q: "Dumping the LSASS process on Windows is primarily a way for an attacker to:",
+    explain: "LSASS holds credential material (hashes/tickets) in memory. Dumping it harvests credentials that enable pass-the-hash / lateral movement.",
+    options: [
+      { t: "Harvest credentials/hashes from memory", correct: true },
+      { t: "Encrypt files for ransom", correct: false },
+      { t: "Open a firewall port", correct: false },
+      { t: "Speed up the system", correct: false } ] },
+
+  { id: "f7-vlan", floor: "floor7", cert: "Network+ \u00b7 Segmentation",
+    q: "A lobby IP camera can open a session to the Finance database because everything shares VLAN 1 with an any/any firewall. The fix is to:",
+    explain: "Segment by trust: put IoT on its own VLAN and replace any/any with least-privilege ACLs so a camera can't route to Finance. A newer camera on a flat net is still exposed.",
+    options: [
+      { t: "Buy a newer camera", correct: false },
+      { t: "Add more bandwidth", correct: false },
+      { t: "Segment IoT onto its own VLAN with ACLs to Finance", correct: true },
+      { t: "Change the camera's DNS server", correct: false } ] },
+
+  { id: "f7-subnet", floor: "floor7", cert: "Network+ \u00b7 Subnetting",
+    q: "How many usable host addresses are in a /24 subnet?",
+    explain: "/24 = 256 total addresses; subtract the network and broadcast addresses = 254 usable hosts.",
+    options: [
+      { t: "256", correct: false },
+      { t: "254", correct: true },
+      { t: "128", correct: false },
+      { t: "512", correct: false } ] },
+
+  { id: "f7-anyany", floor: "floor7", cert: "Security+ \u00b7 Firewall",
+    q: "A firewall inter-subnet rule reads 'permit ip any any.' What's the problem?",
+    explain: "Any/any permits all east-west traffic \u2014 no least privilege. It's why the camera could reach Finance. Rules should permit only what's needed.",
+    options: [
+      { t: "Nothing \u2014 that's best practice", correct: false },
+      { t: "It allows all traffic with no least-privilege filtering", correct: true },
+      { t: "It blocks DNS", correct: false },
+      { t: "It only applies to IPv6", correct: false } ] },
+
+  { id: "f7-chain", floor: "floor7", cert: "Security+ \u00b7 PKI",
+    q: "After a renewal, some clients trust the portal's cert and some say 'unable to get local issuer certificate.' The server's leaf is valid and the root is trusted everywhere. What's wrong?",
+    explain: "The server isn't sending the intermediate, so clients that haven't cached it can't build a chain to the root. Bundle the intermediate with the server cert.",
+    options: [
+      { t: "The root CA expired", correct: false },
+      { t: "The SAN doesn't match the hostname", correct: false },
+      { t: "The intermediate cert is missing from the served chain", correct: true },
+      { t: "The cert is self-signed", correct: false } ] },
+
+  { id: "f7-san", floor: "floor7", cert: "Security+ \u00b7 PKI",
+    q: "Which certificate field must contain the hostname a browser is connecting to, or it throws a name-mismatch error?",
+    explain: "Modern browsers validate the Subject Alternative Name (SAN). The legacy Common Name (CN) alone is no longer trusted for hostname matching.",
+    options: [
+      { t: "Subject Alternative Name (SAN)", correct: true },
+      { t: "Serial Number", correct: false },
+      { t: "Issuer", correct: false },
+      { t: "Key Usage", correct: false } ] },
+
+  { id: "f7-ir-order", floor: "floor7", cert: "Security+ \u00b7 IR phases",
+    q: "Ransomware is actively encrypting a share from one host. Per the IR process, what comes first?",
+    explain: "The IR order is prepare \u2192 identify \u2192 contain \u2192 eradicate \u2192 recover \u2192 lessons learned. Containment (isolate the host) stops the spread before eradication or recovery.",
+    options: [
+      { t: "Recovery \u2014 restore from backup right away", correct: false },
+      { t: "Containment \u2014 isolate the affected host", correct: true },
+      { t: "Eradication \u2014 wipe the malware first", correct: false },
+      { t: "Pay the ransom", correct: false } ] },
+
+  { id: "f7-ransom", floor: "floor7", cert: "Security+ \u00b7 IR",
+    q: "During active ransomware with a verified clean backup, which action is WRONG?",
+    explain: "Rebooting can destroy volatile evidence and in-memory keys and won't stop on-disk encryption. Isolate, preserve evidence, eradicate, then restore from backup \u2014 don't reboot or pay.",
+    options: [
+      { t: "Isolate the encrypting host from the network", correct: false },
+      { t: "Reboot all affected machines", correct: true },
+      { t: "Preserve evidence for analysis", correct: false },
+      { t: "Restore from the immutable backup", correct: false } ] },
+
+  { id: "f7-vss", floor: "floor7", cert: "Security+ \u00b7 Attacks",
+    q: "Ransomware often runs 'vssadmin delete shadows' early. Why?",
+    explain: "It deletes Volume Shadow Copies so victims can't roll back to a local snapshot, pressuring them to pay. Off-host immutable backups defeat this.",
+    options: [
+      { t: "To delete shadow copies so you can't restore locally", correct: true },
+      { t: "To speed up encryption", correct: false },
+      { t: "To open a network port", correct: false },
+      { t: "To install a printer driver", correct: false } ] },
+
+  { id: "f7-eviltwin", floor: "floor7", cert: "Security+ \u00b7 Wireless",
+    q: "You see your SSID broadcast from two different BSSIDs, with deauth bursts knocking clients onto the second one, which then asks for the AD password. This is:",
+    explain: "Same SSID + a second BSSID + deauths forcing reconnection + a creds-harvesting portal = an evil twin / rogue AP. Locate and remove it; move to WPA2/WPA3-Enterprise.",
+    options: [
+      { t: "RF interference", correct: false },
+      { t: "An evil twin / rogue access point", correct: true },
+      { t: "Weak coverage needing another AP", correct: false },
+      { t: "An ISP outage", correct: false } ] },
+
+  { id: "f7-wpaent", floor: "floor7", cert: "Security+ \u00b7 Wireless",
+    q: "Which wireless approach best prevents clients from trusting an evil-twin AP that merely knows the network name?",
+    explain: "WPA2/WPA3-Enterprise (802.1X) makes clients validate a RADIUS server certificate, so a rogue AP with the right SSID but no valid cert is rejected \u2014 unlike a shared PSK.",
+    options: [
+      { t: "WEP", correct: false },
+      { t: "Open network with a captive portal", correct: false },
+      { t: "WPA2/WPA3-Enterprise (802.1X) with server-cert validation", correct: true },
+      { t: "Hiding the SSID", correct: false } ] },
+
+  { id: "f7-defcreds", floor: "floor7", cert: "Security+ \u00b7 Hardening",
+    q: "You log into a production switch with admin/admin and find Telnet enabled. Best response?",
+    explain: "Default creds are a top compromise vector. Set strong unique credentials, disable Telnet (plaintext), enable SSH, and review access logs \u2014 now, not 'later.'",
+    options: [
+      { t: "Leave a sticky note to fix later", correct: false },
+      { t: "Change creds, disable Telnet, enable SSH", correct: true },
+      { t: "Ignore it \u2014 it's internal only", correct: false },
+      { t: "Move the management port to a new number", correct: false } ] },
+
+  { id: "f7-rdp", floor: "floor7", cert: "Security+ \u00b7 Attack surface",
+    q: "A firewall rule exposes RDP (3389) to 'any' on the internet. The right fix is to:",
+    explain: "Internet-facing RDP is brute-forced constantly and is a leading ransomware entry point. Remove the exposure: require VPN + MFA or a bastion. A non-standard port is just obscurity.",
+    options: [
+      { t: "Set a long password and leave it open", correct: false },
+      { t: "Move RDP to a non-standard port", correct: false },
+      { t: "Close it at the edge; require VPN + MFA / bastion", correct: true },
+      { t: "Enable it for IPv6 too", correct: false } ] },
+
+  { id: "f7-secret", floor: "floor7", cert: "PenTest+ \u00b7 OSINT",
+    q: "You discover a live AWS secret key committed to a public GitHub repo. First action?",
+    explain: "Once public, treat it as compromised \u2014 bots scrape commits within seconds. Rotate/revoke the key first, then purge it from history and add secret scanning. Deleting the file alone leaves it in git history.",
+    options: [
+      { t: "Delete the file and commit", correct: false },
+      { t: "Make the repo private", correct: false },
+      { t: "Rotate/revoke the key now, then purge history", correct: true },
+      { t: "Email the developer to be careful next time", correct: false } ] }
+];
+
+// Fisher\u2013Yates, returns a new shuffled array (doesn't mutate input).
+function shuffled(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// Sample up to n questions for a floor, with options pre-shuffled. Each returned
+// question carries answerIndex = the index of the correct option after shuffling.
+function sampleQuiz(floorId, n = 5) {
+  const pool = QUESTIONS.filter((q) => q.floor === floorId);
+  const picked = shuffled(pool).slice(0, Math.min(n, pool.length));
+  return picked.map((q) => {
+    const opts = shuffled(q.options);
+    return {
+      id: q.id, cert: q.cert, q: q.q, explain: q.explain,
+      options: opts,
+      answerIndex: opts.findIndex((o) => o.correct)
+    };
+  });
+}
+function quizPoolSize(floorId) {
+  return QUESTIONS.filter((q) => q.floor === floorId).length;
+}
 
 /* ===== src/render.js ===== */
 // Drawing layer — ports the public-health RPG's rich procedural renderer:
@@ -1677,10 +2524,62 @@ function drawUsb(ctx, px, py, tick) {
   if (Math.sin(tick / 16) > 0.6) { ctx.fillStyle = "rgba(255,255,255,0.8)"; ctx.fillRect(px + 20, py + 15, 1, 1); }
 }
 
+function drawElevator(ctx, px, py, tick) {
+  // a brushed-steel elevator door set in the wall, with a call light and arrows
+  ctx.fillStyle = "#3A3A38"; ctx.fillRect(px + 2, py + 1, TILE - 4, TILE - 2);          // frame
+  ctx.fillStyle = "#9AA0A6"; ctx.fillRect(px + 4, py + 3, TILE - 8, TILE - 5);          // doors
+  ctx.fillStyle = "#7E848A"; ctx.fillRect(px + TILE / 2 - 1, py + 3, 2, TILE - 5);      // seam
+  // brushed highlights
+  ctx.fillStyle = "#B7BDC2"; ctx.fillRect(px + 6, py + 4, 2, TILE - 7);
+  ctx.fillStyle = "#B7BDC2"; ctx.fillRect(px + TILE - 9, py + 4, 2, TILE - 7);
+  // call panel + blinking up light
+  ctx.fillStyle = "#2C2C2A"; ctx.fillRect(px + TILE - 6, py + 6, 3, 7);
+  const on = Math.sin(tick / 14) > 0;
+  ctx.fillStyle = on ? "#FCDE5A" : "#5A5208"; ctx.fillRect(px + TILE - 5, py + 7, 1, 2);
+  ctx.fillStyle = "#63B370"; ctx.fillRect(px + TILE - 5, py + 10, 1, 2);
+  // little up-arrow above the doors
+  ctx.fillStyle = "#FCDE5A";
+  ctx.fillRect(px + TILE / 2 - 1, py + 1, 2, 1);
+  ctx.fillRect(px + TILE / 2 - 2, py + 2, 4, 1);
+}
+
+function drawDevice(ctx, px, py, device, tick) {
+  // rack-mounted gear lying on a desk: switch / firewall / terminal each get a look
+  ctx.fillStyle = PAL.shadow; ctx.beginPath();
+  ctx.ellipse(px + TILE / 2, py + TILE - 5, 11, 3, 0, 0, Math.PI * 2); ctx.fill();
+  const blink = Math.sin(tick / 9) > 0;
+  if (device === "switch") {
+    // flat 1U switch with a row of link LEDs
+    ctx.fillStyle = "#2C2C2A"; ctx.fillRect(px + 4, py + 12, TILE - 8, 11);
+    ctx.fillStyle = "#1a1a18"; ctx.fillRect(px + 4, py + 12, TILE - 8, 2);
+    for (let i = 0; i < 6; i++) {
+      ctx.fillStyle = (i % 2 === 0) === blink ? "#63B370" : "#1d5a30";
+      ctx.fillRect(px + 7 + i * 3, py + 16, 2, 2);
+    }
+    ctx.fillStyle = "#9AA0A6"; ctx.fillRect(px + TILE - 9, py + 15, 3, 5); // uplink port
+  } else if (device === "firewall") {
+    // chunkier box, red status bar — the perimeter guardian
+    ctx.fillStyle = "#33312E"; ctx.fillRect(px + 5, py + 9, TILE - 10, 14);
+    ctx.fillStyle = "#1a1a18"; ctx.fillRect(px + 5, py + 9, TILE - 10, 3);
+    ctx.fillStyle = "#C0392B"; ctx.fillRect(px + 8, py + 14, TILE - 16, 2);   // brand stripe
+    ctx.fillStyle = blink ? "#F2C94C" : "#5A4708"; ctx.fillRect(px + 8, py + 18, 2, 2);
+    ctx.fillStyle = "#63B370"; ctx.fillRect(px + 12, py + 18, 2, 2);
+  } else {
+    // terminal: a little monitor showing a blinking prompt
+    ctx.fillStyle = "#2C2C2A"; ctx.fillRect(px + 6, py + 6, TILE - 12, 14);
+    ctx.fillStyle = "#0c1f14"; ctx.fillRect(px + 8, py + 8, TILE - 16, 10);
+    ctx.fillStyle = "#63B370"; ctx.fillRect(px + 10, py + 10, 5, 1);          // a line of text
+    ctx.fillStyle = "#63B370"; ctx.fillRect(px + 10, py + 13, 8, 1);
+    if (blink) { ctx.fillStyle = "#9FE1CB"; ctx.fillRect(px + 19, py + 13, 2, 2); } // cursor
+    ctx.fillStyle = "#5F5E5A"; ctx.fillRect(px + 11, py + 20, TILE - 22, 2);  // stand
+  }
+}
+
 // ---- which bubble (if any) floats over a prop ----
 function propBubbleKind(p, state) {
   const kind = p.kind || (p.isMonitor ? "monitor" : p.isPrinter ? "printer" : "");
-  if (kind === "printer" || kind === "usb") {
+  if (kind === "elevator") return null; // the lift never wears a marker
+  if (kind === "printer" || kind === "usb" || kind === "device") {
     return p.sideQuest ? (state.sqSolved.has(p.sideQuest) ? "done" : "sq") : null;
   }
   if (kind === "pet") return state.flags.has(p.doneFlag || "stashTaken") ? "done" : "quest";
@@ -1794,6 +2693,10 @@ function draw(ctx, state, facedTarget) {
       drawStash(ctx, sx, sy, state.flags.has(p.doneFlag));
     } else if (kind === "usb") {
       drawUsb(ctx, sx, sy, state.tick);
+    } else if (kind === "elevator") {
+      drawElevator(ctx, sx, sy, state.tick);
+    } else if (kind === "device") {
+      drawDevice(ctx, sx, sy, p.device, state.tick);
     }
     const bk = propBubbleKind(p, state);
     if (bk) drawBubble(ctx, sx, sy, bk, state.tick);
@@ -1812,7 +2715,7 @@ function draw(ctx, state, facedTarget) {
   }
 
   // prompt over a faced prop
-  if (facedTarget && ["monitor", "prop-sq", "pet", "search", "chest"].includes(facedTarget.kind) && !state.moving) {
+  if (facedTarget && ["monitor", "prop-sq", "pet", "search", "chest", "elevator"].includes(facedTarget.kind) && !state.moving) {
     const p = facedTarget.target;
     drawPrompt(ctx, p.x * TILE - camX, p.y * TILE - camY, state.tick);
   }
@@ -1878,6 +2781,7 @@ function drawVignette(ctx, cw, ch) {
 
 /* ===== src/ui.js ===== */
 // UI layer: everything that happens inside the modal popup.
+
 
 
 
@@ -1981,43 +2885,60 @@ function openIntro() {
 // --- end of day -----------------------------------------------------------
 function openEndOfDay() {
   state.inEndOfDay = true;
-  const principles = Object.values(SCENARIOS).map((s) => s.principle);
-  const sqCount = state.sqSolved.size;
-  const sqTotal = Object.keys(SIDE_QUESTS).length;
-  const sharpCount = state.sharp.size;
+  const here = state.floor;
+  const meta = FLOOR_META[here] || { name: here, tag: "" };
+  const floorScenIds = scenarioIdsForFloor(here);
+  const floorTotal = scenarioCountForFloor(here);
+  const principles = floorScenIds.map((id) => SCENARIOS[id] && SCENARIOS[id].principle).filter(Boolean);
+
+  // side quests / sharp calls counted for THIS floor only
+  const floorSqIds = sideQuestIdsForFloor(here);
+  const sqCount = floorSqIds.filter((id) => state.sqSolved.has(id)).length;
+  const sqTotal = floorSqIds.length;
+  const sharpCount = floorScenIds.filter((id) => state.sharp.has(id)).length;
 
   const principleList = principles
     .map((p) => `<li>${escapeHtml(p)}</li>`)
     .join("");
 
-  const sqStatus = sqCount === sqTotal
-    ? "You found every side quest today. That's the rare 'actually pays attention' tier."
+  const sqStatus = sqTotal === 0
+    ? "No side quests on this floor today \u2014 the queue was the whole job."
+    : sqCount === sqTotal
+    ? "You found every side quest on this floor. That's the rare 'actually pays attention' tier."
     : sqCount > 0
-    ? `You found ${sqCount} of ${sqTotal} side quests. The rest are still out there \u2014 noticing them is its own skill.`
-    : "You didn't find any side quests today. Try walking through every room before clearing the queue next time.";
+    ? `You found ${sqCount} of ${sqTotal} side quests here. The rest are still out there \u2014 noticing them is its own skill.`
+    : "You didn't find any side quests on this floor. Try walking through every room before clearing the queue next time.";
 
-  const sharpStatus = sharpCount === 7
+  const sharpStatus = sharpCount === floorTotal
     ? "And you nailed every diagnosis on the first call. Clean sheet."
-    : sharpCount >= 4
-    ? `You called ${sharpCount} of 7 right on the first try \u2014 the evidence work is paying off.`
-    : `You called ${sharpCount} of 7 right on the first try. Investigating one more clue before committing usually settles it.`;
+    : sharpCount >= Math.ceil(floorTotal / 2)
+    ? `You called ${sharpCount} of ${floorTotal} right on the first try \u2014 the evidence work is paying off.`
+    : `You called ${sharpCount} of ${floorTotal} right on the first try. Investigating one more clue before committing usually settles it.`;
 
   const name = escapeHtml(state.playerName || "you");
 
+  // If Floor 3 just got cleared and Floor 7 is still locked-by-progress, nudge.
+  const unlockNote = (here === "floor3" && state.hasFlag("floor3Cleared"))
+    ? `<div style="margin-top:12px;padding:10px;border:0.5px solid var(--border);border-radius:8px;background:rgba(43,179,163,0.08);font-size:12px;">
+         <strong>Floor 7 is unlocked.</strong> Take the elevator in the corner to reach Security Operations \u2014 Security+, PenTest+, and advanced Network+ scenarios.
+       </div>`
+    : "";
+
   openModal(
-    `End of day ${state.day}`,
-    "Ticket monitor",
+    `End of day ${state.day} \u00b7 ${escapeHtml(meta.name)}`,
+    meta.tag || "Ticket monitor",
     "i",
-    `<div style="margin-bottom:10px;">Nice work, ${name}. All seven tickets closed.</div>
+    `<div style="margin-bottom:10px;">Nice work, ${name}. All ${floorTotal} tickets on ${escapeHtml(meta.name)} closed.</div>
      <div style="margin-bottom:6px;color:var(--text-muted);font-size:12px;">${sqStatus}</div>
      <div style="margin-bottom:14px;color:var(--text-muted);font-size:12px;">${sharpStatus}</div>
 
      <div class="eod-stats">
-       <div class="eod-stat"><div class="eod-stat-num">${sharpCount}/7</div><div class="eod-stat-label">first-try calls</div></div>
+       <div class="eod-stat"><div class="eod-stat-num">${sharpCount}/${floorTotal}</div><div class="eod-stat-label">first-try calls</div></div>
        <div class="eod-stat"><div class="eod-stat-num">${state.day}</div><div class="eod-stat-label">days worked</div></div>
        <div class="eod-stat"><div class="eod-stat-num">${state.lifeTickets}</div><div class="eod-stat-label">tickets, all-time</div></div>
        <div class="eod-stat"><div class="eod-stat-num">${state.lifeSideQuests}</div><div class="eod-stat-label">side quests, all-time</div></div>
      </div>
+     ${unlockNote}
 
      <div class="scenario-section-label" style="margin-top:14px;">Principles you used today</div>
      <ol class="principle-list">${principleList}</ol>
@@ -2046,14 +2967,20 @@ function openNpcChat(n) {
 // --- Ticket monitor -------------------------------------------------------
 function openTicketBoard() {
   state.inTicketBoard = true;
-  const rows = Object.entries(SCENARIOS).map(([id, s]) => {
+  const here = state.floor;
+  const meta = FLOOR_META[here] || { name: here, tag: "" };
+  const ids = scenarioIdsForFloor(here);
+  const rows = ids.map((id) => {
+    const s = SCENARIOS[id];
+    if (!s) return "";
     const isSolved = state.solved.has(id);
     const npc = NPCS.find((n) => n.ticket === id);
+    const cert = s.cert ? `<span class="ticket-cert">${escapeHtml(s.cert)}</span>` : "";
     return `
       <div class="ticket-row ${isSolved ? "solved" : ""}">
         <span class="ticket-row-icon">${isSolved ? "\u2713" : "\u25cf"}</span>
         <div class="ticket-row-main">
-          <div class="ticket-row-title">${escapeHtml(s.title)}</div>
+          <div class="ticket-row-title">${escapeHtml(s.title)} ${cert}</div>
           <div class="ticket-row-meta">${escapeHtml(s.ticketMeta)}</div>
         </div>
         <span class="ticket-row-status">${isSolved ? "solved" : `find ${npc ? escapeHtml(npc.name) : ""}`}</span>
@@ -2061,12 +2988,12 @@ function openTicketBoard() {
   }).join("");
 
   openModal(
-    "Ticket monitor",
-    `IT room \u00b7 Day ${state.day} queue`,
+    `${meta.name} ticket queue`,
+    `${escapeHtml(meta.tag)} \u00b7 Day ${state.day}`,
     "i",
     `<div>${rows}</div>
      <div style="font-size:11px;color:var(--text-faint);margin-top:10px;padding-top:8px;border-top:0.5px solid var(--border);">
-       Walk to the person named on the ticket to take it on.
+       Walk to the person named on the ticket to take it on. Hit <strong>Exam</strong> in the top bar to practice-test everything on this floor.
      </div>`
   );
 }
@@ -2380,12 +3307,28 @@ function openChest(p) {
 // --- SDV: the Field Companion / Discoveries gallery -------------------------
 function currentObjectives() {
   const o = [];
-  if (!state.hasFlag("catMet")) o.push("Find the office cat (she's in the conf. room).");
-  else if (!state.hasFlag("hasCatFood")) o.push("Mittens is hungry \u2014 find cat food in the print room supply cabinet.");
-  else if (!state.hasFlag("catFed")) o.push("Bring the cat food back to Mittens.");
-  else if (state.hasFlag("catRevealed") && !state.hasFlag("stashTaken")) o.push("Check the loose ceiling tile Mittens pawed open.");
-  if (!state.sqSolved.has("usbDrop")) o.push("Deal with the mystery USB stick on the open-desk floor.");
-  if (o.length === 0) o.push("All side quests handled. Nice. (More coming soon.)");
+  const here = state.floor;
+  if (here === "floor3") {
+    if (!state.hasFlag("catMet")) o.push("Find the office cat (she's in the conf. room).");
+    else if (!state.hasFlag("hasCatFood")) o.push("Mittens is hungry \u2014 find cat food in the print room supply cabinet.");
+    else if (!state.hasFlag("catFed")) o.push("Bring the cat food back to Mittens.");
+    else if (state.hasFlag("catRevealed") && !state.hasFlag("stashTaken")) o.push("Check the loose ceiling tile Mittens pawed open.");
+    if (!state.sqSolved.has("usbDrop")) o.push("Deal with the mystery USB stick on the open-desk floor.");
+    if (!state.hasFlag("floor3Cleared")) o.push("Clear the Floor 3 queue to unlock the elevator to Floor 7.");
+    else o.push("Floor 7 (Security Operations) is unlocked \u2014 take the elevator up.");
+  } else {
+    // Floor 7 side quests live on devices around the SOC.
+    const sqLabels = {
+      defaultCreds: "Audit the network switch in the network closet (default creds?).",
+      exposedRdp: "Review the firewall console in the analyst pit (exposed RDP?).",
+      secretInRepo: "Check the OSINT terminal in the red-team lab (leaked secret?).",
+      tailgater: "That stranger with no visible badge near the red-team lab \u2014 handle it."
+    };
+    for (const id of sideQuestIdsForFloor("floor7")) {
+      if (!state.sqSolved.has(id) && sqLabels[id]) o.push(sqLabels[id]);
+    }
+  }
+  if (o.length === 0) o.push("All side quests on this floor handled. Nice work.");
   return o;
 }
 function openDiscoveries() {
@@ -2414,6 +3357,173 @@ function openDiscoveries() {
      <div class="find-grid">${cards}</div>`);
 }
 
+// --- Elevator: travel between floors ---------------------------------------
+function openElevator(p) {
+  state.inDialog = true;
+  const here = state.floor;
+  const cards = FLOOR_ORDER.map((id) => {
+    const m = FLOOR_META[id];
+    const isHere = id === here;
+    // Floor 7 stays locked until Floor 3's queue is cleared.
+    const locked = id === "floor7" && !state.hasFlag("floor3Cleared");
+    let statusChip, btn;
+    if (isHere) {
+      statusChip = `<span class="floor-chip here">you are here</span>`;
+      btn = `<button class="floor-btn" disabled>Current floor</button>`;
+    } else if (locked) {
+      statusChip = `<span class="floor-chip locked">\u{1F512} locked</span>`;
+      btn = `<button class="floor-btn" disabled>Clear Floor 3 first</button>`;
+    } else {
+      statusChip = `<span class="floor-chip open">ready</span>`;
+      btn = `<button class="floor-btn primary-btn" data-floor="${escapeAttr(id)}">Go to ${escapeHtml(m.name)} \u2192</button>`;
+    }
+    return `<div class="floor-card ${isHere ? "is-here" : ""} ${locked ? "is-locked" : ""}">
+        <div class="floor-card-head">
+          <span class="floor-card-name">${escapeHtml(m.name)}</span>
+          ${statusChip}
+        </div>
+        <div class="floor-card-tag">${escapeHtml(m.tag)}</div>
+        <div class="floor-card-blurb">${escapeHtml(m.blurb)}</div>
+        ${btn}
+      </div>`;
+  }).join("");
+
+  const lockHint = !state.hasFlag("floor3Cleared")
+    ? `<div style="font-size:11px;color:var(--text-faint);margin-top:10px;">Floor 7 unlocks once every Floor 3 ticket is solved. You can practice-test anything anytime with the <strong>Exam</strong> button \u2014 no need to wait.</div>`
+    : `<div style="font-size:11px;color:var(--text-faint);margin-top:10px;">Both floors are open. Your progress on each is saved separately.</div>`;
+
+  openModal("The elevator", "Choose a floor", "\u{1F6D7}",
+    `<div class="floor-list">${cards}</div>${lockHint}`);
+
+  document.querySelectorAll(".floor-btn[data-floor]").forEach((b) => {
+    b.addEventListener("click", () => {
+      const id = b.dataset.floor;
+      closeModal();
+      state.goToFloor(id);
+    });
+  });
+}
+
+// --- Practice Test: a 5-question quiz on the current floor ------------------
+function openQuiz() {
+  state.inDialog = true;
+  const here = state.floor;
+  const meta = FLOOR_META[here] || { name: here, tag: "" };
+  const bestKey = "quiz-best-" + here;
+
+  function start() {
+    const questions = sampleQuiz(here, 5);
+    const total = questions.length;
+    let idx = 0;
+    let score = 0;
+    let answered = false;
+
+    function paint(html, subtitle) {
+      // first paint uses openModal (shows panel + scrolls once); later paints
+      // just swap the body so the panel doesn't jump on every Next.
+      const bodyEl = document.getElementById("modal-body");
+      if (!bodyEl || els.bg.hidden) {
+        openModal("Practice Test", subtitle, "\u{1F4DD}", html);
+      } else {
+        if (subtitle != null) els.subtitle.textContent = subtitle;
+        bodyEl.innerHTML = html;
+      }
+    }
+
+    function renderQuestion() {
+      answered = false;
+      const q = questions[idx];
+      const opts = q.options.map((o, i) =>
+        `<button class="quiz-opt" data-i="${i}">${escapeHtml(o.t)}</button>`).join("");
+      paint(
+        `<div class="quiz-progress-row">
+           <span>Question ${idx + 1} of ${total}</span>
+           <span class="quiz-cert">${escapeHtml(q.cert || "")}</span>
+         </div>
+         <div class="quiz-question">${escapeHtml(q.q)}</div>
+         <div class="quiz-opts btn-column">${opts}</div>
+         <div id="quiz-feedback"></div>`,
+        `${meta.name} \u00b7 ${meta.tag}`
+      );
+      document.querySelectorAll(".quiz-opt").forEach((b) => {
+        b.addEventListener("click", () => choose(parseInt(b.dataset.i, 10)));
+      });
+    }
+
+    function choose(i) {
+      if (answered) return;
+      answered = true;
+      const q = questions[idx];
+      const correct = i === q.answerIndex;
+      if (correct) score += 1;
+      document.querySelectorAll(".quiz-opt").forEach((b) => {
+        const bi = parseInt(b.dataset.i, 10);
+        if (bi === q.answerIndex) b.classList.add("correct");
+        else if (bi === i) b.classList.add("wrong");
+        b.disabled = true;
+      });
+      const fb = document.getElementById("quiz-feedback");
+      const last = idx === total - 1;
+      fb.className = "scenario-feedback " + (correct ? "win" : "lose");
+      fb.innerHTML =
+        `<div style="font-weight:600;margin-bottom:4px;">${correct ? "Correct" : "Not quite"}</div>
+         <div style="font-size:12px;">${escapeHtml(q.explain)}</div>
+         <div style="margin-top:10px;">
+           <button id="quiz-next" class="primary-btn">${last ? "See score \u2192" : "Next question \u2192"}</button>
+         </div>`;
+      document.getElementById("quiz-next").addEventListener("click", () => {
+        if (last) renderScore();
+        else { idx += 1; renderQuestion(); }
+      });
+    }
+
+    function renderScore() {
+      const prevBest = loadNum(bestKey, 0);
+      const pct = total ? Math.round((score / total) * 100) : 0;
+      const isBest = score > prevBest;
+      if (isBest) saveNum(bestKey, score);
+      const best = Math.max(prevBest, score);
+      const verdict = pct === 100
+        ? "Perfect score. You could teach this floor."
+        : pct >= 80
+        ? "Strong. You know this material."
+        : pct >= 60
+        ? "Solid start \u2014 review the misses and run it again."
+        : "Worth another pass. The explanations above are the fast way up.";
+      paint(
+        `<div class="quiz-score-wrap">
+           <div class="quiz-score-num">${score} / ${total}</div>
+           <div class="quiz-score-pct">${pct}%</div>
+           <div class="quiz-score-bar"><span style="width:${pct}%;"></span></div>
+           <div class="quiz-score-verdict">${escapeHtml(verdict)}</div>
+           <div class="quiz-best">${isBest ? "\u2B50 New best on this floor!" : `Best on ${escapeHtml(meta.name)}: ${best}/${total}`}</div>
+         </div>
+         <div class="eod-actions">
+           <button id="quiz-retake" class="primary-btn">Retake test</button>
+           <button id="quiz-done">Back to the floor</button>
+         </div>
+         <div style="font-size:11px;color:var(--text-faint);margin-top:8px;">
+           Each retake pulls a fresh draw from this floor's question pool (${quizPoolSize(here)} total). Retake as often as you like.
+         </div>`,
+        `${meta.name} \u00b7 results`
+      );
+      document.getElementById("quiz-retake").addEventListener("click", start);
+      document.getElementById("quiz-done").addEventListener("click", closeModal);
+    }
+
+    if (total === 0) {
+      openModal("Practice Test", meta.name, "\u{1F4DD}",
+        `<div>No questions available for this floor yet.</div>
+         <div style="margin-top:12px;"><button id="quiz-done" class="primary-btn">Close</button></div>`);
+      document.getElementById("quiz-done").addEventListener("click", closeModal);
+      return;
+    }
+    renderQuestion();
+  }
+
+  start();
+}
+
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
@@ -2424,6 +3534,7 @@ function escapeAttr(s) { return escapeHtml(s); }
 /* ===== src/game.js ===== */
 // Game loop and input — drives the ported renderer (renderX/renderY pixel
 // positions, facing, smooth lerp walking, held-key continuous movement).
+
 
 
 
@@ -2534,8 +3645,14 @@ async function startGame() {
   const ctx = canvas.getContext("2d");
   ctx.imageSmoothingEnabled = false;
 
+  // Restore which floor the player was on BEFORE we read PLAYER_START, so the
+  // spawn point and live MAP/NPCS/PROPS bindings all reflect the right floor.
+  const savedFloor = loadString("floor", "floor3");
+  setFloor(savedFloor);
+
   const state = {
-    map: "office",
+    map: FLOOR_ID,
+    floor: FLOOR_ID,
     px: PLAYER_START.x, py: PLAYER_START.y,
     renderX: PLAYER_START.x * TILE, renderY: PLAYER_START.y * TILE,
     facing: PLAYER_START.dir,
@@ -2588,12 +3705,42 @@ async function startGame() {
       this.facing = PLAYER_START.dir; this.moving = false;
       this.updateProgressUI();
     },
+    // --- floors ---
+    // how many of THIS floor's tickets are solved (solved Set is shared across floors)
+    solvedOnFloor(floorId) {
+      return scenarioIdsForFloor(floorId).filter((id) => this.solved.has(id)).length;
+    },
+    floorCleared(floorId) {
+      return this.solvedOnFloor(floorId) >= scenarioCountForFloor(floorId);
+    },
+    goToFloor(id) {
+      setFloor(id);
+      this.floor = id; this.map = id; saveString("floor", id);
+      this.px = PLAYER_START.x; this.py = PLAYER_START.y;
+      this.renderX = this.px * TILE; this.renderY = this.py * TILE;
+      this.facing = PLAYER_START.dir; this.moving = false;
+      const lab = document.getElementById("loc-label");
+      if (lab) lab.textContent = LOC_LABEL;
+      const fp = document.getElementById("floor-pill");
+      if (fp) fp.textContent = FLOOR_META[id] ? FLOOR_META[id].name : id;
+      this.updateProgressUI();
+    },
     updateProgressUI() {
       document.getElementById("day-pill").textContent = `Day ${this.day}`;
-      document.getElementById("ticket-progress").textContent = `${this.solved.size} / 7 tickets`;
+      // Mark Floor 3 cleared (gates the elevator to Floor 7) the moment its
+      // tickets are all solved — idempotent, so safe to check every frame-ish.
+      if (this.floorCleared("floor3")) this.setFlag("floor3Cleared");
+      const here = this.floor;
+      const total = scenarioCountForFloor(here);
+      const done = this.solvedOnFloor(here);
+      document.getElementById("ticket-progress").textContent = `${done} / ${total} tickets`;
       const n = this.sqSolved.size;
       document.getElementById("sq-progress").textContent = `${n} side quest${n === 1 ? "" : "s"}`;
-      document.getElementById("eod-hint").hidden = !(this.solved.size === 7) || this.inEndOfDay;
+      document.getElementById("eod-hint").hidden = !(done === total) || this.inEndOfDay;
+      const fpill = document.getElementById("floor-pill");
+      if (fpill) fpill.textContent = FLOOR_META[here] ? FLOOR_META[here].name : here;
+      const lab = document.getElementById("loc-label");
+      if (lab) lab.textContent = LOC_LABEL;
       const fp = document.getElementById("finds-progress");
       if (fp) fp.textContent = `\u2605 ${this.finds.size}/${FINDTOTAL}`;
       const cp = document.getElementById("coins-progress");
@@ -2629,6 +3776,7 @@ async function startGame() {
     const p = propAt(fx, fy);
     if (p) {
       if (p.isMonitor || p.kind === "monitor") return { kind: "monitor", target: p };
+      if (p.kind === "elevator") return { kind: "elevator", target: p };
       if (p.kind === "pet") return { kind: "pet", target: p };
       if (p.kind === "search") return { kind: "search", target: p };
       if (p.kind === "chest") return { kind: "chest", target: p };
@@ -2662,7 +3810,9 @@ async function startGame() {
       else if (n.sideQuest && !state.sqSolved.has(n.sideQuest)) openSideQuest(n.sideQuest);
       else openNpcChat(n);
     } else if (t.kind === "monitor") {
-      if (state.solved.size === 7) openEndOfDay(); else openTicketBoard();
+      if (state.floorCleared(state.floor)) openEndOfDay(); else openTicketBoard();
+    } else if (t.kind === "elevator") {
+      openElevator(t.target);
     } else if (t.kind === "pet") {
       openPet(t.target);
     } else if (t.kind === "search") {
@@ -2682,6 +3832,7 @@ async function startGame() {
       let label = "Interact";
       if (t.kind === "npc") label = `Talk to ${t.target.name}`;
       else if (t.kind === "monitor") label = "Read ticket board";
+      else if (t.kind === "elevator") label = "Take the elevator";
       else if (t.kind === "pet") label = `Approach ${t.target.name || "the cat"}`;
       else if (t.kind === "search") label = `Examine ${t.target.label}`;
       else if (t.kind === "chest") label = `Check ${t.target.label}`;
@@ -2775,18 +3926,24 @@ async function startGame() {
   document.getElementById("reset-btn").addEventListener("click", () => {
     if (!confirm("Clear ALL saved progress \u2014 day count, stats, and your name \u2014 and start completely over?")) return;
     clearAll();
+    setFloor("floor3");
+    state.floor = "floor3"; state.map = "floor3";
     state.solved = new Set(); state.sqSolved = new Set(); state.sharp = new Set();
     state.flags = new Set(); state.finds = new Set(); state.coins = 0; state.tokens = 0;
     state.playerName = ""; state.day = 1; state.lifeTickets = 0; state.lifeSideQuests = 0;
     state.px = PLAYER_START.x; state.py = PLAYER_START.y;
     state.renderX = state.px * TILE; state.renderY = state.py * TILE;
     state.facing = PLAYER_START.dir; state.moving = false;
+    const lab = document.getElementById("loc-label");
+    if (lab) lab.textContent = LOC_LABEL;
     state.updateProgressUI();
     openIntro();
   });
   document.getElementById("sound-btn").addEventListener("click", () => state.setSound(!state.soundOn));
   const compBtn = document.getElementById("companion-btn");
   if (compBtn) compBtn.addEventListener("click", () => { if (!isModalOpen()) openDiscoveries(); });
+  const examBtn = document.getElementById("exam-btn");
+  if (examBtn) examBtn.addEventListener("click", () => { if (!isModalOpen()) openQuiz(); });
 
   function onResize() { sizeCanvas(canvas, viewport); }
   window.addEventListener("resize", onResize);
@@ -2795,7 +3952,10 @@ async function startGame() {
   state.updateProgressUI();
   // continue line on the title screen
   const cont = document.getElementById("continue-line");
-  if (cont && state.solved.size > 0) cont.textContent = `Progress found: ${state.solved.size}/7 tickets solved today.`;
+  if (cont && state.solved.size > 0) {
+    const here = state.floor;
+    cont.textContent = `Progress found: ${state.solvedOnFloor(here)}/${scenarioCountForFloor(here)} tickets on ${FLOOR_META[here] ? FLOOR_META[here].name : here}.`;
+  }
 
   requestAnimationFrame(loop);
 }

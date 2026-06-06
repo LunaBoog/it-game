@@ -1,10 +1,11 @@
 // UI layer: everything that happens inside the modal popup.
 
-import { SCENARIOS } from "./scenarios.js";
-import { SIDE_QUESTS } from "./sideQuests.js";
-import { NPCS, PROPS } from "./world.js";
+import { SCENARIOS, scenarioIdsForFloor, scenarioCountForFloor } from "./scenarios.js";
+import { SIDE_QUESTS, sideQuestIdsForFloor } from "./sideQuests.js";
+import { NPCS, PROPS, FLOOR_META, FLOOR_ORDER, LOC_LABEL } from "./world.js";
 import { FINDS, FINDTOTAL } from "./collectables.js";
-import { saveSet } from "./storage.js";
+import { saveSet, loadNum, saveNum } from "./storage.js";
+import { sampleQuiz, quizPoolSize } from "./quiz.js";
 
 const els = {};
 let state;
@@ -105,43 +106,60 @@ export function openIntro() {
 
 export function openEndOfDay() {
   state.inEndOfDay = true;
-  const principles = Object.values(SCENARIOS).map((s) => s.principle);
-  const sqCount = state.sqSolved.size;
-  const sqTotal = Object.keys(SIDE_QUESTS).length;
-  const sharpCount = state.sharp.size;
+  const here = state.floor;
+  const meta = FLOOR_META[here] || { name: here, tag: "" };
+  const floorScenIds = scenarioIdsForFloor(here);
+  const floorTotal = scenarioCountForFloor(here);
+  const principles = floorScenIds.map((id) => SCENARIOS[id] && SCENARIOS[id].principle).filter(Boolean);
+
+  // side quests / sharp calls counted for THIS floor only
+  const floorSqIds = sideQuestIdsForFloor(here);
+  const sqCount = floorSqIds.filter((id) => state.sqSolved.has(id)).length;
+  const sqTotal = floorSqIds.length;
+  const sharpCount = floorScenIds.filter((id) => state.sharp.has(id)).length;
 
   const principleList = principles
     .map((p) => `<li>${escapeHtml(p)}</li>`)
     .join("");
 
-  const sqStatus = sqCount === sqTotal
-    ? "You found every side quest today. That's the rare 'actually pays attention' tier."
+  const sqStatus = sqTotal === 0
+    ? "No side quests on this floor today \u2014 the queue was the whole job."
+    : sqCount === sqTotal
+    ? "You found every side quest on this floor. That's the rare 'actually pays attention' tier."
     : sqCount > 0
-    ? `You found ${sqCount} of ${sqTotal} side quests. The rest are still out there \u2014 noticing them is its own skill.`
-    : "You didn't find any side quests today. Try walking through every room before clearing the queue next time.";
+    ? `You found ${sqCount} of ${sqTotal} side quests here. The rest are still out there \u2014 noticing them is its own skill.`
+    : "You didn't find any side quests on this floor. Try walking through every room before clearing the queue next time.";
 
-  const sharpStatus = sharpCount === 7
+  const sharpStatus = sharpCount === floorTotal
     ? "And you nailed every diagnosis on the first call. Clean sheet."
-    : sharpCount >= 4
-    ? `You called ${sharpCount} of 7 right on the first try \u2014 the evidence work is paying off.`
-    : `You called ${sharpCount} of 7 right on the first try. Investigating one more clue before committing usually settles it.`;
+    : sharpCount >= Math.ceil(floorTotal / 2)
+    ? `You called ${sharpCount} of ${floorTotal} right on the first try \u2014 the evidence work is paying off.`
+    : `You called ${sharpCount} of ${floorTotal} right on the first try. Investigating one more clue before committing usually settles it.`;
 
   const name = escapeHtml(state.playerName || "you");
 
+  // If Floor 3 just got cleared and Floor 7 is still locked-by-progress, nudge.
+  const unlockNote = (here === "floor3" && state.hasFlag("floor3Cleared"))
+    ? `<div style="margin-top:12px;padding:10px;border:0.5px solid var(--border);border-radius:8px;background:rgba(43,179,163,0.08);font-size:12px;">
+         <strong>Floor 7 is unlocked.</strong> Take the elevator in the corner to reach Security Operations \u2014 Security+, PenTest+, and advanced Network+ scenarios.
+       </div>`
+    : "";
+
   openModal(
-    `End of day ${state.day}`,
-    "Ticket monitor",
+    `End of day ${state.day} \u00b7 ${escapeHtml(meta.name)}`,
+    meta.tag || "Ticket monitor",
     "i",
-    `<div style="margin-bottom:10px;">Nice work, ${name}. All seven tickets closed.</div>
+    `<div style="margin-bottom:10px;">Nice work, ${name}. All ${floorTotal} tickets on ${escapeHtml(meta.name)} closed.</div>
      <div style="margin-bottom:6px;color:var(--text-muted);font-size:12px;">${sqStatus}</div>
      <div style="margin-bottom:14px;color:var(--text-muted);font-size:12px;">${sharpStatus}</div>
 
      <div class="eod-stats">
-       <div class="eod-stat"><div class="eod-stat-num">${sharpCount}/7</div><div class="eod-stat-label">first-try calls</div></div>
+       <div class="eod-stat"><div class="eod-stat-num">${sharpCount}/${floorTotal}</div><div class="eod-stat-label">first-try calls</div></div>
        <div class="eod-stat"><div class="eod-stat-num">${state.day}</div><div class="eod-stat-label">days worked</div></div>
        <div class="eod-stat"><div class="eod-stat-num">${state.lifeTickets}</div><div class="eod-stat-label">tickets, all-time</div></div>
        <div class="eod-stat"><div class="eod-stat-num">${state.lifeSideQuests}</div><div class="eod-stat-label">side quests, all-time</div></div>
      </div>
+     ${unlockNote}
 
      <div class="scenario-section-label" style="margin-top:14px;">Principles you used today</div>
      <ol class="principle-list">${principleList}</ol>
@@ -172,14 +190,20 @@ export function openNpcChat(n) {
 
 export function openTicketBoard() {
   state.inTicketBoard = true;
-  const rows = Object.entries(SCENARIOS).map(([id, s]) => {
+  const here = state.floor;
+  const meta = FLOOR_META[here] || { name: here, tag: "" };
+  const ids = scenarioIdsForFloor(here);
+  const rows = ids.map((id) => {
+    const s = SCENARIOS[id];
+    if (!s) return "";
     const isSolved = state.solved.has(id);
     const npc = NPCS.find((n) => n.ticket === id);
+    const cert = s.cert ? `<span class="ticket-cert">${escapeHtml(s.cert)}</span>` : "";
     return `
       <div class="ticket-row ${isSolved ? "solved" : ""}">
         <span class="ticket-row-icon">${isSolved ? "\u2713" : "\u25cf"}</span>
         <div class="ticket-row-main">
-          <div class="ticket-row-title">${escapeHtml(s.title)}</div>
+          <div class="ticket-row-title">${escapeHtml(s.title)} ${cert}</div>
           <div class="ticket-row-meta">${escapeHtml(s.ticketMeta)}</div>
         </div>
         <span class="ticket-row-status">${isSolved ? "solved" : `find ${npc ? escapeHtml(npc.name) : ""}`}</span>
@@ -187,12 +211,12 @@ export function openTicketBoard() {
   }).join("");
 
   openModal(
-    "Ticket monitor",
-    `IT room \u00b7 Day ${state.day} queue`,
+    `${meta.name} ticket queue`,
+    `${escapeHtml(meta.tag)} \u00b7 Day ${state.day}`,
     "i",
     `<div>${rows}</div>
      <div style="font-size:11px;color:var(--text-faint);margin-top:10px;padding-top:8px;border-top:0.5px solid var(--border);">
-       Walk to the person named on the ticket to take it on.
+       Walk to the person named on the ticket to take it on. Hit <strong>Exam</strong> in the top bar to practice-test everything on this floor.
      </div>`
   );
 }
@@ -508,12 +532,28 @@ export function openChest(p) {
 // --- SDV: the Field Companion / Discoveries gallery -------------------------
 function currentObjectives() {
   const o = [];
-  if (!state.hasFlag("catMet")) o.push("Find the office cat (she's in the conf. room).");
-  else if (!state.hasFlag("hasCatFood")) o.push("Mittens is hungry \u2014 find cat food in the print room supply cabinet.");
-  else if (!state.hasFlag("catFed")) o.push("Bring the cat food back to Mittens.");
-  else if (state.hasFlag("catRevealed") && !state.hasFlag("stashTaken")) o.push("Check the loose ceiling tile Mittens pawed open.");
-  if (!state.sqSolved.has("usbDrop")) o.push("Deal with the mystery USB stick on the open-desk floor.");
-  if (o.length === 0) o.push("All side quests handled. Nice. (More coming soon.)");
+  const here = state.floor;
+  if (here === "floor3") {
+    if (!state.hasFlag("catMet")) o.push("Find the office cat (she's in the conf. room).");
+    else if (!state.hasFlag("hasCatFood")) o.push("Mittens is hungry \u2014 find cat food in the print room supply cabinet.");
+    else if (!state.hasFlag("catFed")) o.push("Bring the cat food back to Mittens.");
+    else if (state.hasFlag("catRevealed") && !state.hasFlag("stashTaken")) o.push("Check the loose ceiling tile Mittens pawed open.");
+    if (!state.sqSolved.has("usbDrop")) o.push("Deal with the mystery USB stick on the open-desk floor.");
+    if (!state.hasFlag("floor3Cleared")) o.push("Clear the Floor 3 queue to unlock the elevator to Floor 7.");
+    else o.push("Floor 7 (Security Operations) is unlocked \u2014 take the elevator up.");
+  } else {
+    // Floor 7 side quests live on devices around the SOC.
+    const sqLabels = {
+      defaultCreds: "Audit the network switch in the network closet (default creds?).",
+      exposedRdp: "Review the firewall console in the analyst pit (exposed RDP?).",
+      secretInRepo: "Check the OSINT terminal in the red-team lab (leaked secret?).",
+      tailgater: "That stranger with no visible badge near the red-team lab \u2014 handle it."
+    };
+    for (const id of sideQuestIdsForFloor("floor7")) {
+      if (!state.sqSolved.has(id) && sqLabels[id]) o.push(sqLabels[id]);
+    }
+  }
+  if (o.length === 0) o.push("All side quests on this floor handled. Nice work.");
   return o;
 }
 
@@ -541,6 +581,173 @@ export function openDiscoveries() {
      <ul class="principle-list">${objs}</ul>
      <div class="scenario-section-label" style="margin-top:12px;">Discoveries</div>
      <div class="find-grid">${cards}</div>`);
+}
+
+// --- Elevator: travel between floors ---------------------------------------
+export function openElevator(p) {
+  state.inDialog = true;
+  const here = state.floor;
+  const cards = FLOOR_ORDER.map((id) => {
+    const m = FLOOR_META[id];
+    const isHere = id === here;
+    // Floor 7 stays locked until Floor 3's queue is cleared.
+    const locked = id === "floor7" && !state.hasFlag("floor3Cleared");
+    let statusChip, btn;
+    if (isHere) {
+      statusChip = `<span class="floor-chip here">you are here</span>`;
+      btn = `<button class="floor-btn" disabled>Current floor</button>`;
+    } else if (locked) {
+      statusChip = `<span class="floor-chip locked">\u{1F512} locked</span>`;
+      btn = `<button class="floor-btn" disabled>Clear Floor 3 first</button>`;
+    } else {
+      statusChip = `<span class="floor-chip open">ready</span>`;
+      btn = `<button class="floor-btn primary-btn" data-floor="${escapeAttr(id)}">Go to ${escapeHtml(m.name)} \u2192</button>`;
+    }
+    return `<div class="floor-card ${isHere ? "is-here" : ""} ${locked ? "is-locked" : ""}">
+        <div class="floor-card-head">
+          <span class="floor-card-name">${escapeHtml(m.name)}</span>
+          ${statusChip}
+        </div>
+        <div class="floor-card-tag">${escapeHtml(m.tag)}</div>
+        <div class="floor-card-blurb">${escapeHtml(m.blurb)}</div>
+        ${btn}
+      </div>`;
+  }).join("");
+
+  const lockHint = !state.hasFlag("floor3Cleared")
+    ? `<div style="font-size:11px;color:var(--text-faint);margin-top:10px;">Floor 7 unlocks once every Floor 3 ticket is solved. You can practice-test anything anytime with the <strong>Exam</strong> button \u2014 no need to wait.</div>`
+    : `<div style="font-size:11px;color:var(--text-faint);margin-top:10px;">Both floors are open. Your progress on each is saved separately.</div>`;
+
+  openModal("The elevator", "Choose a floor", "\u{1F6D7}",
+    `<div class="floor-list">${cards}</div>${lockHint}`);
+
+  document.querySelectorAll(".floor-btn[data-floor]").forEach((b) => {
+    b.addEventListener("click", () => {
+      const id = b.dataset.floor;
+      closeModal();
+      state.goToFloor(id);
+    });
+  });
+}
+
+// --- Practice Test: a 5-question quiz on the current floor ------------------
+export function openQuiz() {
+  state.inDialog = true;
+  const here = state.floor;
+  const meta = FLOOR_META[here] || { name: here, tag: "" };
+  const bestKey = "quiz-best-" + here;
+
+  function start() {
+    const questions = sampleQuiz(here, 5);
+    const total = questions.length;
+    let idx = 0;
+    let score = 0;
+    let answered = false;
+
+    function paint(html, subtitle) {
+      // first paint uses openModal (shows panel + scrolls once); later paints
+      // just swap the body so the panel doesn't jump on every Next.
+      const bodyEl = document.getElementById("modal-body");
+      if (!bodyEl || els.bg.hidden) {
+        openModal("Practice Test", subtitle, "\u{1F4DD}", html);
+      } else {
+        if (subtitle != null) els.subtitle.textContent = subtitle;
+        bodyEl.innerHTML = html;
+      }
+    }
+
+    function renderQuestion() {
+      answered = false;
+      const q = questions[idx];
+      const opts = q.options.map((o, i) =>
+        `<button class="quiz-opt" data-i="${i}">${escapeHtml(o.t)}</button>`).join("");
+      paint(
+        `<div class="quiz-progress-row">
+           <span>Question ${idx + 1} of ${total}</span>
+           <span class="quiz-cert">${escapeHtml(q.cert || "")}</span>
+         </div>
+         <div class="quiz-question">${escapeHtml(q.q)}</div>
+         <div class="quiz-opts btn-column">${opts}</div>
+         <div id="quiz-feedback"></div>`,
+        `${meta.name} \u00b7 ${meta.tag}`
+      );
+      document.querySelectorAll(".quiz-opt").forEach((b) => {
+        b.addEventListener("click", () => choose(parseInt(b.dataset.i, 10)));
+      });
+    }
+
+    function choose(i) {
+      if (answered) return;
+      answered = true;
+      const q = questions[idx];
+      const correct = i === q.answerIndex;
+      if (correct) score += 1;
+      document.querySelectorAll(".quiz-opt").forEach((b) => {
+        const bi = parseInt(b.dataset.i, 10);
+        if (bi === q.answerIndex) b.classList.add("correct");
+        else if (bi === i) b.classList.add("wrong");
+        b.disabled = true;
+      });
+      const fb = document.getElementById("quiz-feedback");
+      const last = idx === total - 1;
+      fb.className = "scenario-feedback " + (correct ? "win" : "lose");
+      fb.innerHTML =
+        `<div style="font-weight:600;margin-bottom:4px;">${correct ? "Correct" : "Not quite"}</div>
+         <div style="font-size:12px;">${escapeHtml(q.explain)}</div>
+         <div style="margin-top:10px;">
+           <button id="quiz-next" class="primary-btn">${last ? "See score \u2192" : "Next question \u2192"}</button>
+         </div>`;
+      document.getElementById("quiz-next").addEventListener("click", () => {
+        if (last) renderScore();
+        else { idx += 1; renderQuestion(); }
+      });
+    }
+
+    function renderScore() {
+      const prevBest = loadNum(bestKey, 0);
+      const pct = total ? Math.round((score / total) * 100) : 0;
+      const isBest = score > prevBest;
+      if (isBest) saveNum(bestKey, score);
+      const best = Math.max(prevBest, score);
+      const verdict = pct === 100
+        ? "Perfect score. You could teach this floor."
+        : pct >= 80
+        ? "Strong. You know this material."
+        : pct >= 60
+        ? "Solid start \u2014 review the misses and run it again."
+        : "Worth another pass. The explanations above are the fast way up.";
+      paint(
+        `<div class="quiz-score-wrap">
+           <div class="quiz-score-num">${score} / ${total}</div>
+           <div class="quiz-score-pct">${pct}%</div>
+           <div class="quiz-score-bar"><span style="width:${pct}%;"></span></div>
+           <div class="quiz-score-verdict">${escapeHtml(verdict)}</div>
+           <div class="quiz-best">${isBest ? "\u2B50 New best on this floor!" : `Best on ${escapeHtml(meta.name)}: ${best}/${total}`}</div>
+         </div>
+         <div class="eod-actions">
+           <button id="quiz-retake" class="primary-btn">Retake test</button>
+           <button id="quiz-done">Back to the floor</button>
+         </div>
+         <div style="font-size:11px;color:var(--text-faint);margin-top:8px;">
+           Each retake pulls a fresh draw from this floor's question pool (${quizPoolSize(here)} total). Retake as often as you like.
+         </div>`,
+        `${meta.name} \u00b7 results`
+      );
+      document.getElementById("quiz-retake").addEventListener("click", start);
+      document.getElementById("quiz-done").addEventListener("click", closeModal);
+    }
+
+    if (total === 0) {
+      openModal("Practice Test", meta.name, "\u{1F4DD}",
+        `<div>No questions available for this floor yet.</div>
+         <div style="margin-top:12px;"><button id="quiz-done" class="primary-btn">Close</button></div>`);
+      document.getElementById("quiz-done").addEventListener("click", closeModal);
+      return;
+    }
+    renderQuestion();
+  }
+
+  start();
 }
 
 function escapeHtml(s) {
