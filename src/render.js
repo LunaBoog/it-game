@@ -83,6 +83,14 @@ const PAL = {
 
 let mapCanvasCache = {};
 
+// display prefs the renderer honors (set from theme.applyPrefs)
+let REDUCE_MOTION = false;
+let HI_CONTRAST = false;
+export function setRenderPrefs(reduceMotion, hiContrast) {
+  REDUCE_MOTION = !!reduceMotion;
+  HI_CONTRAST = !!hiContrast;
+}
+
 function drawFloorBase(c, px, py, base, shade) {
   c.fillStyle = base; c.fillRect(px, py, TILE, TILE);
   c.fillStyle = shade; c.fillRect(px, py + TILE - 2, TILE, 2); c.fillRect(px + TILE - 2, py, 2, TILE);
@@ -158,6 +166,7 @@ function getMapCanvas(name) {
 // chorus line.
 function bobFor(stepping, tick, seed) {
   if (stepping) return -1;                       // walking hop handled by frame
+  if (REDUCE_MOTION) return 0;
   return Math.round(Math.sin((tick + seed) / 26) * 0.5 - 0.5); // 0 or -1, slow
 }
 
@@ -184,10 +193,21 @@ function drawPersonProc(ctx, px, py, sp, facing, stepping, tick = 0, seed = 0) {
   } else if (facing === "right") {
     ctx.fillRect(px + 19, py + 8 + yo, 2, 2);
   }
-  // glasses
-  if (co.glasses) {
+  // glasses / shades
+  if (co.shades) {
+    ctx.fillStyle = "#1a1a18";
+    ctx.fillRect(px + 11, py + 7 + yo, 4, 3); ctx.fillRect(px + 17, py + 7 + yo, 4, 3);
+    ctx.fillRect(px + 15, py + 8 + yo, 2, 1); // bridge
+  } else if (co.glasses) {
     ctx.strokeStyle = "#2C2C2A"; ctx.lineWidth = 1;
     ctx.strokeRect(px + 11, py + 7 + yo, 4, 3); ctx.strokeRect(px + 17, py + 7 + yo, 4, 3);
+  }
+  // hat (a simple cap over the hairline; drawn for all facings)
+  if (co.hat) {
+    ctx.fillStyle = co.hat; ctx.fillRect(px + 9, py + 2 + yo, 14, 4);
+    ctx.fillRect(px + 10, py + 1 + yo, 12, 1);
+    if (facing !== "up") { ctx.fillRect(px + 8, py + 5 + yo, 6, 1); } // brim toward viewer
+    ctx.fillStyle = "rgba(255,255,255,0.18)"; ctx.fillRect(px + 11, py + 2 + yo, 5, 1);
   }
   // body
   ctx.fillStyle = co.body; ctx.fillRect(px + 9, py + 14 + yo, 14, 12);
@@ -406,7 +426,7 @@ function propBubbleKind(p, state) {
 const MARKER_FILE = { quest: "marker_ticket", sq: "marker_sidequest", done: "marker_done" };
 
 function drawBubble(ctx, px, py, kind, tick) {
-  const bob = Math.sin(tick / 18) * 1.5;
+  const bob = REDUCE_MOTION ? 0 : Math.sin(tick / 18) * 1.5;
   const cx = px + TILE - 6;
   const cy = py + bob;
   // sprite override: drop marker_ticket / marker_sidequest / marker_done PNGs
@@ -420,6 +440,9 @@ function drawBubble(ctx, px, py, kind, tick) {
   if (kind === "quest") { ring = "#EF9F27"; fill = "#FCDE5A"; glyph = "!"; glyphColor = "#412402"; }
   else if (kind === "sq") { ring = "#185FA5"; fill = "#378ADD"; glyph = "?"; glyphColor = "#042C53"; }
   else { ring = "#0F6E56"; fill = "#1D9E75"; glyph = ""; }
+  if (HI_CONTRAST) { // dark halo so the marker pops regardless of color vision
+    ctx.fillStyle = "#0c0c0e"; ctx.beginPath(); ctx.arc(cx, cy, 9.5, 0, Math.PI * 2); ctx.fill();
+  }
   ctx.fillStyle = ring; ctx.beginPath(); ctx.arc(cx, cy, 8, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = fill; ctx.beginPath(); ctx.arc(cx, cy, 6, 0, Math.PI * 2); ctx.fill();
   if (kind === "done") {
@@ -530,7 +553,7 @@ export function draw(ctx, state, facedTarget) {
   }
 
   // player
-  drawPerson(ctx, state.renderX - camX, state.renderY - camY, "player", PLAYER_SPRITE, state.facing, state.moving, state.tick, 0);
+  drawPerson(ctx, state.renderX - camX, state.renderY - camY, "player", state.playerSprite || PLAYER_SPRITE, state.facing, state.moving, state.tick, 0);
 
   // room labels
   drawRoomLabels(ctx, camX, camY);
@@ -586,4 +609,21 @@ function drawVignette(ctx, cw, ch) {
   g.addColorStop(0, "rgba(0,0,0,0)");
   g.addColorStop(1, "rgba(0,0,0,0.4)");
   ctx.fillStyle = g; ctx.fillRect(0, 0, cw, ch);
+}
+
+// ---- character-creator preview -------------------------------------------
+// Draws a single procedural person (the player's chosen palette) scaled up into
+// an arbitrary canvas. Used by the character creator / shop previews.
+export function drawSpritePreview(canvas, sprite, facing = "down", scale = 4) {
+  const ctx = canvas.getContext("2d");
+  ctx.imageSmoothingEnabled = false;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.save();
+  // center the TILE-sized figure in the canvas
+  const ox = (canvas.width - TILE * scale) / 2;
+  const oy = (canvas.height - TILE * scale) / 2;
+  ctx.translate(ox, oy);
+  ctx.scale(scale, scale);
+  drawPersonProc(ctx, 0, 0, sprite, facing, false, 0, 0);
+  ctx.restore();
 }

@@ -6,6 +6,16 @@ import { NPCS, PROPS, FLOOR_META, FLOOR_ORDER, LOC_LABEL } from "./world.js";
 import { FINDS, FINDTOTAL } from "./collectables.js";
 import { saveSet, loadNum, saveNum } from "./storage.js";
 import { sampleQuiz, quizPoolSize } from "./quiz.js";
+import { drawSpritePreview } from "./render.js";
+import {
+  PRESETS, SKIN_TONES, HAIR_COLORS, SHIRT_COLORS, ACCENT_COLORS,
+  ACCESSORIES, SHOP_ITEMS, PREMIUM_SHIRTS, darken, randomSprite, DEFAULT_SPRITE
+} from "./cosmetics.js";
+import { rank, ACHIEVEMENTS, ACHTOTAL, XP } from "./progression.js";
+import {
+  THEMES, currentTheme, applyTheme, prefs,
+  setReducedMotion, setColorblind, setBigText
+} from "./theme.js";
 
 const els = {};
 let state;
@@ -60,9 +70,10 @@ function closeModal() {
 // intro it commits a default name first so the player isn't stuck.
 export function handleEscape() {
   if (state.inIntro) {
-    const input = document.getElementById("intro-name");
-    const v = ((input && input.value) || "").trim() || "you";
-    state.setPlayerName(v);
+    const input = document.getElementById("cc-name") || document.getElementById("intro-name");
+    const typed = ((input && input.value) || "").trim();
+    // keep a typed name; otherwise preserve the existing one (don't clobber on cancel)
+    state.setPlayerName(typed || state.playerName || "you");
   }
   closeModal();
 }
@@ -262,6 +273,7 @@ function resolveSideQuest(id, key) {
       if (sq.reward.coins) state.addCoins(sq.reward.coins);
       if (sq.reward.find) state.addFind(sq.reward.find);
     }
+    state.addXp(XP.sideQuest);
     state.updateProgressUI();
   }
 }
@@ -426,7 +438,12 @@ function commitDiagnosis(key) {
       state.solved.add(state.currentScenario);
       saveSet("solved", state.solved);
       state.recordTicketSolved();
-      if (firstTry) { state.sharp.add(state.currentScenario); saveSet("sharp", state.sharp); }
+      let gained = XP.ticket;
+      if (firstTry) { state.sharp.add(state.currentScenario); saveSet("sharp", state.sharp); gained += XP.firstTry; }
+      const wasCleared = state.floorCleared(state.floor);
+      state.addXp(gained);
+      // floor-clear bonus the first time a floor is fully solved
+      if (!wasCleared && state.floorCleared(state.floor)) state.addXp(XP.floorCleared);
     }
     state.updateProgressUI();
     lockScenarioButtons();
@@ -709,6 +726,11 @@ export function openQuiz() {
       const isBest = score > prevBest;
       if (isBest) saveNum(bestKey, score);
       const best = Math.max(prevBest, score);
+      // XP + achievement hooks (only the first pass/perfect on a given best avoids farming)
+      if (pct >= 80 && isBest) {
+        state.addXp(XP.quizPass + (pct === 100 ? XP.quizPerfect : 0));
+      }
+      if (pct === 100) { state.setFlag("quizPerfect"); state.checkAchievements(); }
       const verdict = pct === 100
         ? "Perfect score. You could teach this floor."
         : pct >= 80
@@ -748,6 +770,294 @@ export function openQuiz() {
   }
 
   start();
+}
+
+// ===========================================================================
+//  WAVE 1 — character creator, settings, shop, achievements, toasts
+// ===========================================================================
+
+// Build a clean working copy of a sprite palette with accessory fields present.
+function normSprite(sp) {
+  const s = { ...DEFAULT_SPRITE, ...(sp || {}) };
+  if (!s.body2) s.body2 = darken(s.body);
+  if (s.glasses == null) s.glasses = false;
+  if (s.shades == null) s.shades = false;
+  if (s.hat == null) s.hat = null;
+  return s;
+}
+
+// --- transient achievement / promotion toast ------------------------------
+export function showAchievementToast(ach) {
+  try {
+    let host = document.getElementById("toast-host");
+    if (!host) {
+      host = document.createElement("div");
+      host.id = "toast-host"; host.className = "toast-host";
+      document.body.appendChild(host);
+    }
+    const el = document.createElement("div");
+    el.className = "toast";
+    el.innerHTML = `<span class="toast-icon">${ach.icon || "\u2728"}</span>
+      <span class="toast-text"><strong>${escapeHtml(ach.name)}</strong><br>${escapeHtml(ach.desc || "")}</span>`;
+    host.appendChild(el);
+    requestAnimationFrame(() => el.classList.add("show"));
+    setTimeout(() => { el.classList.remove("show"); setTimeout(() => el.remove(), 350); }, 3200);
+  } catch { /* ignore */ }
+}
+
+// --- character creator: roster select → customizer ------------------------
+export function openCharacterCreator() {
+  state.inIntro = true;
+  // working sprite + chosen name; seed from existing if returning
+  const draft = { sprite: normSprite(state.playerSprite), name: state.playerName || "" };
+  renderRoster();
+
+  function renderRoster() {
+    const cards = PRESETS.map((p) => {
+      const sp = p.random ? randomSprite() : normSprite(p.sprite);
+      return `<button class="roster-card" data-id="${escapeAttr(p.id)}">
+        <canvas class="roster-canvas" width="72" height="72" data-pid="${escapeAttr(p.id)}"></canvas>
+        <div class="roster-name">${escapeHtml(p.name)}</div>
+        <div class="roster-role">${escapeHtml(p.role)}</div>
+      </button>`;
+    }).join("");
+    openModal("Choose your character", "Pick a fighter \u2014 you'll customize next", "\u{1F3AE}",
+      `<div class="roster-grid">${cards}</div>
+       <div class="roster-foot">Each is just a starting look. You can recolor everything on the next screen.</div>`,
+      { hideClose: true });
+    // paint previews + wire picks
+    PRESETS.forEach((p) => {
+      const c = document.querySelector(`canvas[data-pid="${p.id}"]`);
+      if (c) drawSpritePreview(c, p.random ? randomSprite() : normSprite(p.sprite), "down", 2);
+    });
+    document.querySelectorAll(".roster-card").forEach((b) => {
+      b.addEventListener("click", () => {
+        const p = PRESETS.find((x) => x.id === b.dataset.id);
+        draft.sprite = normSprite(p.random ? randomSprite() : p.sprite);
+        renderCustomizer();
+      });
+    });
+  }
+
+  function swatchRow(label, colors, field) {
+    const sw = colors.map((c) =>
+      `<button class="swatch ${draft.sprite[field] === c ? "sel" : ""}" data-field="${field}" data-color="${escapeAttr(c)}" style="background:${escapeAttr(c)}"></button>`
+    ).join("");
+    return `<div class="cc-row"><div class="cc-label">${escapeHtml(label)}</div><div class="cc-swatches">${sw}</div></div>`;
+  }
+
+  function renderCustomizer() {
+    // owned premium shirts become extra shirt swatches
+    const shirts = [...SHIRT_COLORS];
+    for (const it of SHOP_ITEMS) {
+      if (it.kind === "swatch" && state.hasOwned(it.id) && PREMIUM_SHIRTS[it.swatch]) shirts.push(PREMIUM_SHIRTS[it.swatch]);
+    }
+    // accessory buttons: free ones + owned ones
+    const accBtns = ACCESSORIES.filter((a) => a.free || state.hasOwned(shopIdForAccessory(a.id)))
+      .map((a) => `<button class="cc-acc" data-acc="${escapeAttr(a.id)}">${a.icon ? a.icon + " " : ""}${escapeHtml(a.name)}</button>`).join("");
+
+    openModal("Customize", "Make it yours", "\u{1F3A8}",
+      `<div class="cc-wrap">
+         <div class="cc-preview">
+           <canvas id="cc-canvas" width="128" height="128"></canvas>
+           <div class="cc-rotate">
+             <button id="cc-face-down">\u25BC</button>
+             <button id="cc-face-left">\u25C0</button>
+             <button id="cc-face-right">\u25B6</button>
+             <button id="cc-face-up">\u25B2</button>
+           </div>
+           <button id="cc-random" class="cc-random">\u{1F3B2} Surprise me</button>
+         </div>
+         <div class="cc-controls">
+           ${swatchRow("Skin", SKIN_TONES, "skin")}
+           ${swatchRow("Hair", HAIR_COLORS, "hair")}
+           ${swatchRow("Shirt", shirts, "body")}
+           ${swatchRow("Accent", ACCENT_COLORS, "accent")}
+           <div class="cc-row"><div class="cc-label">Accessory</div><div class="cc-accs">${accBtns}</div></div>
+           <label class="cc-namelabel">Name</label>
+           <input id="cc-name" type="text" maxlength="20" value="${escapeAttr(draft.name)}" placeholder="What should they call you?" autocomplete="off" />
+           <div class="cc-foot">
+             <button id="cc-back">\u2190 Roster</button>
+             <button id="cc-confirm" class="primary-btn">Start \u2192</button>
+           </div>
+           <div style="font-size:11px;color:var(--text-faint);margin-top:6px;">Unlock more shirts, shades, and hats in the Shop with coins you earn.</div>
+         </div>
+       </div>`,
+      { hideClose: true });
+
+    let facing = "down";
+    const canvas = document.getElementById("cc-canvas");
+    const paint = () => drawSpritePreview(canvas, draft.sprite, facing, 4);
+    paint();
+
+    document.querySelectorAll(".swatch").forEach((b) => b.addEventListener("click", () => {
+      const f = b.dataset.field, col = b.dataset.color;
+      draft.sprite[f] = col;
+      if (f === "body") draft.sprite.body2 = darken(col);
+      document.querySelectorAll(`.swatch[data-field="${f}"]`).forEach((x) => x.classList.remove("sel"));
+      b.classList.add("sel");
+      paint();
+    }));
+    document.querySelectorAll(".cc-acc").forEach((b) => b.addEventListener("click", () => {
+      const a = ACCESSORIES.find((x) => x.id === b.dataset.acc);
+      if (a) a.apply(draft.sprite);
+      paint();
+    }));
+    const faces = { "cc-face-down": "down", "cc-face-up": "up", "cc-face-left": "left", "cc-face-right": "right" };
+    Object.entries(faces).forEach(([id, dir]) => {
+      const el = document.getElementById(id); if (el) el.addEventListener("click", () => { facing = dir; paint(); });
+    });
+    document.getElementById("cc-random").addEventListener("click", () => { draft.sprite = normSprite(randomSprite()); renderCustomizer(); });
+    document.getElementById("cc-back").addEventListener("click", renderRoster);
+    document.getElementById("cc-name").addEventListener("input", (e) => { draft.name = e.target.value; });
+    document.getElementById("cc-confirm").addEventListener("click", () => {
+      const nm = (document.getElementById("cc-name").value || "").trim() || "you";
+      state.setPlayerName(nm);
+      state.setPlayerSprite(draft.sprite);
+      closeModal();
+    });
+  }
+}
+function shopIdForAccessory(accId) {
+  const it = SHOP_ITEMS.find((x) => x.kind === "accessory" && x.accessory === accId);
+  return it ? it.id : "__none__";
+}
+
+// --- settings panel --------------------------------------------------------
+export function openSettings() {
+  state.inDialog = true;
+  const theme = currentTheme();
+  const themeBtns = THEMES.map((t) =>
+    `<button class="seg ${theme === t.id ? "on" : ""}" data-theme="${t.id}">${escapeHtml(t.name)}</button>`).join("");
+  const toggle = (id, label, on, hint) =>
+    `<div class="set-row"><div><div class="set-label">${escapeHtml(label)}</div>${hint ? `<div class="set-hint">${escapeHtml(hint)}</div>` : ""}</div>
+       <button class="switch ${on ? "on" : ""}" id="${id}"><span></span></button></div>`;
+
+  openModal("Settings", "Display, sound & saves", "\u2699\uFE0F",
+    `<div class="set-row"><div class="set-label">Theme</div><div class="seg-group">${themeBtns}</div></div>
+     ${toggle("set-sound", "Step sound", state.soundOn)}
+     ${toggle("set-motion", "Reduced motion", prefs.reducedMotion(), "Calms idle bobbing and animations.")}
+     ${toggle("set-cb", "High-contrast markers", prefs.colorblind(), "Adds a dark halo behind the !/?/\u2713 markers.")}
+     ${toggle("set-text", "Larger text", prefs.bigText())}
+     <div class="set-divider"></div>
+     <button id="set-edit-char" class="primary-btn" style="width:100%;">\u{1F3A8} Edit character</button>
+     <div class="set-divider"></div>
+     <div class="set-label" style="margin-bottom:6px;">Progress file</div>
+     <div class="set-saverow">
+       <button id="set-save" class="primary-btn">\u2B07\uFE0F Save to file</button>
+       <button id="set-load">\u2B06\uFE0F Load from file</button>
+       <input id="set-file" type="file" accept="application/json,.json" hidden />
+     </div>
+     <div id="set-file-msg" class="set-hint" style="margin-top:6px;"></div>
+     <div class="set-hint" style="margin-top:4px;">Download a save to back up or move to another device, then load it here to continue.</div>
+     <div class="set-divider"></div>
+     <button id="set-reset" class="danger-btn">Reset all progress</button>`
+  );
+
+  document.querySelectorAll(".seg[data-theme]").forEach((b) => b.addEventListener("click", () => {
+    applyTheme(b.dataset.theme);
+    document.querySelectorAll(".seg[data-theme]").forEach((x) => x.classList.toggle("on", x === b));
+  }));
+  const flip = (id, getter, setter) => {
+    const el = document.getElementById(id); if (!el) return;
+    el.addEventListener("click", () => { const nv = !getter(); setter(nv); el.classList.toggle("on", nv); });
+  };
+  flip("set-sound", () => state.soundOn, (v) => state.setSound(v));
+  flip("set-motion", () => prefs.reducedMotion(), (v) => setReducedMotion(v));
+  flip("set-cb", () => prefs.colorblind(), (v) => setColorblind(v));
+  flip("set-text", () => prefs.bigText(), (v) => setBigText(v));
+
+  document.getElementById("set-save").addEventListener("click", () => {
+    const r = state.exportSaveFile();
+    const msg = document.getElementById("set-file-msg");
+    msg.textContent = r.ok ? "Saved. Check your downloads." : (r.error || "Couldn't save.");
+    msg.style.color = r.ok ? "var(--success-text)" : "var(--danger-text)";
+  });
+  const fileInput = document.getElementById("set-file");
+  document.getElementById("set-load").addEventListener("click", () => fileInput.click());
+  fileInput.addEventListener("change", (e) => {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    const msg = document.getElementById("set-file-msg");
+    const reader = new FileReader();
+    reader.onload = () => {
+      const r = state.importSaveText(String(reader.result || ""));
+      msg.textContent = r.ok ? "Loaded! Reloading\u2026" : (r.error || "Couldn't load that file.");
+      msg.style.color = r.ok ? "var(--success-text)" : "var(--danger-text)";
+    };
+    reader.onerror = () => { msg.textContent = "Couldn't read that file."; msg.style.color = "var(--danger-text)"; };
+    reader.readAsText(f);
+  });
+  document.getElementById("set-reset").addEventListener("click", () => {
+    if (typeof confirm === "function" && !confirm("Clear ALL saved progress and start over?")) return;
+    state.doReset(); closeModal(); openCharacterCreator();
+  });
+  document.getElementById("set-edit-char").addEventListener("click", () => { closeModal(); openCharacterCreator(); });
+}
+
+// --- cosmetics shop --------------------------------------------------------
+export function openShop() {
+  state.inDialog = true;
+  renderShop();
+  function renderShop() {
+    const rows = SHOP_ITEMS.map((it) => {
+      const owned = state.hasOwned(it.id);
+      const afford = state.coins >= it.cost;
+      const btn = owned
+        ? `<span class="shop-owned">\u2713 Owned</span>`
+        : `<button class="shop-buy ${afford ? "" : "broke"}" data-id="${escapeAttr(it.id)}" ${afford ? "" : "disabled"}>\u{1FA99} ${it.cost}</button>`;
+      return `<div class="shop-item">
+        <div class="shop-icon">${it.icon || "\u{1F455}"}</div>
+        <div class="shop-main"><div class="shop-name">${escapeHtml(it.name)}</div>
+          <div class="shop-kind">${it.kind === "swatch" ? "Shirt color" : "Accessory"}</div></div>
+        ${btn}
+      </div>`;
+    }).join("");
+    openModal("The Vending Machine", "Spend your coins on drip", "\u{1F6CD}\uFE0F",
+      `<div class="shop-bal">Balance: <strong>\u{1FA99} ${state.coins}</strong></div>
+       <div class="shop-grid">${rows}</div>
+       <div class="set-hint" style="margin-top:10px;">Equip what you buy in the character creator (Settings \u2192 or Reset re-opens it). Earn coins from side quests and the cat's stash.</div>`);
+    document.querySelectorAll(".shop-buy[data-id]").forEach((b) => b.addEventListener("click", () => {
+      const it = SHOP_ITEMS.find((x) => x.id === b.dataset.id);
+      const r = state.buyItem(it);
+      if (r.ok) {
+        // auto-equip accessories/shirts onto the live sprite for instant payoff
+        const sp = normSprite(state.playerSprite);
+        if (it.kind === "accessory") { const a = ACCESSORIES.find((x) => x.id === it.accessory); if (a) a.apply(sp); }
+        else if (it.kind === "swatch" && PREMIUM_SHIRTS[it.swatch]) { sp.body = PREMIUM_SHIRTS[it.swatch]; sp.body2 = darken(sp.body); }
+        state.setPlayerSprite(sp);
+        showAchievementToast({ icon: it.icon || "\u{1F455}", name: "Purchased!", desc: it.name + " \u2014 equipped." });
+      } else {
+        showAchievementToast({ icon: "\u{1FA99}", name: "Hold up", desc: r.error || "Can't buy that." });
+      }
+      renderShop();
+    }));
+  }
+}
+
+// --- achievements gallery --------------------------------------------------
+export function openAchievements() {
+  state.inDialog = true;
+  const r = rank(state.xp || 0);
+  const got = state.achievements;
+  const cards = ACHIEVEMENTS.map((a) => {
+    const have = got.has(a.id);
+    return `<div class="ach-card ${have ? "have" : "locked"}">
+      <div class="ach-icon">${have ? a.icon : "\u{1F512}"}</div>
+      <div class="ach-text"><div class="ach-name">${escapeHtml(a.name)}</div>
+        <div class="ach-desc">${escapeHtml(a.desc)}</div></div>
+    </div>`;
+  }).join("");
+  const bar = r.max
+    ? `<div class="rank-sub">Max rank reached \u2014 ${escapeHtml(r.title)}.</div>`
+    : `<div class="rank-bar"><span style="width:${r.pct}%;"></span></div>
+       <div class="rank-sub">${r.into}/${r.span} XP to <strong>${escapeHtml(r.next)}</strong></div>`;
+  openModal("Career & Achievements", `Level ${r.level} \u00b7 ${r.title}`, "\u{1F3C6}",
+    `<div class="rank-card">
+       <div class="rank-top"><span class="rank-level">Lv ${r.level}</span><span class="rank-title">${escapeHtml(r.title)}</span><span class="rank-xp">${state.xp} XP</span></div>
+       ${bar}
+     </div>
+     <div class="scenario-section-label" style="margin-top:12px;">Achievements \u00b7 ${got.size}/${ACHTOTAL}</div>
+     <div class="ach-grid">${cards}</div>`);
 }
 
 function escapeHtml(s) {

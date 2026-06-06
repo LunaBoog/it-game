@@ -651,6 +651,169 @@ input[type="text"]:focus { outline: none; border-color: var(--info); }
 .quiz-score-bar > span { display: block; height: 100%; background: #2bb3a3; border-radius: 999px; }
 .quiz-score-verdict { font-size: 13px; color: var(--text-muted); max-width: 320px; margin: 0 auto; }
 .quiz-best { font-size: 12px; font-weight: 600; color: var(--info-text); margin-top: 8px; }
+
+/* ===========================================================================
+   WAVE 1 — themes, side-panel layout, character creator, settings, shop,
+   achievements, toasts, accessibility prefs
+   =========================================================================== */
+
+/* ---- themes (light is the :root default; gray + black override) ---------- */
+[data-theme="gray"] {
+  --bg: #292930; --surface: #34343c; --surface-2: #3d3d46;
+  --text: #ecebf0; --text-muted: #b6b6c0; --text-faint: #8a8a95;
+  --border: rgba(255,255,255,0.12); --border-strong: rgba(255,255,255,0.24);
+  --info: #6fb0ff; --info-bg: #243a52; --info-text: #cfe6ff;
+  --success: #7fd154; --success-bg: #22381f; --success-text: #cdeccb;
+  --danger: #ff7a7a; --danger-bg: #3c2020; --danger-text: #ffd6d6;
+  --amber: #f2c14e; --amber-bg: #3a2f14;
+}
+[data-theme="black"] {
+  --bg: #0b0b0d; --surface: #161619; --surface-2: #1e1e22;
+  --text: #f3f3f6; --text-muted: #b0b0bb; --text-faint: #7e7e8a;
+  --border: rgba(255,255,255,0.13); --border-strong: rgba(255,255,255,0.26);
+  --info: #6fb0ff; --info-bg: #1b2b3d; --info-text: #cfe6ff;
+  --success: #7fd154; --success-bg: #182a16; --success-text: #cdeccb;
+  --danger: #ff7a7a; --danger-bg: #2e1818; --danger-text: #ffd6d6;
+  --amber: #f2c14e; --amber-bg: #2e2510;
+}
+[data-theme="gray"] .modal, [data-theme="black"] .modal { box-shadow: 0 8px 28px rgba(0,0,0,0.5); }
+
+/* ---- side-panel layout --------------------------------------------------- */
+body { max-width: 1440px; }
+.game-layout { display: flex; gap: 12px; align-items: flex-start; }
+.viewport-shell { flex: 1 1 auto; min-width: 0; }
+#modal-bg.modal-bg {
+  margin-top: 0;
+  flex: 0 0 392px;
+  max-width: 392px;
+  align-self: stretch;
+  max-height: 82vh;
+  overflow-y: auto;
+  position: sticky;
+  top: 12px;
+}
+#modal-bg .modal { height: 100%; }
+/* stack underneath on narrow screens */
+@media (max-width: 980px) {
+  .game-layout { flex-direction: column; }
+  #modal-bg.modal-bg { flex: 1 1 auto; max-width: none; width: 100%; margin-top: 12px; position: static; max-height: none; }
+}
+
+/* ---- topbar additions ---------------------------------------------------- */
+.pill-rank { background: var(--amber-bg); color: var(--amber); font-weight: 600; }
+
+/* ---- accessibility prefs ------------------------------------------------- */
+[data-text="lg"] body, [data-text="lg"] .modal-body, [data-text="lg"] .pill { font-size: 15px; }
+[data-text="lg"] .topbar-title { font-size: 18px; }
+[data-text="lg"] .modal-body { line-height: 1.7; }
+[data-motion="reduced"] * { animation: none !important; transition: none !important; }
+
+/* ---- toasts -------------------------------------------------------------- */
+.toast-host {
+  position: fixed; right: 16px; bottom: 16px; z-index: 50;
+  display: flex; flex-direction: column; gap: 8px; pointer-events: none;
+}
+.toast {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--surface); color: var(--text);
+  border: 0.5px solid var(--border-strong); border-left: 3px solid var(--amber);
+  border-radius: var(--radius-md); padding: 10px 14px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.28);
+  transform: translateX(120%); opacity: 0; transition: transform .35s ease, opacity .35s ease;
+  max-width: 320px;
+}
+.toast.show { transform: translateX(0); opacity: 1; }
+.toast-icon { font-size: 22px; line-height: 1; }
+.toast-text { font-size: 12px; line-height: 1.4; }
+
+/* ---- character creator: roster ------------------------------------------ */
+.roster-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+@media (max-width: 980px) { .roster-grid { grid-template-columns: repeat(2, 1fr); } }
+.roster-card {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 8px 6px; cursor: pointer;
+  background: var(--surface-2); border: 0.5px solid var(--border); border-radius: var(--radius-md);
+  transition: transform .1s ease, border-color .1s ease;
+}
+.roster-card:hover { transform: translateY(-2px); border-color: var(--info); }
+.roster-canvas { width: 72px; height: 72px; image-rendering: pixelated; }
+.roster-name { font-weight: 700; font-size: 13px; }
+.roster-role { font-size: 11px; color: var(--text-muted); text-align: center; }
+.roster-foot { font-size: 11px; color: var(--text-faint); margin-top: 10px; }
+
+/* ---- character creator: customizer -------------------------------------- */
+.cc-wrap { display: flex; gap: 16px; }
+@media (max-width: 980px) { .cc-wrap { flex-direction: column; align-items: center; } }
+.cc-preview { display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 0 0 auto; }
+#cc-canvas {
+  width: 128px; height: 128px; image-rendering: pixelated;
+  background: var(--surface-2); border-radius: var(--radius-md); border: 0.5px solid var(--border);
+}
+.cc-rotate { display: flex; gap: 4px; }
+.cc-rotate button {
+  width: 30px; height: 26px; cursor: pointer; border-radius: var(--radius-sm);
+  border: 0.5px solid var(--border-strong); background: var(--surface); color: var(--text-muted);
+}
+.cc-random { font-size: 12px; cursor: pointer; padding: 5px 10px; border-radius: var(--radius-sm);
+  border: 0.5px solid var(--border-strong); background: var(--surface); color: var(--text); }
+.cc-controls { flex: 1 1 auto; min-width: 0; }
+.cc-row { margin-bottom: 8px; }
+.cc-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+.cc-swatches, .cc-accs { display: flex; gap: 5px; flex-wrap: wrap; }
+.swatch { width: 24px; height: 24px; border-radius: 6px; cursor: pointer; border: 2px solid transparent; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.25); }
+.swatch.sel { border-color: var(--info); }
+.cc-acc { font-size: 12px; cursor: pointer; padding: 4px 9px; border-radius: 999px;
+  border: 0.5px solid var(--border-strong); background: var(--surface); color: var(--text); }
+.cc-namelabel { display: block; font-size: 11px; color: var(--text-muted); margin: 10px 0 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+.cc-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 12px; }
+.cc-foot button:not(.primary-btn) { cursor: pointer; background: transparent; border: 0.5px solid var(--border-strong); color: var(--text-muted); padding: 7px 12px; border-radius: var(--radius-sm); }
+
+/* ---- settings ------------------------------------------------------------ */
+.seg-group { display: inline-flex; border: 0.5px solid var(--border-strong); border-radius: var(--radius-sm); overflow: hidden; }
+.seg { padding: 5px 12px; font-size: 12px; cursor: pointer; background: var(--surface); color: var(--text-muted); border: none; border-right: 0.5px solid var(--border); }
+.seg:last-child { border-right: none; }
+.seg.on { background: var(--info-bg); color: var(--info-text); font-weight: 600; }
+.set-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 0.5px solid var(--border); }
+.set-label { font-size: 13px; font-weight: 500; }
+.set-hint { font-size: 11px; color: var(--text-faint); }
+.set-divider { height: 0; border-top: 0.5px solid var(--border); margin: 12px 0; }
+.switch { width: 42px; height: 24px; border-radius: 999px; border: none; background: var(--surface-2); position: relative; cursor: pointer; box-shadow: inset 0 0 0 1px var(--border-strong); flex: 0 0 auto; }
+.switch span { position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--text-faint); transition: transform .15s ease, background .15s ease; }
+.switch.on { background: var(--info); }
+.switch.on span { transform: translateX(18px); background: #fff; }
+.set-saverow { display: flex; gap: 8px; flex-wrap: wrap; }
+.set-saverow button { cursor: pointer; padding: 8px 14px; border-radius: var(--radius-sm); font-size: 13px; }
+.set-saverow button:not(.primary-btn) { background: transparent; border: 0.5px solid var(--border-strong); color: var(--text); }
+.danger-btn { cursor: pointer; padding: 8px 14px; border-radius: var(--radius-sm); font-size: 13px; background: var(--danger-bg); color: var(--danger-text); border: 0.5px solid var(--danger); }
+
+/* ---- shop ---------------------------------------------------------------- */
+.shop-bal { font-size: 13px; margin-bottom: 10px; }
+.shop-grid { display: flex; flex-direction: column; gap: 8px; }
+.shop-item { display: flex; align-items: center; gap: 12px; padding: 9px 11px; background: var(--surface-2); border: 0.5px solid var(--border); border-radius: var(--radius-md); }
+.shop-icon { font-size: 22px; flex: 0 0 auto; width: 26px; text-align: center; }
+.shop-main { flex: 1 1 auto; min-width: 0; }
+.shop-name { font-weight: 600; font-size: 13px; }
+.shop-kind { font-size: 11px; color: var(--text-faint); }
+.shop-buy { cursor: pointer; padding: 6px 12px; border-radius: var(--radius-sm); border: none; background: var(--info); color: #fff; font-weight: 600; font-size: 12px; }
+.shop-buy.broke { background: var(--surface); color: var(--text-faint); border: 0.5px solid var(--border); cursor: default; }
+.shop-owned { font-size: 12px; color: var(--success-text); font-weight: 600; }
+
+/* ---- achievements / rank ------------------------------------------------- */
+.rank-card { background: var(--surface-2); border: 0.5px solid var(--border); border-radius: var(--radius-md); padding: 12px 14px; }
+.rank-top { display: flex; align-items: baseline; gap: 8px; }
+.rank-level { font-weight: 800; font-size: 18px; }
+.rank-title { font-weight: 600; flex: 1 1 auto; }
+.rank-xp { font-size: 12px; color: var(--text-muted); }
+.rank-bar { height: 8px; border-radius: 999px; background: var(--surface); overflow: hidden; margin: 10px 0 4px; box-shadow: inset 0 0 0 1px var(--border); }
+.rank-bar > span { display: block; height: 100%; background: var(--amber); border-radius: 999px; }
+.rank-sub { font-size: 11px; color: var(--text-muted); }
+.ach-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
+@media (max-width: 980px) { .ach-grid { grid-template-columns: 1fr; } }
+.ach-card { display: flex; gap: 10px; align-items: flex-start; padding: 9px 11px; background: var(--surface-2); border: 0.5px solid var(--border); border-radius: var(--radius-md); }
+.ach-card.locked { opacity: 0.55; }
+.ach-icon { font-size: 20px; flex: 0 0 auto; width: 24px; text-align: center; }
+.ach-name { font-weight: 600; font-size: 13px; }
+.ach-desc { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
 </style>
 </head>
 <body>
@@ -664,13 +827,18 @@ input[type="text"]:focus { outline: none; border-color: var(--info); }
       <div class="progress">
         <div class="pill pill-accent" id="day-pill">Day 1</div>
         <div class="pill pill-floor" id="floor-pill" title="Current floor">Floor 3</div>
+        <div class="pill pill-rank" id="rank-pill" title="Your XP rank">Lv 1 &middot; IT Intern</div>
         <div class="pill" id="ticket-progress">0 / 7 tickets</div>
         <div class="pill" id="sq-progress">0 side quests</div>
         <div class="pill" id="coins-progress" title="Vending coins &middot; break-room tokens">&#129689; 0</div>
         <button class="pill pill-button" id="exam-btn" title="Take a 5-question practice test on this floor">&#128221; Exam</button>
-        <button class="pill pill-button" id="companion-btn" title="Open your Field Companion"><span id="finds-progress">&#9733; 0/2</span></button>
-        <button class="pill pill-button" id="sound-btn" title="Toggle step sound">Sound: off</button>
-        <button class="pill pill-button" id="reset-btn" title="Clear save and start over">Reset</button>
+        <button class="pill pill-button" id="shop-btn" title="Spend coins on cosmetics">&#128717;&#65039; Shop</button>
+        <button class="pill pill-button" id="ach-btn" title="Career rank &amp; achievements">&#127942; Career</button>
+        <button class="pill pill-button" id="companion-btn" title="Open your Field Companion"><span id="finds-progress">&#9733; 0/6</span></button>
+        <button class="pill pill-button" id="settings-btn" title="Themes, sound, save &amp; load">&#9881;&#65039;</button>
+        <!-- legacy controls kept (now also inside Settings); hidden but wired -->
+        <button class="pill pill-button" id="sound-btn" hidden>Sound: off</button>
+        <button class="pill pill-button" id="reset-btn" hidden>Reset</button>
       </div>
     </div>
 
@@ -683,61 +851,65 @@ input[type="text"]:focus { outline: none; border-color: var(--info); }
       <span>&#128221; Exam = practice test</span>
     </div>
 
-    <div class="viewport-shell">
-      <div id="viewport" tabindex="0">
-        <canvas id="world"></canvas>
+    <div class="game-layout">
+      <div class="viewport-shell">
+        <div id="viewport" tabindex="0">
+          <canvas id="world"></canvas>
 
-        <!-- title screen: gates input until the player begins -->
-        <div id="title-screen" class="title-screen">
-          <div class="title-card">
-            <div class="title-kicker">A PLAYABLE STUDY GUIDE &middot; FREE</div>
-            <div class="title-name">THE TICKET QUEUE</div>
-            <div class="title-blurb">
-              You're the IT person. Read the ticket monitor, walk the office, find
-              who filed each ticket, and learn the principle behind every fix.
-              Clear <strong>Floor 3</strong> (A+ / Network+ fundamentals), then ride
-              the elevator to <strong>Floor 7</strong> &mdash; Security Operations, for
-              Security+ and PenTest+. Hit <strong>Exam</strong> anytime to practice-test
-              the whole floor. Let IT glow.
+          <!-- title screen: gates input until the player begins -->
+          <div id="title-screen" class="title-screen">
+            <div class="title-card">
+              <div class="title-kicker">A PLAYABLE STUDY GUIDE &middot; FREE</div>
+              <div class="title-name">THE TICKET QUEUE</div>
+              <div class="title-blurb">
+                You're the IT person. Build your character, read the ticket monitor,
+                walk the office, find who filed each ticket, and learn the principle
+                behind every fix. Clear <strong>Floor 3</strong> (A+ / Network+), then
+                ride the elevator to <strong>Floor 7</strong> &mdash; Security Operations,
+                for Security+ and PenTest+. Earn XP, climb the career ladder, and spend
+                coins on drip. Let IT glow.
+              </div>
+              <button id="start-btn" class="title-start">&#9654;&nbsp; PRESS SPACE TO BEGIN</button>
+              <div id="continue-line" class="title-continue"></div>
             </div>
-            <button id="start-btn" class="title-start">&#9654;&nbsp; PRESS SPACE TO BEGIN</button>
-            <div id="continue-line" class="title-continue"></div>
+          </div>
+
+          <div id="interact-hint" class="interact-hint">
+            <span id="interact-hint-text">Press E to interact</span>
+          </div>
+
+          <div id="eod-hint" class="eod-hint" hidden>
+            Every ticket on this floor is closed. Walk back to your ticket monitor.
+          </div>
+
+          <div class="touch-controls" id="touch-controls" aria-hidden="true">
+            <div class="dpad">
+              <button class="dpad-btn dpad-up" id="touch-up" aria-label="Move up">&#9650;</button>
+              <button class="dpad-btn dpad-left" id="touch-left" aria-label="Move left">&#9664;</button>
+              <button class="dpad-btn dpad-right" id="touch-right" aria-label="Move right">&#9654;</button>
+              <button class="dpad-btn dpad-down" id="touch-down" aria-label="Move down">&#9660;</button>
+            </div>
+            <button class="action-btn" id="touch-action" aria-label="Interact">E</button>
           </div>
         </div>
+      </div>
 
-        <div id="interact-hint" class="interact-hint">
-          <span id="interact-hint-text">Press E to interact</span>
-        </div>
-
-        <div id="eod-hint" class="eod-hint" hidden>
-          Every ticket on this floor is closed. Walk back to your ticket monitor.
-        </div>
-
-        <div class="touch-controls" id="touch-controls" aria-hidden="true">
-          <div class="dpad">
-            <button class="dpad-btn dpad-up" id="touch-up" aria-label="Move up">&#9650;</button>
-            <button class="dpad-btn dpad-left" id="touch-left" aria-label="Move left">&#9664;</button>
-            <button class="dpad-btn dpad-right" id="touch-right" aria-label="Move right">&#9654;</button>
-            <button class="dpad-btn dpad-down" id="touch-down" aria-label="Move down">&#9660;</button>
+      <div id="modal-bg" class="modal-bg" hidden>
+        <div class="modal" role="dialog" aria-modal="true">
+          <div class="modal-head">
+            <div class="modal-avatar" id="modal-avatar">i</div>
+            <div class="modal-headtext">
+              <div class="modal-title" id="modal-title"></div>
+              <div class="modal-subtitle" id="modal-subtitle"></div>
+            </div>
+            <button id="modal-close" class="modal-close" aria-label="Close">&times;</button>
           </div>
-          <button class="action-btn" id="touch-action" aria-label="Interact">E</button>
+          <div id="modal-body" class="modal-body"></div>
         </div>
       </div>
     </div>
 
-    <div id="modal-bg" class="modal-bg" hidden>
-      <div class="modal" role="dialog" aria-modal="true">
-        <div class="modal-head">
-          <div class="modal-avatar" id="modal-avatar">i</div>
-          <div class="modal-headtext">
-            <div class="modal-title" id="modal-title"></div>
-            <div class="modal-subtitle" id="modal-subtitle"></div>
-          </div>
-          <button id="modal-close" class="modal-close" aria-label="Close">&times;</button>
-        </div>
-        <div id="modal-body" class="modal-body"></div>
-      </div>
-    </div>
+    <div id="toast-host" class="toast-host"></div>
 <script type="module">
 /* ===== src/storage.js ===== */
 const PREFIX = "it-game:";
@@ -811,6 +983,31 @@ function clearAll() {
       .forEach((k) => localStorage.removeItem(k));
   } catch {
     // ignore
+  }
+}
+
+// --- whole-save dump/restore (powers the download/upload feature) ----------
+// Returns a plain object of every it-game:* key with the prefix stripped.
+function dumpAll() {
+  const out = {};
+  try {
+    Object.keys(localStorage)
+      .filter((k) => k.startsWith(PREFIX))
+      .forEach((k) => { out[k.slice(PREFIX.length)] = localStorage.getItem(k); });
+  } catch { /* ignore */ }
+  return out;
+}
+
+// Replaces the current save with the given map (clears existing it-game:* first).
+function restoreAll(map) {
+  try {
+    clearAll();
+    for (const [k, v] of Object.entries(map || {})) {
+      if (v != null) localStorage.setItem(PREFIX + k, String(v));
+    }
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -2195,6 +2392,194 @@ function quizPoolSize(floorId) {
   return QUESTIONS.filter((q) => q.floor === floorId).length;
 }
 
+/* ===== src/cosmetics.js ===== */
+// Cosmetics: the character roster (Mortal-Kombat-style select), the swatches
+// the customizer offers, accessories, and the coin shop. A player "sprite" is
+// just a palette object the procedural renderer already understands:
+//   { skin, hair, body, body2, accent, glasses?, shades?, hat? }
+
+// ---- starter roster (pick-a-fighter grid) ---------------------------------
+// Each preset is a ready-to-play look with a little role flavor. The player can
+// then recolor any of it. body2 is auto-derived as a darker body in the
+// customizer, but presets set it explicitly for a hand-tuned look.
+const PRESETS = [
+  { id: "helpdesk", name: "The Closer", role: "Help Desk Hero",
+    blurb: "Calm under a full queue. Has never once said 'have you tried turning it off and on' sarcastically.",
+    sprite: { body: "#2E6FB0", body2: "#1B4E84", accent: "#FCDE5A", hair: "#2C2C2A", skin: "#C9926B" } },
+  { id: "sysadmin", name: "Root", role: "Sysadmin",
+    blurb: "Lives in the server closet by choice. Backups tested, coffee strong.",
+    sprite: { body: "#3B7A57", body2: "#255038", accent: "#CFF3DD", hair: "#412402", skin: "#8A5A3A", glasses: true } },
+  { id: "neteng", name: "Packet", role: "Network Engineer",
+    blurb: "Subnets in their sleep. The cables are labeled. ALL of them.",
+    sprite: { body: "#2D7DD2", body2: "#1B5896", accent: "#CFE6FF", hair: "#1a1a18", skin: "#E0B080" } },
+  { id: "soc", name: "Nightshift", role: "SOC Analyst",
+    blurb: "2 a.m. is prime time. Knows which alerts to trust and which to mute.",
+    sprite: { body: "#2BB3A3", body2: "#178277", accent: "#D6FFF8", hair: "#2C2C2A", skin: "#C9926B" } },
+  { id: "redteam", name: "Phantom", role: "Red Teamer",
+    blurb: "Gets in, takes notes, leaves a report. Respects scope like a religion.",
+    sprite: { body: "#C0392B", body2: "#8E261B", accent: "#2C2C2A", hair: "#1a1a18", skin: "#8A5A3A", shades: true } },
+  { id: "pmgr", name: "Scope", role: "Project Lead",
+    blurb: "Turns chaos into a checklist. The change log is sacred.",
+    sprite: { body: "#7F77DD", body2: "#534AB7", accent: "#F4C0D1", hair: "#6B4A2A", skin: "#E0B080" } },
+  { id: "intern", name: "Fresh", role: "The Intern",
+    blurb: "Day one energy. Asks great questions. Going places, fast.",
+    sprite: { body: "#EF9F27", body2: "#BA7517", accent: "#FFF3D6", hair: "#2C2C2A", skin: "#D8B088" } },
+  { id: "wildcard", name: "Wildcard", role: "?",
+    blurb: "Rolls in with a totally random look. Reroll until it's perfect.",
+    sprite: null, random: true }
+];
+
+// ---- customizer swatches (free tier) --------------------------------------
+const SKIN_TONES  = ["#F2D2B6", "#E0B080", "#D8B088", "#C9926B", "#A8744E", "#8A5A3A", "#6B4226", "#4A2C18"];
+const HAIR_COLORS = ["#2C2C2A", "#1a1a18", "#412402", "#6B4A2A", "#BA7517", "#C8C4B4", "#888780", "#B5179E"];
+const SHIRT_COLORS = ["#2E6FB0", "#3B7A57", "#2BB3A3", "#C0392B", "#7F77DD", "#EF9F27", "#D4537E", "#5F5E5A"];
+const ACCENT_COLORS = ["#FCDE5A", "#CFE6FF", "#D6FFF8", "#F4C0D1", "#CFF3DD", "#FFF3D6", "#2C2C2A", "#FFFFFF"];
+
+// shop-locked premium swatches (unlocked by buying the matching shop item)
+const PREMIUM_SHIRTS = { neonPink: "#FF2D95", neonGreen: "#39FF14", cyber: "#00E5FF", gold: "#E8B923" };
+
+// ---- accessories ----------------------------------------------------------
+// Applied onto the sprite palette. glasses + shades are booleans; hat is a color.
+const ACCESSORIES = [
+  { id: "none",    name: "None",        free: true,  apply: (s) => { s.glasses = false; s.shades = false; s.hat = null; } },
+  { id: "glasses", name: "Glasses",     free: true,  apply: (s) => { s.glasses = true; s.shades = false; } },
+  { id: "shades",  name: "Cool Shades", cost: 30,    apply: (s) => { s.shades = true; s.glasses = false; }, icon: "\u{1F576}\uFE0F" },
+  { id: "capRed",  name: "Red Cap",     cost: 25,    apply: (s) => { s.hat = "#C0392B"; }, icon: "\u{1F9E2}" },
+  { id: "capBlue", name: "Blue Cap",    cost: 25,    apply: (s) => { s.hat = "#2D7DD2"; }, icon: "\u{1F9E2}" },
+  { id: "beanie",  name: "Black Beanie",cost: 40,    apply: (s) => { s.hat = "#2C2C2A"; }, icon: "\u{1F3A9}" }
+];
+
+// ---- the coin shop --------------------------------------------------------
+// kind "swatch" unlocks a premium shirt color; "accessory" unlocks a hat/shades.
+// Owned ids live in state.owned (a Set). Buying spends coins.
+const SHOP_ITEMS = [
+  { id: "shirt_neonPink",  kind: "swatch", swatch: "neonPink",  name: "Neon Pink tee",  cost: 35, icon: "\u{1F455}" },
+  { id: "shirt_neonGreen", kind: "swatch", swatch: "neonGreen", name: "Neon Green tee", cost: 35, icon: "\u{1F455}" },
+  { id: "shirt_cyber",     kind: "swatch", swatch: "cyber",     name: "Cyber Cyan tee", cost: 45, icon: "\u{1F455}" },
+  { id: "shirt_gold",      kind: "swatch", swatch: "gold",      name: "Golden tee",     cost: 80, icon: "\u2728" },
+  { id: "acc_shades",      kind: "accessory", accessory: "shades",  name: "Cool Shades",  cost: 30, icon: "\u{1F576}\uFE0F" },
+  { id: "acc_capRed",      kind: "accessory", accessory: "capRed",  name: "Red Cap",      cost: 25, icon: "\u{1F9E2}" },
+  { id: "acc_capBlue",     kind: "accessory", accessory: "capBlue", name: "Blue Cap",     cost: 25, icon: "\u{1F9E2}" },
+  { id: "acc_beanie",      kind: "accessory", accessory: "beanie",  name: "Black Beanie", cost: 40, icon: "\u{1F3A9}" }
+];
+
+// derive a sensible darker shade for body2 when the user recolors the shirt
+function darken(hex, amt = 0.32) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || "");
+  if (!m) return hex;
+  const n = parseInt(m[1], 16);
+  let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  r = Math.round(r * (1 - amt)); g = Math.round(g * (1 - amt)); b = Math.round(b * (1 - amt));
+  return "#" + [r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("");
+}
+function randomSprite() {
+  const pick = (a) => a[Math.floor(Math.random() * a.length)];
+  const body = pick(SHIRT_COLORS);
+  return {
+    skin: pick(SKIN_TONES), hair: pick(HAIR_COLORS),
+    body, body2: darken(body), accent: pick(ACCENT_COLORS),
+    glasses: Math.random() < 0.3, shades: false, hat: null
+  };
+}
+const DEFAULT_SPRITE = { ...PRESETS[0].sprite, glasses: false, shades: false, hat: null };
+
+/* ===== src/progression.js ===== */
+// Progression: an XP / job-title career ladder and an achievements set.
+// Pure data + helpers; the game awards XP and evaluates unlocks against state.
+
+// ---- XP rewards (single source of truth) ----------------------------------
+const XP = {
+  ticket: 20,        // solve any ticket
+  firstTry: 10,      // bonus for a first-try diagnosis
+  sideQuest: 15,     // resolve a side quest
+  quizPass: 25,      // score >= 80% on a practice test
+  quizPerfect: 15,   // bonus for 100%
+  floorCleared: 60,  // clear every ticket on a floor
+  find: 8            // discover a keepsake
+};
+
+// ---- title ladder ----------------------------------------------------------
+// Thematic IT career progression. `level` is the index + 1.
+const TITLES = [
+  { xp: 0,    title: "IT Intern" },
+  { xp: 60,   title: "Help Desk Tier 1" },
+  { xp: 150,  title: "Help Desk Tier 2" },
+  { xp: 280,  title: "Desktop Support" },
+  { xp: 450,  title: "Sysadmin" },
+  { xp: 650,  title: "Network Engineer" },
+  { xp: 900,  title: "Security Analyst" },
+  { xp: 1200, title: "SOC Lead" },
+  { xp: 1600, title: "Red Team Operator" },
+  { xp: 2100, title: "Security Architect" },
+  { xp: 2700, title: "CISO" }
+];
+
+// Resolve XP into level/title plus progress toward the next title.
+function rank(xp) {
+  let i = 0;
+  for (let k = 0; k < TITLES.length; k++) if (xp >= TITLES[k].xp) i = k;
+  const cur = TITLES[i];
+  const next = TITLES[i + 1] || null;
+  const base = cur.xp;
+  const span = next ? next.xp - base : 0;
+  const into = xp - base;
+  const pct = next ? Math.max(0, Math.min(100, Math.round((into / span) * 100))) : 100;
+  return { level: i + 1, title: cur.title, next: next ? next.title : null,
+           nextAt: next ? next.xp : null, into, span, pct, max: !next };
+}
+
+// ---- achievements ----------------------------------------------------------
+// check(state) reads the live game state. Keep checks cheap + side-effect free.
+const ACHIEVEMENTS = [
+  { id: "first_ticket", icon: "\u{1F39F}\uFE0F", name: "First Contact",
+    desc: "Close your first ticket.",
+    check: (s) => s.lifeTickets >= 1 },
+  { id: "first_sq", icon: "\u{1F50D}", name: "Eagle Eye",
+    desc: "Resolve your first side quest.",
+    check: (s) => s.lifeSideQuests >= 1 },
+  { id: "floor3_clear", icon: "\u{1F3E2}", name: "Help Desk Hero",
+    desc: "Clear every ticket on Floor 3.",
+    check: (s) => s.hasFlag("floor3Cleared") },
+  { id: "reach_floor7", icon: "\u{1F6D7}", name: "Going Up",
+    desc: "Ride the elevator to Floor 7.",
+    check: (s) => s.hasFlag("visitedFloor7") },
+  { id: "sharp5", icon: "\u{1F3AF}", name: "Sharp Shooter",
+    desc: "Nail 5 diagnoses on the first try.",
+    check: (s) => s.sharp.size >= 5 },
+  { id: "quiz_perfect", icon: "\u{1F4AF}", name: "Top of the Class",
+    desc: "Score 100% on a practice test.",
+    check: (s) => s.hasFlag("quizPerfect") },
+  { id: "collector", icon: "\u2B50", name: "Collector",
+    desc: "Find 4 keepsakes.",
+    check: (s) => s.finds.size >= 4 },
+  { id: "shopper", icon: "\u{1F6CD}\uFE0F", name: "Drip Acquired",
+    desc: "Buy something from the shop.",
+    check: (s) => s.owned && s.owned.size >= 1 },
+  { id: "fashionista", icon: "\u{1F60E}", name: "Fashionista",
+    desc: "Own 4 cosmetic items.",
+    check: (s) => s.owned && s.owned.size >= 4 },
+  { id: "promoted", icon: "\u{1F4C8}", name: "Climbing the Ladder",
+    desc: "Reach the rank of Sysadmin.",
+    check: (s) => rank(s.xp || 0).level >= 5 },
+  { id: "rich", icon: "\u{1FA99}", name: "Vending Tycoon",
+    desc: "Bank 100 coins.",
+    check: (s) => s.coins >= 100 },
+  { id: "both_floors", icon: "\u{1F510}", name: "Full Stack",
+    desc: "Clear every ticket on BOTH floors.",
+    check: (s) => s.hasFlag("floor3Cleared") && s.hasFlag("floor7Cleared") }
+];
+const ACHTOTAL = ACHIEVEMENTS.length;
+
+// Returns ids that pass their check but aren't yet in the unlocked set.
+function newlyUnlocked(state, unlockedSet) {
+  const out = [];
+  for (const a of ACHIEVEMENTS) {
+    if (unlockedSet.has(a.id)) continue;
+    try { if (a.check(state)) out.push(a.id); } catch { /* ignore */ }
+  }
+  return out;
+}
+
 /* ===== src/render.js ===== */
 // Drawing layer — ports the public-health RPG's rich procedural renderer:
 // real little pixel people, shaded office tiles, an offscreen map cache,
@@ -2274,6 +2659,14 @@ const PAL = {
 
 let mapCanvasCache = {};
 
+// display prefs the renderer honors (set from theme.applyPrefs)
+let REDUCE_MOTION = false;
+let HI_CONTRAST = false;
+function setRenderPrefs(reduceMotion, hiContrast) {
+  REDUCE_MOTION = !!reduceMotion;
+  HI_CONTRAST = !!hiContrast;
+}
+
 function drawFloorBase(c, px, py, base, shade) {
   c.fillStyle = base; c.fillRect(px, py, TILE, TILE);
   c.fillStyle = shade; c.fillRect(px, py + TILE - 2, TILE, 2); c.fillRect(px + TILE - 2, py, 2, TILE);
@@ -2349,6 +2742,7 @@ function getMapCanvas(name) {
 // chorus line.
 function bobFor(stepping, tick, seed) {
   if (stepping) return -1;                       // walking hop handled by frame
+  if (REDUCE_MOTION) return 0;
   return Math.round(Math.sin((tick + seed) / 26) * 0.5 - 0.5); // 0 or -1, slow
 }
 
@@ -2375,10 +2769,21 @@ function drawPersonProc(ctx, px, py, sp, facing, stepping, tick = 0, seed = 0) {
   } else if (facing === "right") {
     ctx.fillRect(px + 19, py + 8 + yo, 2, 2);
   }
-  // glasses
-  if (co.glasses) {
+  // glasses / shades
+  if (co.shades) {
+    ctx.fillStyle = "#1a1a18";
+    ctx.fillRect(px + 11, py + 7 + yo, 4, 3); ctx.fillRect(px + 17, py + 7 + yo, 4, 3);
+    ctx.fillRect(px + 15, py + 8 + yo, 2, 1); // bridge
+  } else if (co.glasses) {
     ctx.strokeStyle = "#2C2C2A"; ctx.lineWidth = 1;
     ctx.strokeRect(px + 11, py + 7 + yo, 4, 3); ctx.strokeRect(px + 17, py + 7 + yo, 4, 3);
+  }
+  // hat (a simple cap over the hairline; drawn for all facings)
+  if (co.hat) {
+    ctx.fillStyle = co.hat; ctx.fillRect(px + 9, py + 2 + yo, 14, 4);
+    ctx.fillRect(px + 10, py + 1 + yo, 12, 1);
+    if (facing !== "up") { ctx.fillRect(px + 8, py + 5 + yo, 6, 1); } // brim toward viewer
+    ctx.fillStyle = "rgba(255,255,255,0.18)"; ctx.fillRect(px + 11, py + 2 + yo, 5, 1);
   }
   // body
   ctx.fillStyle = co.body; ctx.fillRect(px + 9, py + 14 + yo, 14, 12);
@@ -2597,7 +3002,7 @@ function propBubbleKind(p, state) {
 const MARKER_FILE = { quest: "marker_ticket", sq: "marker_sidequest", done: "marker_done" };
 
 function drawBubble(ctx, px, py, kind, tick) {
-  const bob = Math.sin(tick / 18) * 1.5;
+  const bob = REDUCE_MOTION ? 0 : Math.sin(tick / 18) * 1.5;
   const cx = px + TILE - 6;
   const cy = py + bob;
   // sprite override: drop marker_ticket / marker_sidequest / marker_done PNGs
@@ -2611,6 +3016,9 @@ function drawBubble(ctx, px, py, kind, tick) {
   if (kind === "quest") { ring = "#EF9F27"; fill = "#FCDE5A"; glyph = "!"; glyphColor = "#412402"; }
   else if (kind === "sq") { ring = "#185FA5"; fill = "#378ADD"; glyph = "?"; glyphColor = "#042C53"; }
   else { ring = "#0F6E56"; fill = "#1D9E75"; glyph = ""; }
+  if (HI_CONTRAST) { // dark halo so the marker pops regardless of color vision
+    ctx.fillStyle = "#0c0c0e"; ctx.beginPath(); ctx.arc(cx, cy, 9.5, 0, Math.PI * 2); ctx.fill();
+  }
   ctx.fillStyle = ring; ctx.beginPath(); ctx.arc(cx, cy, 8, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = fill; ctx.beginPath(); ctx.arc(cx, cy, 6, 0, Math.PI * 2); ctx.fill();
   if (kind === "done") {
@@ -2721,7 +3129,7 @@ function draw(ctx, state, facedTarget) {
   }
 
   // player
-  drawPerson(ctx, state.renderX - camX, state.renderY - camY, "player", PLAYER_SPRITE, state.facing, state.moving, state.tick, 0);
+  drawPerson(ctx, state.renderX - camX, state.renderY - camY, "player", state.playerSprite || PLAYER_SPRITE, state.facing, state.moving, state.tick, 0);
 
   // room labels
   drawRoomLabels(ctx, camX, camY);
@@ -2779,8 +3187,127 @@ function drawVignette(ctx, cw, ch) {
   ctx.fillStyle = g; ctx.fillRect(0, 0, cw, ch);
 }
 
+// ---- character-creator preview -------------------------------------------
+// Draws a single procedural person (the player's chosen palette) scaled up into
+// an arbitrary canvas. Used by the character creator / shop previews.
+function drawSpritePreview(canvas, sprite, facing = "down", scale = 4) {
+  const ctx = canvas.getContext("2d");
+  ctx.imageSmoothingEnabled = false;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.save();
+  // center the TILE-sized figure in the canvas
+  const ox = (canvas.width - TILE * scale) / 2;
+  const oy = (canvas.height - TILE * scale) / 2;
+  ctx.translate(ox, oy);
+  ctx.scale(scale, scale);
+  drawPersonProc(ctx, 0, 0, sprite, facing, false, 0, 0);
+  ctx.restore();
+}
+
+/* ===== src/theme.js ===== */
+// Theme controller: light / gray / black. Sets data-theme on <html>; the CSS
+// variables in styles.css key off that attribute. Persisted in localStorage.
+const THEMES = [
+  { id: "light", name: "Light" },
+  { id: "gray",  name: "Gray" },
+  { id: "black", name: "Black" }
+];
+function currentTheme() {
+  const t = loadString("theme", "gray");
+  return THEMES.some((x) => x.id === t) ? t : "gray";
+}
+function applyTheme(id) {
+  const t = THEMES.some((x) => x.id === id) ? id : "gray";
+  try { document.documentElement.setAttribute("data-theme", t); } catch { /* ignore */ }
+  saveString("theme", t);
+  return t;
+}
+
+// ---- accessibility / display prefs ----------------------------------------
+const prefs = {
+  reducedMotion() { return loadBool("pref-motion", false); },
+  colorblind() { return loadBool("pref-cb", false); },
+  bigText() { return loadBool("pref-text", false); }
+};
+function setReducedMotion(on) { saveBool("pref-motion", on); applyPrefs(); }
+function setColorblind(on) { saveBool("pref-cb", on); applyPrefs(); }
+function setBigText(on) { saveBool("pref-text", on); applyPrefs(); }
+function applyPrefs() {
+  try {
+    const r = document.documentElement;
+    r.setAttribute("data-motion", prefs.reducedMotion() ? "reduced" : "full");
+    r.setAttribute("data-cb", prefs.colorblind() ? "1" : "0");
+    r.setAttribute("data-text", prefs.bigText() ? "lg" : "md");
+  } catch { /* ignore */ }
+  try { setRenderPrefs(prefs.reducedMotion(), prefs.colorblind()); } catch { /* ignore */ }
+}
+
+/* ===== src/savefile.js ===== */
+// Save file: wraps storage.dumpAll/restoreAll in a portable, versioned JSON
+// envelope with a lightweight checksum so a truncated or hand-edited file is
+// caught instead of silently corrupting a save. No backend — it's just a file
+// the player downloads and can re-upload here or on another device.
+
+
+
+const MAGIC = "ticket-queue-save";
+const VERSION = 1;
+
+// tiny, dependency-free string hash (FNV-1a) → hex. Not crypto; just integrity.
+function checksum(str) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
+  }
+  return ("0000000" + h.toString(16)).slice(-8);
+}
+
+// Build the JSON string to download.
+function serializeSave() {
+  const data = dumpAll();
+  const payload = JSON.stringify(data);
+  const env = {
+    magic: MAGIC,
+    version: VERSION,
+    savedAt: new Date().toISOString(),
+    checksum: checksum(payload),
+    data
+  };
+  return JSON.stringify(env, null, 2);
+}
+
+// A friendly filename like ticket-queue-Nova-day3-2026-06-05.json
+function saveFilename(playerName, day) {
+  const safe = (playerName || "player").replace(/[^a-z0-9_-]+/gi, "").slice(0, 20) || "player";
+  const date = new Date().toISOString().slice(0, 10);
+  return `ticket-queue-${safe}-day${day || 1}-${date}.json`;
+}
+
+// Validate + apply an uploaded file's text. Returns { ok, error?, savedAt? }.
+function applySaveText(text) {
+  let env;
+  try { env = JSON.parse(text); }
+  catch { return { ok: false, error: "That file isn't valid JSON." }; }
+  if (!env || env.magic !== MAGIC) return { ok: false, error: "This doesn't look like a Ticket Queue save file." };
+  if (typeof env.version !== "number" || env.version > VERSION) {
+    return { ok: false, error: "This save was made by a newer version of the game." };
+  }
+  if (!env.data || typeof env.data !== "object") return { ok: false, error: "The save file is missing its data." };
+  const expect = checksum(JSON.stringify(env.data));
+  if (env.checksum && env.checksum !== expect) {
+    return { ok: false, error: "The save file looks corrupted (checksum mismatch)." };
+  }
+  const ok = restoreAll(env.data);
+  return ok ? { ok: true, savedAt: env.savedAt } : { ok: false, error: "Couldn't write the save (storage unavailable)." };
+}
+
 /* ===== src/ui.js ===== */
 // UI layer: everything that happens inside the modal popup.
+
+
+
+
 
 
 
@@ -2841,9 +3368,10 @@ function closeModal() {
 // intro it commits a default name first so the player isn't stuck.
 function handleEscape() {
   if (state.inIntro) {
-    const input = document.getElementById("intro-name");
-    const v = ((input && input.value) || "").trim() || "you";
-    state.setPlayerName(v);
+    const input = document.getElementById("cc-name") || document.getElementById("intro-name");
+    const typed = ((input && input.value) || "").trim();
+    // keep a typed name; otherwise preserve the existing one (don't clobber on cancel)
+    state.setPlayerName(typed || state.playerName || "you");
   }
   closeModal();
 }
@@ -3038,6 +3566,7 @@ function resolveSideQuest(id, key) {
       if (sq.reward.coins) state.addCoins(sq.reward.coins);
       if (sq.reward.find) state.addFind(sq.reward.find);
     }
+    state.addXp(XP.sideQuest);
     state.updateProgressUI();
   }
 }
@@ -3201,7 +3730,12 @@ function commitDiagnosis(key) {
       state.solved.add(state.currentScenario);
       saveSet("solved", state.solved);
       state.recordTicketSolved();
-      if (firstTry) { state.sharp.add(state.currentScenario); saveSet("sharp", state.sharp); }
+      let gained = XP.ticket;
+      if (firstTry) { state.sharp.add(state.currentScenario); saveSet("sharp", state.sharp); gained += XP.firstTry; }
+      const wasCleared = state.floorCleared(state.floor);
+      state.addXp(gained);
+      // floor-clear bonus the first time a floor is fully solved
+      if (!wasCleared && state.floorCleared(state.floor)) state.addXp(XP.floorCleared);
     }
     state.updateProgressUI();
     lockScenarioButtons();
@@ -3483,6 +4017,11 @@ function openQuiz() {
       const isBest = score > prevBest;
       if (isBest) saveNum(bestKey, score);
       const best = Math.max(prevBest, score);
+      // XP + achievement hooks (only the first pass/perfect on a given best avoids farming)
+      if (pct >= 80 && isBest) {
+        state.addXp(XP.quizPass + (pct === 100 ? XP.quizPerfect : 0));
+      }
+      if (pct === 100) { state.setFlag("quizPerfect"); state.checkAchievements(); }
       const verdict = pct === 100
         ? "Perfect score. You could teach this floor."
         : pct >= 80
@@ -3524,6 +4063,294 @@ function openQuiz() {
   start();
 }
 
+// ===========================================================================
+//  WAVE 1 — character creator, settings, shop, achievements, toasts
+// ===========================================================================
+
+// Build a clean working copy of a sprite palette with accessory fields present.
+function normSprite(sp) {
+  const s = { ...DEFAULT_SPRITE, ...(sp || {}) };
+  if (!s.body2) s.body2 = darken(s.body);
+  if (s.glasses == null) s.glasses = false;
+  if (s.shades == null) s.shades = false;
+  if (s.hat == null) s.hat = null;
+  return s;
+}
+
+// --- transient achievement / promotion toast ------------------------------
+function showAchievementToast(ach) {
+  try {
+    let host = document.getElementById("toast-host");
+    if (!host) {
+      host = document.createElement("div");
+      host.id = "toast-host"; host.className = "toast-host";
+      document.body.appendChild(host);
+    }
+    const el = document.createElement("div");
+    el.className = "toast";
+    el.innerHTML = `<span class="toast-icon">${ach.icon || "\u2728"}</span>
+      <span class="toast-text"><strong>${escapeHtml(ach.name)}</strong><br>${escapeHtml(ach.desc || "")}</span>`;
+    host.appendChild(el);
+    requestAnimationFrame(() => el.classList.add("show"));
+    setTimeout(() => { el.classList.remove("show"); setTimeout(() => el.remove(), 350); }, 3200);
+  } catch { /* ignore */ }
+}
+
+// --- character creator: roster select → customizer ------------------------
+function openCharacterCreator() {
+  state.inIntro = true;
+  // working sprite + chosen name; seed from existing if returning
+  const draft = { sprite: normSprite(state.playerSprite), name: state.playerName || "" };
+  renderRoster();
+
+  function renderRoster() {
+    const cards = PRESETS.map((p) => {
+      const sp = p.random ? randomSprite() : normSprite(p.sprite);
+      return `<button class="roster-card" data-id="${escapeAttr(p.id)}">
+        <canvas class="roster-canvas" width="72" height="72" data-pid="${escapeAttr(p.id)}"></canvas>
+        <div class="roster-name">${escapeHtml(p.name)}</div>
+        <div class="roster-role">${escapeHtml(p.role)}</div>
+      </button>`;
+    }).join("");
+    openModal("Choose your character", "Pick a fighter \u2014 you'll customize next", "\u{1F3AE}",
+      `<div class="roster-grid">${cards}</div>
+       <div class="roster-foot">Each is just a starting look. You can recolor everything on the next screen.</div>`,
+      { hideClose: true });
+    // paint previews + wire picks
+    PRESETS.forEach((p) => {
+      const c = document.querySelector(`canvas[data-pid="${p.id}"]`);
+      if (c) drawSpritePreview(c, p.random ? randomSprite() : normSprite(p.sprite), "down", 2);
+    });
+    document.querySelectorAll(".roster-card").forEach((b) => {
+      b.addEventListener("click", () => {
+        const p = PRESETS.find((x) => x.id === b.dataset.id);
+        draft.sprite = normSprite(p.random ? randomSprite() : p.sprite);
+        renderCustomizer();
+      });
+    });
+  }
+
+  function swatchRow(label, colors, field) {
+    const sw = colors.map((c) =>
+      `<button class="swatch ${draft.sprite[field] === c ? "sel" : ""}" data-field="${field}" data-color="${escapeAttr(c)}" style="background:${escapeAttr(c)}"></button>`
+    ).join("");
+    return `<div class="cc-row"><div class="cc-label">${escapeHtml(label)}</div><div class="cc-swatches">${sw}</div></div>`;
+  }
+
+  function renderCustomizer() {
+    // owned premium shirts become extra shirt swatches
+    const shirts = [...SHIRT_COLORS];
+    for (const it of SHOP_ITEMS) {
+      if (it.kind === "swatch" && state.hasOwned(it.id) && PREMIUM_SHIRTS[it.swatch]) shirts.push(PREMIUM_SHIRTS[it.swatch]);
+    }
+    // accessory buttons: free ones + owned ones
+    const accBtns = ACCESSORIES.filter((a) => a.free || state.hasOwned(shopIdForAccessory(a.id)))
+      .map((a) => `<button class="cc-acc" data-acc="${escapeAttr(a.id)}">${a.icon ? a.icon + " " : ""}${escapeHtml(a.name)}</button>`).join("");
+
+    openModal("Customize", "Make it yours", "\u{1F3A8}",
+      `<div class="cc-wrap">
+         <div class="cc-preview">
+           <canvas id="cc-canvas" width="128" height="128"></canvas>
+           <div class="cc-rotate">
+             <button id="cc-face-down">\u25BC</button>
+             <button id="cc-face-left">\u25C0</button>
+             <button id="cc-face-right">\u25B6</button>
+             <button id="cc-face-up">\u25B2</button>
+           </div>
+           <button id="cc-random" class="cc-random">\u{1F3B2} Surprise me</button>
+         </div>
+         <div class="cc-controls">
+           ${swatchRow("Skin", SKIN_TONES, "skin")}
+           ${swatchRow("Hair", HAIR_COLORS, "hair")}
+           ${swatchRow("Shirt", shirts, "body")}
+           ${swatchRow("Accent", ACCENT_COLORS, "accent")}
+           <div class="cc-row"><div class="cc-label">Accessory</div><div class="cc-accs">${accBtns}</div></div>
+           <label class="cc-namelabel">Name</label>
+           <input id="cc-name" type="text" maxlength="20" value="${escapeAttr(draft.name)}" placeholder="What should they call you?" autocomplete="off" />
+           <div class="cc-foot">
+             <button id="cc-back">\u2190 Roster</button>
+             <button id="cc-confirm" class="primary-btn">Start \u2192</button>
+           </div>
+           <div style="font-size:11px;color:var(--text-faint);margin-top:6px;">Unlock more shirts, shades, and hats in the Shop with coins you earn.</div>
+         </div>
+       </div>`,
+      { hideClose: true });
+
+    let facing = "down";
+    const canvas = document.getElementById("cc-canvas");
+    const paint = () => drawSpritePreview(canvas, draft.sprite, facing, 4);
+    paint();
+
+    document.querySelectorAll(".swatch").forEach((b) => b.addEventListener("click", () => {
+      const f = b.dataset.field, col = b.dataset.color;
+      draft.sprite[f] = col;
+      if (f === "body") draft.sprite.body2 = darken(col);
+      document.querySelectorAll(`.swatch[data-field="${f}"]`).forEach((x) => x.classList.remove("sel"));
+      b.classList.add("sel");
+      paint();
+    }));
+    document.querySelectorAll(".cc-acc").forEach((b) => b.addEventListener("click", () => {
+      const a = ACCESSORIES.find((x) => x.id === b.dataset.acc);
+      if (a) a.apply(draft.sprite);
+      paint();
+    }));
+    const faces = { "cc-face-down": "down", "cc-face-up": "up", "cc-face-left": "left", "cc-face-right": "right" };
+    Object.entries(faces).forEach(([id, dir]) => {
+      const el = document.getElementById(id); if (el) el.addEventListener("click", () => { facing = dir; paint(); });
+    });
+    document.getElementById("cc-random").addEventListener("click", () => { draft.sprite = normSprite(randomSprite()); renderCustomizer(); });
+    document.getElementById("cc-back").addEventListener("click", renderRoster);
+    document.getElementById("cc-name").addEventListener("input", (e) => { draft.name = e.target.value; });
+    document.getElementById("cc-confirm").addEventListener("click", () => {
+      const nm = (document.getElementById("cc-name").value || "").trim() || "you";
+      state.setPlayerName(nm);
+      state.setPlayerSprite(draft.sprite);
+      closeModal();
+    });
+  }
+}
+function shopIdForAccessory(accId) {
+  const it = SHOP_ITEMS.find((x) => x.kind === "accessory" && x.accessory === accId);
+  return it ? it.id : "__none__";
+}
+
+// --- settings panel --------------------------------------------------------
+function openSettings() {
+  state.inDialog = true;
+  const theme = currentTheme();
+  const themeBtns = THEMES.map((t) =>
+    `<button class="seg ${theme === t.id ? "on" : ""}" data-theme="${t.id}">${escapeHtml(t.name)}</button>`).join("");
+  const toggle = (id, label, on, hint) =>
+    `<div class="set-row"><div><div class="set-label">${escapeHtml(label)}</div>${hint ? `<div class="set-hint">${escapeHtml(hint)}</div>` : ""}</div>
+       <button class="switch ${on ? "on" : ""}" id="${id}"><span></span></button></div>`;
+
+  openModal("Settings", "Display, sound & saves", "\u2699\uFE0F",
+    `<div class="set-row"><div class="set-label">Theme</div><div class="seg-group">${themeBtns}</div></div>
+     ${toggle("set-sound", "Step sound", state.soundOn)}
+     ${toggle("set-motion", "Reduced motion", prefs.reducedMotion(), "Calms idle bobbing and animations.")}
+     ${toggle("set-cb", "High-contrast markers", prefs.colorblind(), "Adds a dark halo behind the !/?/\u2713 markers.")}
+     ${toggle("set-text", "Larger text", prefs.bigText())}
+     <div class="set-divider"></div>
+     <button id="set-edit-char" class="primary-btn" style="width:100%;">\u{1F3A8} Edit character</button>
+     <div class="set-divider"></div>
+     <div class="set-label" style="margin-bottom:6px;">Progress file</div>
+     <div class="set-saverow">
+       <button id="set-save" class="primary-btn">\u2B07\uFE0F Save to file</button>
+       <button id="set-load">\u2B06\uFE0F Load from file</button>
+       <input id="set-file" type="file" accept="application/json,.json" hidden />
+     </div>
+     <div id="set-file-msg" class="set-hint" style="margin-top:6px;"></div>
+     <div class="set-hint" style="margin-top:4px;">Download a save to back up or move to another device, then load it here to continue.</div>
+     <div class="set-divider"></div>
+     <button id="set-reset" class="danger-btn">Reset all progress</button>`
+  );
+
+  document.querySelectorAll(".seg[data-theme]").forEach((b) => b.addEventListener("click", () => {
+    applyTheme(b.dataset.theme);
+    document.querySelectorAll(".seg[data-theme]").forEach((x) => x.classList.toggle("on", x === b));
+  }));
+  const flip = (id, getter, setter) => {
+    const el = document.getElementById(id); if (!el) return;
+    el.addEventListener("click", () => { const nv = !getter(); setter(nv); el.classList.toggle("on", nv); });
+  };
+  flip("set-sound", () => state.soundOn, (v) => state.setSound(v));
+  flip("set-motion", () => prefs.reducedMotion(), (v) => setReducedMotion(v));
+  flip("set-cb", () => prefs.colorblind(), (v) => setColorblind(v));
+  flip("set-text", () => prefs.bigText(), (v) => setBigText(v));
+
+  document.getElementById("set-save").addEventListener("click", () => {
+    const r = state.exportSaveFile();
+    const msg = document.getElementById("set-file-msg");
+    msg.textContent = r.ok ? "Saved. Check your downloads." : (r.error || "Couldn't save.");
+    msg.style.color = r.ok ? "var(--success-text)" : "var(--danger-text)";
+  });
+  const fileInput = document.getElementById("set-file");
+  document.getElementById("set-load").addEventListener("click", () => fileInput.click());
+  fileInput.addEventListener("change", (e) => {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    const msg = document.getElementById("set-file-msg");
+    const reader = new FileReader();
+    reader.onload = () => {
+      const r = state.importSaveText(String(reader.result || ""));
+      msg.textContent = r.ok ? "Loaded! Reloading\u2026" : (r.error || "Couldn't load that file.");
+      msg.style.color = r.ok ? "var(--success-text)" : "var(--danger-text)";
+    };
+    reader.onerror = () => { msg.textContent = "Couldn't read that file."; msg.style.color = "var(--danger-text)"; };
+    reader.readAsText(f);
+  });
+  document.getElementById("set-reset").addEventListener("click", () => {
+    if (typeof confirm === "function" && !confirm("Clear ALL saved progress and start over?")) return;
+    state.doReset(); closeModal(); openCharacterCreator();
+  });
+  document.getElementById("set-edit-char").addEventListener("click", () => { closeModal(); openCharacterCreator(); });
+}
+
+// --- cosmetics shop --------------------------------------------------------
+function openShop() {
+  state.inDialog = true;
+  renderShop();
+  function renderShop() {
+    const rows = SHOP_ITEMS.map((it) => {
+      const owned = state.hasOwned(it.id);
+      const afford = state.coins >= it.cost;
+      const btn = owned
+        ? `<span class="shop-owned">\u2713 Owned</span>`
+        : `<button class="shop-buy ${afford ? "" : "broke"}" data-id="${escapeAttr(it.id)}" ${afford ? "" : "disabled"}>\u{1FA99} ${it.cost}</button>`;
+      return `<div class="shop-item">
+        <div class="shop-icon">${it.icon || "\u{1F455}"}</div>
+        <div class="shop-main"><div class="shop-name">${escapeHtml(it.name)}</div>
+          <div class="shop-kind">${it.kind === "swatch" ? "Shirt color" : "Accessory"}</div></div>
+        ${btn}
+      </div>`;
+    }).join("");
+    openModal("The Vending Machine", "Spend your coins on drip", "\u{1F6CD}\uFE0F",
+      `<div class="shop-bal">Balance: <strong>\u{1FA99} ${state.coins}</strong></div>
+       <div class="shop-grid">${rows}</div>
+       <div class="set-hint" style="margin-top:10px;">Equip what you buy in the character creator (Settings \u2192 or Reset re-opens it). Earn coins from side quests and the cat's stash.</div>`);
+    document.querySelectorAll(".shop-buy[data-id]").forEach((b) => b.addEventListener("click", () => {
+      const it = SHOP_ITEMS.find((x) => x.id === b.dataset.id);
+      const r = state.buyItem(it);
+      if (r.ok) {
+        // auto-equip accessories/shirts onto the live sprite for instant payoff
+        const sp = normSprite(state.playerSprite);
+        if (it.kind === "accessory") { const a = ACCESSORIES.find((x) => x.id === it.accessory); if (a) a.apply(sp); }
+        else if (it.kind === "swatch" && PREMIUM_SHIRTS[it.swatch]) { sp.body = PREMIUM_SHIRTS[it.swatch]; sp.body2 = darken(sp.body); }
+        state.setPlayerSprite(sp);
+        showAchievementToast({ icon: it.icon || "\u{1F455}", name: "Purchased!", desc: it.name + " \u2014 equipped." });
+      } else {
+        showAchievementToast({ icon: "\u{1FA99}", name: "Hold up", desc: r.error || "Can't buy that." });
+      }
+      renderShop();
+    }));
+  }
+}
+
+// --- achievements gallery --------------------------------------------------
+function openAchievements() {
+  state.inDialog = true;
+  const r = rank(state.xp || 0);
+  const got = state.achievements;
+  const cards = ACHIEVEMENTS.map((a) => {
+    const have = got.has(a.id);
+    return `<div class="ach-card ${have ? "have" : "locked"}">
+      <div class="ach-icon">${have ? a.icon : "\u{1F512}"}</div>
+      <div class="ach-text"><div class="ach-name">${escapeHtml(a.name)}</div>
+        <div class="ach-desc">${escapeHtml(a.desc)}</div></div>
+    </div>`;
+  }).join("");
+  const bar = r.max
+    ? `<div class="rank-sub">Max rank reached \u2014 ${escapeHtml(r.title)}.</div>`
+    : `<div class="rank-bar"><span style="width:${r.pct}%;"></span></div>
+       <div class="rank-sub">${r.into}/${r.span} XP to <strong>${escapeHtml(r.next)}</strong></div>`;
+  openModal("Career & Achievements", `Level ${r.level} \u00b7 ${r.title}`, "\u{1F3C6}",
+    `<div class="rank-card">
+       <div class="rank-top"><span class="rank-level">Lv ${r.level}</span><span class="rank-title">${escapeHtml(r.title)}</span><span class="rank-xp">${state.xp} XP</span></div>
+       ${bar}
+     </div>
+     <div class="scenario-section-label" style="margin-top:12px;">Achievements \u00b7 ${got.size}/${ACHTOTAL}</div>
+     <div class="ach-grid">${cards}</div>`);
+}
+
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
@@ -3534,6 +4361,10 @@ function escapeAttr(s) { return escapeHtml(s); }
 /* ===== src/game.js ===== */
 // Game loop and input — drives the ported renderer (renderX/renderY pixel
 // positions, facing, smooth lerp walking, held-key continuous movement).
+
+
+
+
 
 
 
@@ -3638,6 +4469,8 @@ function makeStepSound() {
   };
 }
 async function startGame() {
+  applyTheme(currentTheme());
+  applyPrefs();
   await loadAssets(SPRITE_MANIFEST);
 
   const canvas = document.getElementById("world");
@@ -3673,6 +4506,13 @@ async function startGame() {
     day: loadNum("day", 1),
     lifeTickets: loadNum("lifeTickets", 0),
     lifeSideQuests: loadNum("lifeSideQuests", 0),
+    xp: loadNum("xp", 0),
+    owned: loadSet("owned"),            // cosmetic shop item ids the player owns
+    achievements: loadSet("achievements"), // unlocked achievement ids
+    playerSprite: (() => {
+      try { const raw = loadString("sprite", ""); return raw ? JSON.parse(raw) : { ...DEFAULT_SPRITE }; }
+      catch { return { ...DEFAULT_SPRITE }; }
+    })(),
 
     started: false,
 
@@ -3687,15 +4527,85 @@ async function startGame() {
     setSound(on) { this.soundOn = on; saveBool("soundOn", on); updateSoundUI(on); },
     recordTicketSolved() { this.lifeTickets += 1; saveNum("lifeTickets", this.lifeTickets); },
     recordSideQuestSolved() { this.lifeSideQuests += 1; saveNum("lifeSideQuests", this.lifeSideQuests); },
+    // --- character / cosmetics ---
+    setPlayerSprite(sp) {
+      this.playerSprite = sp;
+      try { saveString("sprite", JSON.stringify(sp)); } catch { /* ignore */ }
+    },
+    own(id) { if (!this.owned.has(id)) { this.owned.add(id); saveSet("owned", this.owned); } },
+    hasOwned(id) { return this.owned.has(id); },
+    buyItem(item) {
+      if (!item) return { ok: false, error: "Unknown item." };
+      if (this.owned.has(item.id)) return { ok: false, error: "You already own that." };
+      if (this.coins < item.cost) return { ok: false, error: `Need ${item.cost - this.coins} more coins.` };
+      this.coins -= item.cost; saveNum("coins", this.coins);
+      this.own(item.id);
+      this.updateProgressUI(); this.checkAchievements();
+      return { ok: true };
+    },
+    // --- XP / rank ---
+    addXp(n) {
+      if (!n) return;
+      const before = rank(this.xp).level;
+      this.xp += n; saveNum("xp", this.xp);
+      const after = rank(this.xp).level;
+      this.updateProgressUI();
+      if (after > before) showAchievementToast({ icon: "\u{1F4C8}", name: "Promoted!", desc: rank(this.xp).title });
+      this.checkAchievements();
+    },
+    // --- achievements ---
+    checkAchievements() {
+      const nu = newlyUnlocked(this, this.achievements);
+      if (!nu.length) return;
+      for (const id of nu) this.achievements.add(id);
+      saveSet("achievements", this.achievements);
+      const a = ACHIEVEMENTS.find((x) => x.id === nu[0]);
+      if (a) showAchievementToast(a);
+      this.updateProgressUI();
+    },
     // --- SDV helpers ---
     setFlag(name) { if (!this.flags.has(name)) { this.flags.add(name); saveSet("flags", this.flags); } },
     hasFlag(name) { return this.flags.has(name); },
     addFind(id) {
       if (this.finds.has(id)) return false;
-      this.finds.add(id); saveSet("finds", this.finds); this.updateProgressUI(); return true;
+      this.finds.add(id); saveSet("finds", this.finds); this.addXp(XP.find); this.updateProgressUI(); return true;
     },
-    addCoins(n) { this.coins += n; saveNum("coins", this.coins); this.updateProgressUI(); },
+    addCoins(n) { this.coins += n; saveNum("coins", this.coins); this.updateProgressUI(); this.checkAchievements(); },
     addTokens(n) { this.tokens += n; saveNum("tokens", this.tokens); this.updateProgressUI(); },
+    // --- whole-game reset / save-file ---
+    doReset() {
+      clearAll();
+      setFloor("floor3");
+      this.floor = "floor3"; this.map = "floor3";
+      this.solved = new Set(); this.sqSolved = new Set(); this.sharp = new Set();
+      this.flags = new Set(); this.finds = new Set(); this.coins = 0; this.tokens = 0;
+      this.owned = new Set(); this.achievements = new Set(); this.xp = 0;
+      this.playerName = ""; this.day = 1; this.lifeTickets = 0; this.lifeSideQuests = 0;
+      this.playerSprite = { ...DEFAULT_SPRITE };
+      this.px = PLAYER_START.x; this.py = PLAYER_START.y;
+      this.renderX = this.px * TILE; this.renderY = this.py * TILE;
+      this.facing = PLAYER_START.dir; this.moving = false;
+      const lab = document.getElementById("loc-label");
+      if (lab) lab.textContent = LOC_LABEL;
+      this.updateProgressUI();
+    },
+    exportSaveFile() {
+      try {
+        const text = serializeSave();
+        const blob = new Blob([text], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = saveFilename(this.playerName, this.day);
+        document.body.appendChild(a); a.click();
+        setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 0);
+        return { ok: true };
+      } catch (e) { return { ok: false, error: "Couldn't create the download." }; }
+    },
+    importSaveText(text) {
+      const res = applySaveText(text);
+      if (res.ok) { try { location.reload(); } catch { /* test env */ } }
+      return res;
+    },
     startNewDay() {
       this.day += 1; saveNum("day", this.day);
       this.solved = new Set(); this.sqSolved = new Set(); this.sharp = new Set();
@@ -3716,6 +4626,7 @@ async function startGame() {
     goToFloor(id) {
       setFloor(id);
       this.floor = id; this.map = id; saveString("floor", id);
+      if (id === "floor7") this.setFlag("visitedFloor7");
       this.px = PLAYER_START.x; this.py = PLAYER_START.y;
       this.renderX = this.px * TILE; this.renderY = this.py * TILE;
       this.facing = PLAYER_START.dir; this.moving = false;
@@ -3724,12 +4635,13 @@ async function startGame() {
       const fp = document.getElementById("floor-pill");
       if (fp) fp.textContent = FLOOR_META[id] ? FLOOR_META[id].name : id;
       this.updateProgressUI();
+      this.checkAchievements();
     },
     updateProgressUI() {
       document.getElementById("day-pill").textContent = `Day ${this.day}`;
-      // Mark Floor 3 cleared (gates the elevator to Floor 7) the moment its
-      // tickets are all solved — idempotent, so safe to check every frame-ish.
+      // Mark floors cleared (gates + achievements) the moment tickets are all solved.
       if (this.floorCleared("floor3")) this.setFlag("floor3Cleared");
+      if (this.floorCleared("floor7")) this.setFlag("floor7Cleared");
       const here = this.floor;
       const total = scenarioCountForFloor(here);
       const done = this.solvedOnFloor(here);
@@ -3745,6 +4657,8 @@ async function startGame() {
       if (fp) fp.textContent = `\u2605 ${this.finds.size}/${FINDTOTAL}`;
       const cp = document.getElementById("coins-progress");
       if (cp) cp.textContent = `\u{1FA99} ${this.coins}${this.tokens ? ` \u00b7 \u{1F39F}\uFE0F ${this.tokens}` : ""}`;
+      const rp = document.getElementById("rank-pill");
+      if (rp) { const r = rank(this.xp); rp.textContent = `Lv ${r.level} \u00b7 ${r.title}`; rp.title = r.next ? `${r.into}/${r.span} XP to ${r.next}` : "Max rank"; }
     }
   };
 
@@ -3911,7 +4825,7 @@ async function startGame() {
     const ts = document.getElementById("title-screen");
     if (ts) ts.style.display = "none";
     viewport.focus();
-    if (!state.playerName) openIntro();
+    if (!state.playerName) openCharacterCreator();
   }
   const startBtn = document.getElementById("start-btn");
   if (startBtn) startBtn.addEventListener("click", begin);
@@ -3923,27 +4837,24 @@ async function startGame() {
   if (ts) ts.addEventListener("click", begin);
 
   // ---- topbar ----
-  document.getElementById("reset-btn").addEventListener("click", () => {
-    if (!confirm("Clear ALL saved progress \u2014 day count, stats, and your name \u2014 and start completely over?")) return;
-    clearAll();
-    setFloor("floor3");
-    state.floor = "floor3"; state.map = "floor3";
-    state.solved = new Set(); state.sqSolved = new Set(); state.sharp = new Set();
-    state.flags = new Set(); state.finds = new Set(); state.coins = 0; state.tokens = 0;
-    state.playerName = ""; state.day = 1; state.lifeTickets = 0; state.lifeSideQuests = 0;
-    state.px = PLAYER_START.x; state.py = PLAYER_START.y;
-    state.renderX = state.px * TILE; state.renderY = state.py * TILE;
-    state.facing = PLAYER_START.dir; state.moving = false;
-    const lab = document.getElementById("loc-label");
-    if (lab) lab.textContent = LOC_LABEL;
-    state.updateProgressUI();
-    openIntro();
+  const resetBtn = document.getElementById("reset-btn");
+  if (resetBtn) resetBtn.addEventListener("click", () => {
+    if (!confirm("Clear ALL saved progress \u2014 day count, stats, character, and name \u2014 and start completely over?")) return;
+    state.doReset();
+    openCharacterCreator();
   });
-  document.getElementById("sound-btn").addEventListener("click", () => state.setSound(!state.soundOn));
+  const soundBtn = document.getElementById("sound-btn");
+  if (soundBtn) soundBtn.addEventListener("click", () => state.setSound(!state.soundOn));
   const compBtn = document.getElementById("companion-btn");
   if (compBtn) compBtn.addEventListener("click", () => { if (!isModalOpen()) openDiscoveries(); });
   const examBtn = document.getElementById("exam-btn");
   if (examBtn) examBtn.addEventListener("click", () => { if (!isModalOpen()) openQuiz(); });
+  const shopBtn = document.getElementById("shop-btn");
+  if (shopBtn) shopBtn.addEventListener("click", () => { if (!isModalOpen()) openShop(); });
+  const achBtn = document.getElementById("ach-btn");
+  if (achBtn) achBtn.addEventListener("click", () => { if (!isModalOpen()) openAchievements(); });
+  const setBtn = document.getElementById("settings-btn");
+  if (setBtn) setBtn.addEventListener("click", () => { if (!isModalOpen()) openSettings(); });
 
   function onResize() { sizeCanvas(canvas, viewport); }
   window.addEventListener("resize", onResize);

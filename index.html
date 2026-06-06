@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="gray">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
@@ -17,13 +17,18 @@
       <div class="progress">
         <div class="pill pill-accent" id="day-pill">Day 1</div>
         <div class="pill pill-floor" id="floor-pill" title="Current floor">Floor 3</div>
+        <div class="pill pill-rank" id="rank-pill" title="Your XP rank">Lv 1 &middot; IT Intern</div>
         <div class="pill" id="ticket-progress">0 / 7 tickets</div>
         <div class="pill" id="sq-progress">0 side quests</div>
         <div class="pill" id="coins-progress" title="Vending coins &middot; break-room tokens">&#129689; 0</div>
         <button class="pill pill-button" id="exam-btn" title="Take a 5-question practice test on this floor">&#128221; Exam</button>
-        <button class="pill pill-button" id="companion-btn" title="Open your Field Companion"><span id="finds-progress">&#9733; 0/2</span></button>
-        <button class="pill pill-button" id="sound-btn" title="Toggle step sound">Sound: off</button>
-        <button class="pill pill-button" id="reset-btn" title="Clear save and start over">Reset</button>
+        <button class="pill pill-button" id="shop-btn" title="Spend coins on cosmetics">&#128717;&#65039; Shop</button>
+        <button class="pill pill-button" id="ach-btn" title="Career rank &amp; achievements">&#127942; Career</button>
+        <button class="pill pill-button" id="companion-btn" title="Open your Field Companion"><span id="finds-progress">&#9733; 0/6</span></button>
+        <button class="pill pill-button" id="settings-btn" title="Themes, sound, save &amp; load">&#9881;&#65039;</button>
+        <!-- legacy controls kept (now also inside Settings); hidden but wired -->
+        <button class="pill pill-button" id="sound-btn" hidden>Sound: off</button>
+        <button class="pill pill-button" id="reset-btn" hidden>Reset</button>
       </div>
     </div>
 
@@ -36,61 +41,65 @@
       <span>&#128221; Exam = practice test</span>
     </div>
 
-    <div class="viewport-shell">
-      <div id="viewport" tabindex="0">
-        <canvas id="world"></canvas>
+    <div class="game-layout">
+      <div class="viewport-shell">
+        <div id="viewport" tabindex="0">
+          <canvas id="world"></canvas>
 
-        <!-- title screen: gates input until the player begins -->
-        <div id="title-screen" class="title-screen">
-          <div class="title-card">
-            <div class="title-kicker">A PLAYABLE STUDY GUIDE &middot; FREE</div>
-            <div class="title-name">THE TICKET QUEUE</div>
-            <div class="title-blurb">
-              You're the IT person. Read the ticket monitor, walk the office, find
-              who filed each ticket, and learn the principle behind every fix.
-              Clear <strong>Floor 3</strong> (A+ / Network+ fundamentals), then ride
-              the elevator to <strong>Floor 7</strong> &mdash; Security Operations, for
-              Security+ and PenTest+. Hit <strong>Exam</strong> anytime to practice-test
-              the whole floor. Let IT glow.
+          <!-- title screen: gates input until the player begins -->
+          <div id="title-screen" class="title-screen">
+            <div class="title-card">
+              <div class="title-kicker">A PLAYABLE STUDY GUIDE &middot; FREE</div>
+              <div class="title-name">THE TICKET QUEUE</div>
+              <div class="title-blurb">
+                You're the IT person. Build your character, read the ticket monitor,
+                walk the office, find who filed each ticket, and learn the principle
+                behind every fix. Clear <strong>Floor 3</strong> (A+ / Network+), then
+                ride the elevator to <strong>Floor 7</strong> &mdash; Security Operations,
+                for Security+ and PenTest+. Earn XP, climb the career ladder, and spend
+                coins on drip. Let IT glow.
+              </div>
+              <button id="start-btn" class="title-start">&#9654;&nbsp; PRESS SPACE TO BEGIN</button>
+              <div id="continue-line" class="title-continue"></div>
             </div>
-            <button id="start-btn" class="title-start">&#9654;&nbsp; PRESS SPACE TO BEGIN</button>
-            <div id="continue-line" class="title-continue"></div>
+          </div>
+
+          <div id="interact-hint" class="interact-hint">
+            <span id="interact-hint-text">Press E to interact</span>
+          </div>
+
+          <div id="eod-hint" class="eod-hint" hidden>
+            Every ticket on this floor is closed. Walk back to your ticket monitor.
+          </div>
+
+          <div class="touch-controls" id="touch-controls" aria-hidden="true">
+            <div class="dpad">
+              <button class="dpad-btn dpad-up" id="touch-up" aria-label="Move up">&#9650;</button>
+              <button class="dpad-btn dpad-left" id="touch-left" aria-label="Move left">&#9664;</button>
+              <button class="dpad-btn dpad-right" id="touch-right" aria-label="Move right">&#9654;</button>
+              <button class="dpad-btn dpad-down" id="touch-down" aria-label="Move down">&#9660;</button>
+            </div>
+            <button class="action-btn" id="touch-action" aria-label="Interact">E</button>
           </div>
         </div>
+      </div>
 
-        <div id="interact-hint" class="interact-hint">
-          <span id="interact-hint-text">Press E to interact</span>
-        </div>
-
-        <div id="eod-hint" class="eod-hint" hidden>
-          Every ticket on this floor is closed. Walk back to your ticket monitor.
-        </div>
-
-        <div class="touch-controls" id="touch-controls" aria-hidden="true">
-          <div class="dpad">
-            <button class="dpad-btn dpad-up" id="touch-up" aria-label="Move up">&#9650;</button>
-            <button class="dpad-btn dpad-left" id="touch-left" aria-label="Move left">&#9664;</button>
-            <button class="dpad-btn dpad-right" id="touch-right" aria-label="Move right">&#9654;</button>
-            <button class="dpad-btn dpad-down" id="touch-down" aria-label="Move down">&#9660;</button>
+      <div id="modal-bg" class="modal-bg" hidden>
+        <div class="modal" role="dialog" aria-modal="true">
+          <div class="modal-head">
+            <div class="modal-avatar" id="modal-avatar">i</div>
+            <div class="modal-headtext">
+              <div class="modal-title" id="modal-title"></div>
+              <div class="modal-subtitle" id="modal-subtitle"></div>
+            </div>
+            <button id="modal-close" class="modal-close" aria-label="Close">&times;</button>
           </div>
-          <button class="action-btn" id="touch-action" aria-label="Interact">E</button>
+          <div id="modal-body" class="modal-body"></div>
         </div>
       </div>
     </div>
 
-    <div id="modal-bg" class="modal-bg" hidden>
-      <div class="modal" role="dialog" aria-modal="true">
-        <div class="modal-head">
-          <div class="modal-avatar" id="modal-avatar">i</div>
-          <div class="modal-headtext">
-            <div class="modal-title" id="modal-title"></div>
-            <div class="modal-subtitle" id="modal-subtitle"></div>
-          </div>
-          <button id="modal-close" class="modal-close" aria-label="Close">&times;</button>
-        </div>
-        <div id="modal-body" class="modal-body"></div>
-      </div>
-    </div>
+    <div id="toast-host" class="toast-host"></div>
 
     <script type="module" src="./src/main.js"></script>
   </body>

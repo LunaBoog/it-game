@@ -80,3 +80,28 @@ export function clearAll() {
     // ignore
   }
 }
+
+// --- whole-save dump/restore (powers the download/upload feature) ----------
+// Returns a plain object of every it-game:* key with the prefix stripped.
+export function dumpAll() {
+  const out = {};
+  try {
+    Object.keys(localStorage)
+      .filter((k) => k.startsWith(PREFIX))
+      .forEach((k) => { out[k.slice(PREFIX.length)] = localStorage.getItem(k); });
+  } catch { /* ignore */ }
+  return out;
+}
+
+// Replaces the current save with the given map (clears existing it-game:* first).
+export function restoreAll(map) {
+  try {
+    clearAll();
+    for (const [k, v] of Object.entries(map || {})) {
+      if (v != null) localStorage.setItem(PREFIX + k, String(v));
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}

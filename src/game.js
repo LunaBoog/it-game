@@ -16,10 +16,15 @@ import {
   initUI, openNpcChat, openTicketBoard, openSideQuest,
   openScenario, openEndOfDay, openIntro, handleEscape,
   openPet, openSearch, openChest, openDiscoveries,
-  openElevator, openQuiz
+  openElevator, openQuiz,
+  openCharacterCreator, openSettings, openShop, openAchievements, showAchievementToast
 } from "./ui.js";
 import { FINDS, FINDTOTAL } from "./collectables.js";
 import { scenarioIdsForFloor, scenarioCountForFloor } from "./scenarios.js";
+import { DEFAULT_SPRITE } from "./cosmetics.js";
+import { XP, rank, newlyUnlocked, ACHIEVEMENTS } from "./progression.js";
+import { applyTheme, currentTheme, applyPrefs } from "./theme.js";
+import { serializeSave, saveFilename, applySaveText } from "./savefile.js";
 
 const DIRS = { up:[0,-1], down:[0,1], left:[-1,0], right:[1,0] };
 const KEY_TO_DIR = {
@@ -118,6 +123,8 @@ function makeStepSound() {
 }
 
 export async function startGame() {
+  applyTheme(currentTheme());
+  applyPrefs();
   await loadAssets(SPRITE_MANIFEST);
 
   const canvas = document.getElementById("world");
@@ -153,6 +160,13 @@ export async function startGame() {
     day: loadNum("day", 1),
     lifeTickets: loadNum("lifeTickets", 0),
     lifeSideQuests: loadNum("lifeSideQuests", 0),
+    xp: loadNum("xp", 0),
+    owned: loadSet("owned"),            // cosmetic shop item ids the player owns
+    achievements: loadSet("achievements"), // unlocked achievement ids
+    playerSprite: (() => {
+      try { const raw = loadString("sprite", ""); return raw ? JSON.parse(raw) : { ...DEFAULT_SPRITE }; }
+      catch { return { ...DEFAULT_SPRITE }; }
+    })(),
 
     started: false,
 
@@ -167,15 +181,85 @@ export async function startGame() {
     setSound(on) { this.soundOn = on; saveBool("soundOn", on); updateSoundUI(on); },
     recordTicketSolved() { this.lifeTickets += 1; saveNum("lifeTickets", this.lifeTickets); },
     recordSideQuestSolved() { this.lifeSideQuests += 1; saveNum("lifeSideQuests", this.lifeSideQuests); },
+    // --- character / cosmetics ---
+    setPlayerSprite(sp) {
+      this.playerSprite = sp;
+      try { saveString("sprite", JSON.stringify(sp)); } catch { /* ignore */ }
+    },
+    own(id) { if (!this.owned.has(id)) { this.owned.add(id); saveSet("owned", this.owned); } },
+    hasOwned(id) { return this.owned.has(id); },
+    buyItem(item) {
+      if (!item) return { ok: false, error: "Unknown item." };
+      if (this.owned.has(item.id)) return { ok: false, error: "You already own that." };
+      if (this.coins < item.cost) return { ok: false, error: `Need ${item.cost - this.coins} more coins.` };
+      this.coins -= item.cost; saveNum("coins", this.coins);
+      this.own(item.id);
+      this.updateProgressUI(); this.checkAchievements();
+      return { ok: true };
+    },
+    // --- XP / rank ---
+    addXp(n) {
+      if (!n) return;
+      const before = rank(this.xp).level;
+      this.xp += n; saveNum("xp", this.xp);
+      const after = rank(this.xp).level;
+      this.updateProgressUI();
+      if (after > before) showAchievementToast({ icon: "\u{1F4C8}", name: "Promoted!", desc: rank(this.xp).title });
+      this.checkAchievements();
+    },
+    // --- achievements ---
+    checkAchievements() {
+      const nu = newlyUnlocked(this, this.achievements);
+      if (!nu.length) return;
+      for (const id of nu) this.achievements.add(id);
+      saveSet("achievements", this.achievements);
+      const a = ACHIEVEMENTS.find((x) => x.id === nu[0]);
+      if (a) showAchievementToast(a);
+      this.updateProgressUI();
+    },
     // --- SDV helpers ---
     setFlag(name) { if (!this.flags.has(name)) { this.flags.add(name); saveSet("flags", this.flags); } },
     hasFlag(name) { return this.flags.has(name); },
     addFind(id) {
       if (this.finds.has(id)) return false;
-      this.finds.add(id); saveSet("finds", this.finds); this.updateProgressUI(); return true;
+      this.finds.add(id); saveSet("finds", this.finds); this.addXp(XP.find); this.updateProgressUI(); return true;
     },
-    addCoins(n) { this.coins += n; saveNum("coins", this.coins); this.updateProgressUI(); },
+    addCoins(n) { this.coins += n; saveNum("coins", this.coins); this.updateProgressUI(); this.checkAchievements(); },
     addTokens(n) { this.tokens += n; saveNum("tokens", this.tokens); this.updateProgressUI(); },
+    // --- whole-game reset / save-file ---
+    doReset() {
+      clearAll();
+      setFloor("floor3");
+      this.floor = "floor3"; this.map = "floor3";
+      this.solved = new Set(); this.sqSolved = new Set(); this.sharp = new Set();
+      this.flags = new Set(); this.finds = new Set(); this.coins = 0; this.tokens = 0;
+      this.owned = new Set(); this.achievements = new Set(); this.xp = 0;
+      this.playerName = ""; this.day = 1; this.lifeTickets = 0; this.lifeSideQuests = 0;
+      this.playerSprite = { ...DEFAULT_SPRITE };
+      this.px = PLAYER_START.x; this.py = PLAYER_START.y;
+      this.renderX = this.px * TILE; this.renderY = this.py * TILE;
+      this.facing = PLAYER_START.dir; this.moving = false;
+      const lab = document.getElementById("loc-label");
+      if (lab) lab.textContent = LOC_LABEL;
+      this.updateProgressUI();
+    },
+    exportSaveFile() {
+      try {
+        const text = serializeSave();
+        const blob = new Blob([text], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = saveFilename(this.playerName, this.day);
+        document.body.appendChild(a); a.click();
+        setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 0);
+        return { ok: true };
+      } catch (e) { return { ok: false, error: "Couldn't create the download." }; }
+    },
+    importSaveText(text) {
+      const res = applySaveText(text);
+      if (res.ok) { try { location.reload(); } catch { /* test env */ } }
+      return res;
+    },
     startNewDay() {
       this.day += 1; saveNum("day", this.day);
       this.solved = new Set(); this.sqSolved = new Set(); this.sharp = new Set();
@@ -196,6 +280,7 @@ export async function startGame() {
     goToFloor(id) {
       setFloor(id);
       this.floor = id; this.map = id; saveString("floor", id);
+      if (id === "floor7") this.setFlag("visitedFloor7");
       this.px = PLAYER_START.x; this.py = PLAYER_START.y;
       this.renderX = this.px * TILE; this.renderY = this.py * TILE;
       this.facing = PLAYER_START.dir; this.moving = false;
@@ -204,12 +289,13 @@ export async function startGame() {
       const fp = document.getElementById("floor-pill");
       if (fp) fp.textContent = FLOOR_META[id] ? FLOOR_META[id].name : id;
       this.updateProgressUI();
+      this.checkAchievements();
     },
     updateProgressUI() {
       document.getElementById("day-pill").textContent = `Day ${this.day}`;
-      // Mark Floor 3 cleared (gates the elevator to Floor 7) the moment its
-      // tickets are all solved — idempotent, so safe to check every frame-ish.
+      // Mark floors cleared (gates + achievements) the moment tickets are all solved.
       if (this.floorCleared("floor3")) this.setFlag("floor3Cleared");
+      if (this.floorCleared("floor7")) this.setFlag("floor7Cleared");
       const here = this.floor;
       const total = scenarioCountForFloor(here);
       const done = this.solvedOnFloor(here);
@@ -225,6 +311,8 @@ export async function startGame() {
       if (fp) fp.textContent = `\u2605 ${this.finds.size}/${FINDTOTAL}`;
       const cp = document.getElementById("coins-progress");
       if (cp) cp.textContent = `\u{1FA99} ${this.coins}${this.tokens ? ` \u00b7 \u{1F39F}\uFE0F ${this.tokens}` : ""}`;
+      const rp = document.getElementById("rank-pill");
+      if (rp) { const r = rank(this.xp); rp.textContent = `Lv ${r.level} \u00b7 ${r.title}`; rp.title = r.next ? `${r.into}/${r.span} XP to ${r.next}` : "Max rank"; }
     }
   };
 
@@ -391,7 +479,7 @@ export async function startGame() {
     const ts = document.getElementById("title-screen");
     if (ts) ts.style.display = "none";
     viewport.focus();
-    if (!state.playerName) openIntro();
+    if (!state.playerName) openCharacterCreator();
   }
   const startBtn = document.getElementById("start-btn");
   if (startBtn) startBtn.addEventListener("click", begin);
@@ -403,27 +491,24 @@ export async function startGame() {
   if (ts) ts.addEventListener("click", begin);
 
   // ---- topbar ----
-  document.getElementById("reset-btn").addEventListener("click", () => {
-    if (!confirm("Clear ALL saved progress \u2014 day count, stats, and your name \u2014 and start completely over?")) return;
-    clearAll();
-    setFloor("floor3");
-    state.floor = "floor3"; state.map = "floor3";
-    state.solved = new Set(); state.sqSolved = new Set(); state.sharp = new Set();
-    state.flags = new Set(); state.finds = new Set(); state.coins = 0; state.tokens = 0;
-    state.playerName = ""; state.day = 1; state.lifeTickets = 0; state.lifeSideQuests = 0;
-    state.px = PLAYER_START.x; state.py = PLAYER_START.y;
-    state.renderX = state.px * TILE; state.renderY = state.py * TILE;
-    state.facing = PLAYER_START.dir; state.moving = false;
-    const lab = document.getElementById("loc-label");
-    if (lab) lab.textContent = LOC_LABEL;
-    state.updateProgressUI();
-    openIntro();
+  const resetBtn = document.getElementById("reset-btn");
+  if (resetBtn) resetBtn.addEventListener("click", () => {
+    if (!confirm("Clear ALL saved progress \u2014 day count, stats, character, and name \u2014 and start completely over?")) return;
+    state.doReset();
+    openCharacterCreator();
   });
-  document.getElementById("sound-btn").addEventListener("click", () => state.setSound(!state.soundOn));
+  const soundBtn = document.getElementById("sound-btn");
+  if (soundBtn) soundBtn.addEventListener("click", () => state.setSound(!state.soundOn));
   const compBtn = document.getElementById("companion-btn");
   if (compBtn) compBtn.addEventListener("click", () => { if (!isModalOpen()) openDiscoveries(); });
   const examBtn = document.getElementById("exam-btn");
   if (examBtn) examBtn.addEventListener("click", () => { if (!isModalOpen()) openQuiz(); });
+  const shopBtn = document.getElementById("shop-btn");
+  if (shopBtn) shopBtn.addEventListener("click", () => { if (!isModalOpen()) openShop(); });
+  const achBtn = document.getElementById("ach-btn");
+  if (achBtn) achBtn.addEventListener("click", () => { if (!isModalOpen()) openAchievements(); });
+  const setBtn = document.getElementById("settings-btn");
+  if (setBtn) setBtn.addEventListener("click", () => { if (!isModalOpen()) openSettings(); });
 
   function onResize() { sizeCanvas(canvas, viewport); }
   window.addEventListener("resize", onResize);
