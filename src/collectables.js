@@ -41,7 +41,25 @@ export const FINDS = {
     icon: "\u{1FAAA}",
     name: "Badge-Challenger badge",
     note: "You stopped a tailgater and walked them to reception. Physical access defeats every digital control, and challenging strangers is the job."
-  }
+  },
+
+  // ---- v2 Cutover Week keepsakes (tied to people and moments) ----
+  badgePhoto: { icon: "\u{1FAAA}", name: "Your first badge photo",
+    note: "Lou told you not to smile. You smiled. It's worse. You'll keep it forever." },
+  dongle: { icon: "\u{1F50C}", name: "Tasha's spare USB-C dongle",
+    note: "'Everybody loses theirs by Thursday.' You didn't. Mostly because you had two." },
+  signoff_ed: { icon: "\u270D\uFE0F", name: "Ed's sign-off (Accounting)",
+    note: "Ed walked through payroll on the new laptop before he signed. He double-checked your double-check." },
+  signoff_karen: { icon: "\u270D\uFE0F", name: "Karen's sign-off (Reception)",
+    note: "Signed with the good pen. Karen doesn't lend the good pen to anyone." },
+  signoff_riley: { icon: "\u270D\uFE0F", name: "Riley's sign-off (Ops)",
+    note: "Riley signed and immediately asked about the Office add-ins. You logged it as a separate request." },
+  certDestruction: { icon: "\u{1F4DC}", name: "Certificate of destruction",
+    note: "Eight devices, eight serials, one signature chain from Accounting to the shredder. Every drive left on paper." },
+  cleanQueue: { icon: "\u{1F5BC}\uFE0F", name: "The 'Clean Queue' printout",
+    note: "Gloria printed your audit, framed it, and hung it in the IT room. Zero closed without notes." },
+  nextGig: { icon: "\u{1F4E7}", name: "Director Chen's email",
+    note: "'Security has asked for Help Desk on Floor 7 next month. They're calling it SOC Week.'" }
 };
 
 export const FINDTOTAL = Object.keys(FINDS).length;

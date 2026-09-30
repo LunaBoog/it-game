@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>The Ticket Queue &mdash; a free CompTIA / IT / pentesting study game</title>
+    <title>The Ticket Queue: Cutover Week &mdash; a free CompTIA / IT help-desk study game</title>
     <link rel="stylesheet" href="./src/styles.css" />
   </head>
   <body>
@@ -11,17 +11,23 @@
       <div>
         <div class="topbar-label" id="loc-label">IT SUPPORT &middot; FLOOR 3</div>
         <div class="topbar-title" id="game-title">
-          A free, playable study guide for CompTIA, IT, networking &amp; pentesting. Arrow keys / WASD to move, E or space to interact.
+          Cutover Week: three days as the new Tier 1 tech. Arrow keys / WASD to move, E or space to interact, N notes, P chat.
         </div>
       </div>
       <div class="progress">
         <div class="pill pill-accent" id="day-pill">Day 1</div>
+        <div class="pill pill-today" id="today-pill">Today 0/10</div>
+        <div class="pill pill-money" id="money-pill" title="Your cash &middot; company card left">&#128181; $50</div>
+        <div class="pill pill-rep" id="rep-pill" title="Reputation">&#11088; 5</div>
+        <div class="pill pill-carry" id="carry-pill" hidden>&#9851;&#65039; carrying 0</div>
         <div class="pill pill-floor" id="floor-pill" title="Current floor">Floor 3</div>
         <div class="pill pill-rank" id="rank-pill" title="Your XP rank">Lv 1 &middot; IT Intern</div>
         <div class="pill" id="ticket-progress">0 / 7 tickets</div>
         <div class="pill" id="sq-progress">0 side quests</div>
         <div class="pill" id="coins-progress" title="Vending coins &middot; break-room tokens">&#129689; 0</div>
-        <button class="pill pill-button" id="exam-btn" title="Take a 5-question practice test on this floor">&#128221; Exam</button>
+        <button class="pill pill-button" id="chat-btn" title="Team chat (P)">&#128241; Chat</button>
+        <button class="pill pill-button" id="notes-btn" title="Day Notes + receipt envelope (N)">&#128221; Notes</button>
+        <button class="pill pill-button" id="exam-btn" title="Take a 5-question practice test on this floor">&#127891; Exam</button>
         <button class="pill pill-button" id="shop-btn" title="Spend coins on cosmetics">&#128717;&#65039; Shop</button>
         <button class="pill pill-button" id="ach-btn" title="Career rank &amp; achievements">&#127942; Career</button>
         <button class="pill pill-button" id="companion-btn" title="Open your Field Companion"><span id="finds-progress">&#9733; 0/6</span></button>
@@ -38,7 +44,8 @@
       <span><span class="dot dot-ticket"></span> ticket</span>
       <span><span class="dot dot-sq"></span> side quest</span>
       <span><span class="dot dot-done"></span> done</span>
-      <span>&#128221; Exam = practice test</span>
+      <span>&#11015;&#65039; yellow arrow = NEXT UP</span>
+      <span>[N] notes &middot; [P] chat</span>
     </div>
 
     <div class="game-layout">
@@ -51,10 +58,12 @@
             <div class="title-card arcade">
               <div class="arcade-sub">&#9733; IT SUPPORT SIMULATOR &#9733;</div>
               <div class="arcade-title" data-text="THE TICKET QUEUE">THE TICKET QUEUE</div>
-              <div class="arcade-tag">A FREE COMPTIA &middot; IT &middot; NETWORKING &middot; PENTEST STUDY GAME</div>
+              <div class="arcade-cutover">CUTOVER WEEK</div>
+              <div class="arcade-tag">THREE DAYS &middot; ONE BIG CHANGE &middot; A FREE COMPTIA STUDY GAME</div>
               <div id="title-menu" class="arcade-menu"></div>
               <div class="arcade-hint" id="title-hint">&#9650;&#9660; SELECT &nbsp;&middot;&nbsp; ENTER / SPACE: CONFIRM</div>
               <div id="continue-line" class="title-continue"></div>
+              <div id="title-hs" class="title-hs"></div>
               <div class="arcade-credit">INSERT COIN &mdash; PLAYER 1</div>
             </div>
           </div>
@@ -63,9 +72,21 @@
             <span id="interact-hint-text">Press E to interact</span>
           </div>
 
-          <div id="eod-hint" class="eod-hint" hidden>
-            Every ticket on this floor is closed. Walk back to your ticket monitor.
+          <div id="eod-hint" class="eod-hint" hidden></div>
+
+          <!-- v2 HUD + overlays -->
+          <div id="nextup" class="nextup" hidden>
+            <div class="nu-k">NEXT UP</div>
+            <div class="nu-t" id="nu-t"></div>
+            <div class="nu-s" id="nu-s"></div>
+            <div class="nu-clock" id="nu-clock" hidden></div>
+            <div class="nu-bridge" id="nu-bridge" hidden></div>
           </div>
+          <div id="loc-banner" class="loc-banner"></div>
+          <div id="sleep" class="sleep" hidden><div id="sleep-t">GOOD NIGHT</div></div>
+          <div id="commute" class="commute" hidden><div class="cm-train">&#128647;</div><div id="commute-t"></div></div>
+          <div id="credits" class="credits" hidden></div>
+          <div id="arcade" class="arcade-over" hidden></div>
 
           <div class="touch-controls" id="touch-controls" aria-hidden="true">
             <div class="dpad">

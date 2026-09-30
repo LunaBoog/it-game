@@ -6,7 +6,7 @@
 import { dumpAll, restoreAll } from "./storage.js";
 
 const MAGIC = "ticket-queue-save";
-const VERSION = 1;
+const VERSION = 2;   // v2 = Cutover Week (older files still load; the run migrates on boot)
 
 // tiny, dependency-free string hash (FNV-1a) → hex. Not crypto; just integrity.
 function checksum(str) {
@@ -36,7 +36,7 @@ export function serializeSave() {
 export function saveFilename(playerName, day) {
   const safe = (playerName || "player").replace(/[^a-z0-9_-]+/gi, "").slice(0, 20) || "player";
   const date = new Date().toISOString().slice(0, 10);
-  return `ticket-queue-${safe}-day${day || 1}-${date}.json`;
+  return `ticket-queue-cutover-${safe}-day${Math.min(day || 1, 3)}-${date}.json`;
 }
 
 // Validate + apply an uploaded file's text. Returns { ok, error?, savedAt? }.

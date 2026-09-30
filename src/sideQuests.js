@@ -7,7 +7,7 @@
 export const SIDE_QUESTS = {
   // ---- FLOOR 3 (fundamentals) ---------------------------------------------
   "unplugged": {
-    floor: "floor3", cert: "A+ \u00b7 5.2 Power",
+    floor: "floor3", cert: "A+ 220-1201 \u00b7 5.1 Power issues",
     title: "Ed: \"My PC won't turn on\"",
     body: "Ed (accountant): 'I've been trying for 10 minutes. Nothing happens. I think the hard drive is dead.' You glance under the desk.",
     where: "Accounting \u00b7 Ed's desk",
@@ -22,7 +22,7 @@ export const SIDE_QUESTS = {
   },
 
   "monitorStandby": {
-    floor: "floor3", cert: "A+ \u00b7 5.4 Display",
+    floor: "floor3", cert: "A+ 220-1201 \u00b7 5.3 Display issues",
     title: "Lisa: \"My screen is dead\"",
     body: "Lisa: 'It just went black. I think the monitor finally died.' The monitor's power button glows amber, gently pulsing.",
     where: "Accounting \u00b7 Lisa's desk",
@@ -37,7 +37,7 @@ export const SIDE_QUESTS = {
   },
 
   "usbDrop": {
-    floor: "floor3", cert: "Security+ \u00b7 2.4 Social engineering",
+    floor: "floor3", cert: "Security+ SY0-701 \u00b7 2.2 Threat vectors (removable media)",
     title: "A USB stick on the floor",
     body: "There's an unbranded USB stick on the carpet by the open desks. No name, no label. Someone could've dropped it \u2014 or someone could've left it there on purpose.",
     where: "Open desks 2",
@@ -53,7 +53,7 @@ export const SIDE_QUESTS = {
   },
 
   "printerInk": {
-    floor: "floor3", cert: "A+ \u00b7 3.6 Printers",
+    floor: "floor3", cert: "A+ 220-1201 \u00b7 5.6 Printer issues",
     title: "Printer waving for ink",
     body: "The print room printer has a small yellow light blinking next to the cyan cartridge. Nobody filed a ticket. It still prints in monochrome.",
     where: "Print room",
@@ -69,7 +69,7 @@ export const SIDE_QUESTS = {
 
   // ---- FLOOR 7 (security ops) ---------------------------------------------
   "defaultCreds": {
-    floor: "floor7", cert: "Security+ \u00b7 1.2 Hardening",
+    floor: "floor7", cert: "Security+ SY0-701 \u00b7 2.5 Mitigation (hardening)",
     title: "Switch still on admin/admin",
     body: "The network closet switch greets you with a web login. You try admin/admin out of habit \u2014 and you're in. Config-mode, full access, and Telnet is enabled.",
     where: "Network closet",
@@ -85,7 +85,7 @@ export const SIDE_QUESTS = {
   },
 
   "exposedRdp": {
-    floor: "floor7", cert: "Security+ \u00b7 3.x Attack surface",
+    floor: "floor7", cert: "Security+ SY0-701 \u00b7 2.2 Attack surfaces",
     title: "RDP open to the whole internet",
     body: "A firewall rule reads: permit tcp any -> 10.10.2.10 eq 3389. That's Remote Desktop on a server, reachable from anywhere on earth. Shodan would find it in minutes.",
     where: "Firewall console",
@@ -101,7 +101,7 @@ export const SIDE_QUESTS = {
   },
 
   "secretInRepo": {
-    floor: "floor7", cert: "PenTest+ \u00b7 OSINT / Security+ \u00b7 2.3",
+    floor: "floor7", cert: "PenTest+ PT0-003 \u00b7 Recon / Security+ 2.2",
     title: "An API key in a public repo",
     body: "Recon on the company's public GitHub turns up a committed config file: AWS_SECRET_ACCESS_KEY = AKIA... \u2014 live, in plaintext, in the history.",
     where: "Red-team lab \u00b7 OSINT station",
@@ -117,7 +117,7 @@ export const SIDE_QUESTS = {
   },
 
   "tailgater": {
-    floor: "floor7", cert: "Security+ \u00b7 2.4 Physical / social eng",
+    floor: "floor7", cert: "Security+ SY0-701 \u00b7 1.2 Physical security / 2.2 Social eng",
     title: "Someone tailgates the secure door",
     body: "You badge into the SOC and a friendly stranger in a delivery polo slips in behind you, arms full of boxes. 'Thanks! Forgot my badge in the car.' No visible credential.",
     where: "SOC entrance",

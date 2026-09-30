@@ -3,7 +3,7 @@
 
 import {
   isWalkable, NPCS, PROPS, PLAYER_START, TILE, MAP_W, MAP_H,
-  setFloor, FLOOR_ID, FLOOR_META, FLOOR_ORDER, LOC_LABEL
+  setFloor, FLOOR_ID, FLOOR_META, FLOOR_ORDER, LOC_LABEL, arrivalFor, mapDef, MAP_IDS
 } from "./world.js";
 import { draw, sizeCanvas, loadAssets } from "./render.js";
 import {
@@ -14,7 +14,7 @@ import {
 } from "./storage.js";
 import {
   initUI, openNpcChat, openTicketBoard, openSideQuest,
-  openScenario, openEndOfDay, openIntro, handleEscape,
+  openScenario, openIntro, handleEscape,
   openPet, openSearch, openChest, openDiscoveries,
   openElevator, openQuiz,
   openCharacterCreator, openSettings, openShop, openAchievements, showAchievementToast,
@@ -26,6 +26,13 @@ import { DEFAULT_SPRITE } from "./cosmetics.js";
 import { XP, rank, newlyUnlocked, ACHIEVEMENTS } from "./progression.js";
 import { applyTheme, currentTheme, applyPrefs } from "./theme.js";
 import { serializeSave, saveFilename, applySaveText } from "./savefile.js";
+import { CORE, ddFresh, ddLoad, ddSave, SAVE_VERSION, DAY_SHORT } from "./core.js";
+import { dayNpc, dayProp, dayStep, dayTick, dayRestore, nextUp, taskCount, ticketOpen, dayTasksDone, spawnWalkup, firePage } from "./days.js";
+import { openMorning } from "./flows.js";
+import { openWindow, windowLeft, clockActive } from "./clock.js";
+import { openPhone, openNotes } from "./comms.js";
+import { hsTable, showArcade, finalScore } from "./score.js";
+import { cardLeft } from "./ledger.js";
 
 const DIRS = { up:[0,-1], down:[0,1], left:[-1,0], right:[1,0] };
 const KEY_TO_DIR = {
@@ -45,9 +52,16 @@ let S = null;
 function propVisible(p) {
   if (!p) return false;
   if (p.needFlag && !(S && S.flags.has(p.needFlag))) return false;
+  if (p.hideFlag && S && S.flags.has(p.hideFlag)) return false;
   return true;
 }
-function npcAt(x, y) { return NPCS.find((n) => n.x === x && n.y === y); }
+function npcVisible(n) {
+  if (!n) return false;
+  if (n.needFlag && !(S && S.flags.has(n.needFlag))) return false;
+  if (n.hideFlag && S && S.flags.has(n.hideFlag)) return false;
+  return true;
+}
+function npcAt(x, y) { return NPCS.find((n) => n.x === x && n.y === y && npcVisible(n)); }
 function propAt(x, y) { return PROPS.find((p) => p.x === x && p.y === y && propVisible(p)); }
 // A prop only blocks if it's visible AND not explicitly walkable.
 function solidPropAt(x, y) { const p = propAt(x, y); return p && !p.walkable ? p : null; }
@@ -123,6 +137,30 @@ function makeStepSound() {
   };
 }
 
+// Tiny WebAudio blips for v2 events (pages, receipts, the alarm...).
+function makeSfx() {
+  let AC = null;
+  const tone = (f, dur, type = "square", vol = 0.03, at = 0) => {
+    AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+    if (AC.state === "suspended") AC.resume();
+    const t = AC.currentTime + at;
+    const o = AC.createOscillator(); const g = AC.createGain();
+    o.type = type; o.frequency.setValueAtTime(f, t);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0008, t + dur);
+    o.connect(g).connect(AC.destination); o.start(t); o.stop(t + dur + 0.02);
+  };
+  const SEQ = {
+    ok: [[660, 0.07], [990, 0.09, 0.07]], bad: [[220, 0.14, 0, "sawtooth"]], tick: [[620, 0.03]],
+    page: [[1320, 0.05], [1320, 0.05, 0.09], [1320, 0.05, 0.18]], alarmset: [[988, 0.08, 0, "triangle"]],
+    night: [[330, 0.4, 0, "sine"]], alarm: [0, 1, 2, 3, 4, 5].map((i) => [1320, 0.06, i * 0.14]),
+    train: [[180, 0.3, 0, "sawtooth", 0.015], [160, 0.3, 0.35, "sawtooth", 0.015]], win: [[523, 0.1], [659, 0.1, 0.1], [784, 0.1, 0.2], [1046, 0.2, 0.3]]
+  };
+  return (kind, on) => {
+    if (!on) return;
+    try { for (const [f, d, at = 0, ty = "square", v = 0.03] of (SEQ[kind] || [])) tone(f, d, ty, v, at); } catch { /* ignore */ }
+  };
+}
+
 export async function startGame() {
   applyTheme(currentTheme());
   applyPrefs();
@@ -133,17 +171,30 @@ export async function startGame() {
   const ctx = canvas.getContext("2d");
   ctx.imageSmoothingEnabled = false;
 
-  // Restore which floor the player was on BEFORE we read PLAYER_START, so the
-  // spawn point and live MAP/NPCS/PROPS bindings all reflect the right floor.
-  const savedFloor = loadString("floor", "floor3");
-  setFloor(savedFloor);
+  // v2 save shape: a saveVersion key. An older save keeps who you are
+  // (character, name, rank, coins, cosmetics, achievements, theme) and starts
+  // a fresh Cutover Week run — same semantics as "New Playthrough".
+  if (loadNum("saveVersion", 1) < SAVE_VERSION) {
+    for (const k of ["solved", "sq-solved", "sharp", "finds", "dd"]) saveString(k, k === "dd" ? "" : "[]");
+    const keepOriented = loadSet("flags").has("oriented");
+    saveSet("flags", keepOriented ? new Set(["oriented"]) : new Set());
+    saveNum("day", 1); saveString("floor", "home");
+    saveNum("saveVersion", SAVE_VERSION);
+  }
 
+  // Restore which map the player was on BEFORE we read PLAYER_START, so the
+  // spawn point and live MAP/NPCS/PROPS bindings all reflect the right map.
+  const savedFloor = loadString("floor", "home");
+  setFloor(MAP_IDS.includes(savedFloor) ? savedFloor : "home");
+  const savedPos = (() => { try { return JSON.parse(loadString("pos", "") || "null"); } catch { return null; } })();
+
+  const sp0 = savedPos && savedPos.m === FLOOR_ID && isWalkable(savedPos.x, savedPos.y) ? savedPos : null;
   const state = {
     map: FLOOR_ID,
     floor: FLOOR_ID,
-    px: PLAYER_START.x, py: PLAYER_START.y,
-    renderX: PLAYER_START.x * TILE, renderY: PLAYER_START.y * TILE,
-    facing: PLAYER_START.dir,
+    px: sp0 ? sp0.x : PLAYER_START.x, py: sp0 ? sp0.y : PLAYER_START.y,
+    renderX: (sp0 ? sp0.x : PLAYER_START.x) * TILE, renderY: (sp0 ? sp0.y : PLAYER_START.y) * TILE,
+    facing: sp0 ? sp0.f : PLAYER_START.dir,
     moving: false, moveT: 0,
     fromX: 0, fromY: 0, toX: 0, toY: 0,
     shake: 0, tick: 0,
@@ -170,6 +221,11 @@ export async function startGame() {
     })(),
 
     started: false,
+    overlay: false,          // sleep / commute / credits / arcade overlays
+    dd: null,                // v2 day data (see core.js)
+    bridgeLine: "",
+    nuTarget: null,
+    propVisible, npcVisible,
 
     inScenario: false, inSideQuest: false, inTicketBoard: false,
     inIntro: false, inEndOfDay: false, inDialog: false,
@@ -230,13 +286,15 @@ export async function startGame() {
     // --- whole-game reset / save-file ---
     doReset() {
       clearAll();
-      setFloor("floor3");
-      this.floor = "floor3"; this.map = "floor3";
+      setFloor("home");
+      this.floor = "home"; this.map = "home";
       this.solved = new Set(); this.sqSolved = new Set(); this.sharp = new Set();
       this.flags = new Set(); this.finds = new Set(); this.coins = 0; this.tokens = 0;
       this.owned = new Set(); this.achievements = new Set(); this.xp = 0;
       this.playerName = ""; this.day = 1; this.lifeTickets = 0; this.lifeSideQuests = 0;
       this.playerSprite = { ...DEFAULT_SPRITE };
+      saveNum("saveVersion", SAVE_VERSION);
+      this.resetRun();
       this.px = PLAYER_START.x; this.py = PLAYER_START.y;
       this.renderX = this.px * TILE; this.renderY = this.py * TILE;
       this.facing = PLAYER_START.dir; this.moving = false;
@@ -248,8 +306,9 @@ export async function startGame() {
     // gameplay flags so Floor 7 re-locks and the cat resets) but KEEP who you are —
     // character, name, rank/XP, coins, owned cosmetics, achievements, lifetime stats.
     newPlaythrough() {
-      setFloor("floor3");
-      this.floor = "floor3"; this.map = "floor3"; saveString("floor", "floor3");
+      setFloor("home");
+      this.floor = "home"; this.map = "home"; saveString("floor", "home");
+      this.resetRun();
       this.solved = new Set(); saveSet("solved", this.solved);
       this.sqSolved = new Set(); saveSet("sq-solved", this.sqSolved);
       this.sharp = new Set(); saveSet("sharp", this.sharp);
@@ -260,7 +319,7 @@ export async function startGame() {
       if (keepOriented) this.flags.add("oriented");
       saveSet("flags", this.flags);
       this.day = 1; saveNum("day", this.day);
-      this.px = PLAYER_START.x; this.py = PLAYER_START.y;
+      this.px = PLAYER_START.x; this.py = PLAYER_START.y; this.savePos();
       this.renderX = this.px * TILE; this.renderY = this.py * TILE;
       this.facing = PLAYER_START.dir; this.moving = false;
       const lab = document.getElementById("loc-label");
@@ -284,15 +343,21 @@ export async function startGame() {
       if (res.ok) { try { location.reload(); } catch { /* test env */ } }
       return res;
     },
-    startNewDay() {
-      this.day += 1; saveNum("day", this.day);
-      this.solved = new Set(); this.sqSolved = new Set(); this.sharp = new Set();
-      saveSet("solved", this.solved); saveSet("sq-solved", this.sqSolved); saveSet("sharp", this.sharp);
-      this.px = PLAYER_START.x; this.py = PLAYER_START.y;
-      this.renderX = this.px * TILE; this.renderY = this.py * TILE;
-      this.facing = PLAYER_START.dir; this.moving = false;
-      this.updateProgressUI();
+    // --- v2 run state ---
+    setDay(n) { this.day = n; saveNum("day", n); this.updateProgressUI(); },
+    resetRun() {
+      this.dd = ddFresh(); ddSave();
+      // wipe transient visitors on every map
+      for (const id of MAP_IDS) { const m = mapDef(id); if (m) m.npcs = m.npcs.filter((n) => !n._vis); }
+      this.overlay = false;
     },
+    savePos() { try { saveString("pos", JSON.stringify({ m: this.map, x: this.px, y: this.py, f: this.facing })); } catch { /* ignore */ } },
+    npcSprite(id) {
+      for (const mid of MAP_IDS) { const m = mapDef(mid); const n = m && m.npcs.find((x) => x.id === id); if (n) return n.sprite; }
+      return null;
+    },
+    floor7Open() { return this.hasFlag("floor3Cleared") || this.hasFlag("f7Unlocked"); },
+    openWindow() { openWindow(); },
     // --- floors ---
     // how many of THIS floor's tickets are solved (solved Set is shared across floors)
     solvedOnFloor(floorId) {
@@ -301,13 +366,15 @@ export async function startGame() {
     floorCleared(floorId) {
       return this.solvedOnFloor(floorId) >= scenarioCountForFloor(floorId);
     },
-    goToFloor(id) {
+    goToFloor(id, via = "elevator") {
       setFloor(id);
       this.floor = id; this.map = id; saveString("floor", id);
       if (id === "floor7") this.setFlag("visitedFloor7");
-      this.px = PLAYER_START.x; this.py = PLAYER_START.y;
+      const at = via === "start" ? PLAYER_START : arrivalFor(id, via);
+      this.px = at.x; this.py = at.y; this.facing = at.dir || "down";
       this.renderX = this.px * TILE; this.renderY = this.py * TILE;
-      this.facing = PLAYER_START.dir; this.moving = false;
+      this.moving = false; this.savePos();
+      showBanner(FLOOR_META[id] ? FLOOR_META[id].label : id);
       const lab = document.getElementById("loc-label");
       if (lab) lab.textContent = LOC_LABEL;
       const fp = document.getElementById("floor-pill");
@@ -316,17 +383,25 @@ export async function startGame() {
       this.checkAchievements();
     },
     updateProgressUI() {
-      document.getElementById("day-pill").textContent = `Day ${this.day}`;
+      const dd = this.dd;
+      const day = Math.min(this.day, 4);
+      const dp = document.getElementById("day-pill");
+      if (dp) dp.textContent = day >= 4 ? "Wrapped" : `Day ${day} \u00b7 ${DAY_SHORT[day]}`;
       // Mark floors cleared (gates + achievements) the moment tickets are all solved.
       if (this.floorCleared("floor3")) this.setFlag("floor3Cleared");
       if (this.floorCleared("floor7")) this.setFlag("floor7Cleared");
+      const tp = document.getElementById("today-pill");
+      if (tp && dd) { const tc = taskCount(Math.min(day, 3)); tp.textContent = day >= 4 ? "Week done" : `Today ${tc.done}/${tc.total}`; tp.classList.toggle("done", tc.done === tc.total); }
       const here = this.floor;
-      const total = scenarioCountForFloor(here);
-      const done = this.solvedOnFloor(here);
-      document.getElementById("ticket-progress").textContent = `${done} / ${total} tickets`;
+      const tpr = document.getElementById("ticket-progress");
+      if (tpr) {
+        if (here === "floor3" || here === "floor7") {
+          const total = scenarioCountForFloor(here); const done = this.solvedOnFloor(here);
+          tpr.textContent = `${done} / ${total} tickets`; tpr.hidden = false;
+        } else tpr.hidden = true;
+      }
       const n = this.sqSolved.size;
-      document.getElementById("sq-progress").textContent = `${n} side quest${n === 1 ? "" : "s"}`;
-      document.getElementById("eod-hint").hidden = !(done === total) || this.inEndOfDay;
+      const sqp = document.getElementById("sq-progress"); if (sqp) sqp.textContent = `${n} side quest${n === 1 ? "" : "s"}`;
       const fpill = document.getElementById("floor-pill");
       if (fpill) fpill.textContent = FLOOR_META[here] ? FLOOR_META[here].name : here;
       const lab = document.getElementById("loc-label");
@@ -335,13 +410,59 @@ export async function startGame() {
       if (fp) fp.textContent = `\u2605 ${this.finds.size}/${FINDTOTAL}`;
       const cp = document.getElementById("coins-progress");
       if (cp) cp.textContent = `\u{1FA99} ${this.coins}${this.tokens ? ` \u00b7 \u{1F39F}\uFE0F ${this.tokens}` : ""}`;
+      const mp = document.getElementById("money-pill");
+      if (mp && dd) mp.textContent = `\u{1F4B5} $${dd.cash}${this.hasFlag("kit") && !this.hasFlag("kitReturned") ? ` \u00b7 \u{1F4B3} $${cardLeft()}` : ""}`;
+      const rpp = document.getElementById("rep-pill");
+      if (rpp && dd) rpp.textContent = `\u2B50 ${dd.rep}`;
+      const cy = document.getElementById("carry-pill");
+      if (cy && dd) { cy.hidden = !(dd.carry && dd.carry.length); cy.textContent = `\u267B\uFE0F carrying ${dd.carry ? dd.carry.length : 0}`; }
       const rp = document.getElementById("rank-pill");
       if (rp) { const r = rank(this.xp); rp.textContent = `Lv ${r.level} \u00b7 ${r.title}`; rp.title = r.next ? `${r.into}/${r.span} XP to ${r.next}` : "Max rank"; }
+      if (dd) refreshNextUp();
+    },
+    updateProgressUIThrottled() {
+      const t = performance.now(); if (t - (this._uiT || 0) < 250) return; this._uiT = t; this.updateProgressUI();
     }
   };
 
+  // ---- v2 HUD: NEXT UP card + location banner ----
+  function refreshNextUp() {
+    const card = document.getElementById("nextup"); if (!card || !state.dd) return;
+    if (!state.started) { card.hidden = true; return; }
+    let nu = null; try { nu = nextUp(); } catch (e) { console.error(e); }
+    card.hidden = !nu;
+    if (!nu) { state.nuTarget = null; return; }
+    card.classList.toggle("loud", !!nu.loud);
+    // step out of the way when you're standing under the card
+    card.classList.toggle("low", state.px < 12 && state.py < 6);
+    document.getElementById("nu-t").textContent = nu.text || "";
+    document.getElementById("nu-s").textContent = nu.sub || "";
+    const cl = document.getElementById("nu-clock");
+    const active = clockActive();
+    cl.hidden = !(state.day === 2 && state.dd.windowOpen && !state.dd.windowClosed);
+    if (!cl.hidden) cl.textContent = windowLeft();
+    const br = document.getElementById("nu-bridge");
+    br.hidden = !(active && state.bridgeLine); if (!br.hidden) br.textContent = "\u{1F4DE} " + state.bridgeLine;
+    state.nuTarget = nu.tgt || null;
+  }
+  let bannerT = null;
+  function showBanner(text) {
+    const b = document.getElementById("loc-banner"); if (!b) return;
+    b.textContent = text; b.classList.add("show");
+    clearTimeout(bannerT); bannerT = setTimeout(() => b.classList.remove("show"), 1800);
+  }
+
   const stepSound = makeStepSound();
   S = state;  // expose to the module-level visibility helpers
+  CORE.S = state;
+  state.dd = ddLoad();
+  const sfx = makeSfx();
+  CORE.sfx = (k) => sfx(k, state.soundOn);
+  CORE.toast = (a) => showAchievementToast(a);
+  state.ticketOpen = ticketOpen;
+  state.dayOver = () => state.day <= 2 && dayTasksDone(state.day);
+  // debug/test handle (used by the headless validator bot)
+  try { window.__tq = { S: state, CORE }; } catch { /* ignore */ }
   function updateSoundUI(on) {
     const b = document.getElementById("sound-btn"); if (b) b.textContent = on ? "Sound: on" : "Sound: off";
   }
@@ -350,7 +471,7 @@ export async function startGame() {
   initUI(state, () => {});
 
   function isModalOpen() {
-    return state.inScenario || state.inSideQuest || state.inTicketBoard || state.inIntro || state.inEndOfDay || state.inDialog;
+    return state.inScenario || state.inSideQuest || state.inTicketBoard || state.inIntro || state.inEndOfDay || state.inDialog || state.overlay;
   }
 
   // ---- held-key continuous movement ----
@@ -373,10 +494,12 @@ export async function startGame() {
       if (p.kind === "search") return { kind: "search", target: p };
       if (p.kind === "chest") return { kind: "chest", target: p };
       if (p.sideQuest) return { kind: "prop-sq", target: p };
+      return { kind: "prop", target: p };
     }
     return null;
   }
 
+  function moveMs() { return state.dd && state.dd.buffUntil > Date.now() ? 100 : MOVE_MS; }
   function startMove(dir) {
     state.facing = dir;
     const [dx, dy] = DIRS[dir];
@@ -396,13 +519,19 @@ export async function startGame() {
     if (isModalOpen() || state.moving) return;
     const t = facedTarget();
     if (!t) return;
+    // v2: the day engine gets first say on every NPC and prop
+    try {
+      if (t.kind === "npc" && dayNpc(t.target)) return;
+      if (t.kind !== "npc" && dayProp(t.target)) return;
+    } catch (e) { console.error(e); }
+    if (t.kind === "prop") { openNpcChat({ name: t.target.label || "Something", role: t.target.room || "", chat: ["Nothing to do here right now."] }); return; }
     if (t.kind === "npc") {
       const n = t.target;
-      if (n.ticket && !state.solved.has(n.ticket)) openScenario(n.ticket);
+      if (n.ticket && !state.solved.has(n.ticket) && ticketOpen(n.ticket)) openScenario(n.ticket);
       else if (n.sideQuest && !state.sqSolved.has(n.sideQuest)) openSideQuest(n.sideQuest);
       else openNpcChat(n);
     } else if (t.kind === "monitor") {
-      if (state.floorCleared(state.floor)) openEndOfDay(); else openTicketBoard();
+      openTicketBoard();
     } else if (t.kind === "elevator") {
       openElevator(t.target);
     } else if (t.kind === "pet") {
@@ -429,6 +558,7 @@ export async function startGame() {
       else if (t.kind === "search") label = `Examine ${t.target.label}`;
       else if (t.kind === "chest") label = `Check ${t.target.label}`;
       else if (t.kind === "prop-sq") label = t.target.label;
+      else if (t.kind === "prop") label = `Use ${t.target.label}`;
       document.getElementById("interact-hint-text").textContent = `Press E: ${label}`;
       hintEl.classList.add("visible");
       if (actBtn) actBtn.classList.add("ready");
@@ -440,6 +570,7 @@ export async function startGame() {
 
   // ---- main loop ----
   let lastT = 0;
+  let nuAcc = 0;
   function loop(t) {
     if (!lastT) lastT = t;
     const dt = Math.min(50, t - lastT);  // clamp: tab-away then back won't teleport
@@ -447,8 +578,8 @@ export async function startGame() {
     state.tick += 1;
 
     if (state.moving) {
-      state.moveT += dt / MOVE_MS;
-      if (state.moveT >= 1) { state.moveT = 1; state.moving = false; }
+      state.moveT += dt / moveMs();
+      if (state.moveT >= 1) { state.moveT = 1; state.moving = false; state.savePos(); try { dayStep(state.px, state.py); } catch (e) { console.error(e); } }
       state.renderX = state.fromX + (state.toX - state.fromX) * state.moveT;
       state.renderY = state.fromY + (state.toY - state.fromY) * state.moveT;
     } else {
@@ -461,6 +592,10 @@ export async function startGame() {
 
     if (state.shake > 0) { state.shake *= SHAKE_DECAY; if (state.shake < 0.05) state.shake = 0; }
 
+    if (state.started) {
+      try { dayTick(dt, isModalOpen()); } catch (e) { console.error(e); }
+      nuAcc += dt; if (nuAcc > 200) { nuAcc = 0; refreshNextUp(); }
+    }
     const t2 = (state.started && !isModalOpen()) ? facedTarget() : null;
     draw(ctx, state, t2);
     updateInteractHint(t2);
@@ -484,6 +619,8 @@ export async function startGame() {
     const dir = KEY_TO_DIR[e.key];
     if (dir) { e.preventDefault(); pressDir(dir); }
     else if (e.key === "e" || e.key === "E" || e.key === " " || e.key === "Enter") { e.preventDefault(); interact(); }
+    else if (e.key === "n" || e.key === "N") { e.preventDefault(); openNotes(); }
+    else if (e.key === "p" || e.key === "P") { e.preventDefault(); openPhone(); }
   });
   window.addEventListener("keyup", (e) => {
     const dir = KEY_TO_DIR[e.key];
@@ -503,6 +640,14 @@ export async function startGame() {
   bindTouch("touch-right", () => pressDir("right"), () => releaseDir("right"));
   bindTouch("touch-action", () => interact());
 
+  // test handle for the headless validator bot (tools/bot.mjs)
+  try {
+    Object.assign(window.__tq, { interact, nextUp, dayTick: (ms) => dayTick(ms, false), facedTarget, isModalOpen, finalScore, spawnWalkup, firePage });
+    state._mapRows = () => mapDef(state.map).map;
+    state._occupied = (x, y) => !!(npcAt(x, y) || solidPropAt(x, y));
+    state._npcs = () => NPCS; state._props = () => PROPS;
+  } catch { /* ignore */ }
+
   // ---- title screen: 8-bit start menu -> character select -> orientation ----
   const titleEl = document.getElementById("title-screen");
   const menuEl = document.getElementById("title-menu");
@@ -513,13 +658,21 @@ export async function startGame() {
   function startPlay() {
     state.started = true;
     hideTitle();
+    try { dayRestore(); } catch (e) { console.error(e); }
+    state.updateProgressUI();
     try { viewport.focus(); } catch { /* ignore */ }
+    if (state.day >= 4 && !state.hasFlag("scoreSubmitted")) showArcade();
   }
-  // shown once, right after the character is locked in
+  // shown right after the character is locked in: orientation (once) -> Day 1 morning
   function orientationThenPlay() {
-    if (!state.hasFlag("oriented")) openOrientation(() => state.setFlag("oriented"));
+    const morning = () => { state.setFlag("morning_" + state.day); try { dayRestore(); } catch (e) { console.error(e); } state.updateProgressUI(); openMorning(); };
+    if (!state.hasFlag("oriented")) openOrientation(() => { state.setFlag("oriented"); morning(); });
+    else morning();
   }
   function newCharacter() {
+    // CHANGE CHARACTER / START = a fresh Cutover Week run with a new look
+    if (state.playerName && (state.day > 1 || state.solved.size || (state.dd && state.dd.notes.length))) state.newPlaythrough();
+    if (state.map !== "home") state.goToFloor("home", "start");
     // game goes "live" behind the modal (movement stays blocked while it's open)
     state.started = true;
     hideTitle();
@@ -540,7 +693,7 @@ export async function startGame() {
     const returning = !!state.playerName;
     menuItems = returning
       ? [ { label: "CONTINUE", action: continueGame },
-          { label: "CHANGE CHARACTER", action: newCharacter },
+          { label: "NEW WEEK", action: newCharacter },
           { label: "RESET PROGRESS", action: () => openResetMenu() } ]
       : [ { label: "START GAME", action: newCharacter } ];
     menuIdx = 0;
@@ -561,9 +714,10 @@ export async function startGame() {
   function refreshContinueLine() {
     const cont = document.getElementById("continue-line");
     if (!cont) return;
-    if (state.playerName && state.solved.size > 0) {
-      const here = state.floor;
-      cont.textContent = `Welcome back, ${state.playerName} \u2014 ${state.solvedOnFloor(here)}/${scenarioCountForFloor(here)} tickets on ${FLOOR_META[here] ? FLOOR_META[here].name : here}.`;
+    const hs = document.getElementById("title-hs");
+    if (hs) hs.innerHTML = `<div class="hs"><h3>HIGH SCORES</h3>${hsTable(null, 10)}</div>`;
+    if (state.playerName && state.day > 1) {
+      cont.textContent = `Welcome back, ${state.playerName} \u2014 Cutover Week, ${state.day >= 4 ? "wrapped" : "Day " + state.day}.`;
     } else if (state.playerName) {
       cont.textContent = `Welcome back, ${state.playerName}.`;
     } else {
@@ -587,11 +741,17 @@ export async function startGame() {
   if (shopBtn) shopBtn.addEventListener("click", () => { if (!isModalOpen()) openShop(); });
   const achBtn = document.getElementById("ach-btn");
   if (achBtn) achBtn.addEventListener("click", () => { if (!isModalOpen()) openAchievements(); });
+  const chatBtn = document.getElementById("chat-btn");
+  if (chatBtn) chatBtn.addEventListener("click", () => { if (!isModalOpen() && state.started) openPhone(); });
+  const notesBtn = document.getElementById("notes-btn");
+  if (notesBtn) notesBtn.addEventListener("click", () => { if (!isModalOpen() && state.started) openNotes(); });
   const setBtn = document.getElementById("settings-btn");
   if (setBtn) setBtn.addEventListener("click", () => { if (!isModalOpen()) openSettings(); });
 
   function onResize() { sizeCanvas(canvas, viewport); }
   window.addEventListener("resize", onResize);
+  // the side panel opening/closing changes the viewport width: follow it
+  try { new ResizeObserver(() => onResize()).observe(viewport); } catch { /* old browsers */ }
   sizeCanvas(canvas, viewport);
 
   state.updateProgressUI();

@@ -17,6 +17,7 @@ const src = (f) => readFileSync(join(root, "src", f), "utf8");
 // Dependency order: leaves first, entry (game) last.
 const MODULE_ORDER = [
   "storage.js",
+  "core.js",
   "world.js",
   "scenarios.js",
   "sideQuests.js",
@@ -24,12 +25,29 @@ const MODULE_ORDER = [
   "quiz.js",
   "cosmetics.js",
   "progression.js",
+  "pools.js",
   "render.js",
   "theme.js",
   "savefile.js",
   "ui.js",
+  "comms.js",
+  "ledger.js",
+  "visitors.js",
+  "clock.js",
+  "flows.js",
+  "days.js",
+  "score.js",
   "game.js"
 ];
+
+// Every src/*.js except main.js must be listed, or the standalone silently
+// omits it and throws on boot. Fail the build loudly instead.
+{
+  const { readdirSync } = await import("node:fs");
+  const all = readdirSync(join(root, "src")).filter((f) => f.endsWith(".js") && f !== "main.js");
+  const missing = all.filter((f) => !MODULE_ORDER.includes(f));
+  if (missing.length) { console.error("MODULE_ORDER is missing: " + missing.join(", ")); process.exit(1); }
+}
 
 // Remove `import ... from "...";` (including multi-line) and `export ` prefixes.
 function strip(code) {
@@ -58,7 +76,7 @@ const out = `<!doctype html>
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>IT Support Game</title>
+<title>The Ticket Queue: Cutover Week</title>
 <!-- STANDALONE BUILD: double-click to play, no Node/build needed. -->
 <!-- Auto-generated from src/ by tools/build-standalone.mjs. Do not hand-edit. -->
 <!-- Sprite PNGs only load when served over http (dev server or deployed site). -->

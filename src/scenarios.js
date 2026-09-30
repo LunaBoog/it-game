@@ -16,7 +16,7 @@ export const SCENARIOS = {
   // FLOOR 3 — HELP DESK (fundamentals)
   // ===================================================================
   "monitor": {
-    floor: "floor3", cert: "A+ \u00b7 5.4 Display issues",
+    floor: "floor3", day: 1, cert: "A+ 220-1201 \u00b7 5.3 Video & display issues",
     title: "Reception monitor is black",
     principle: "Physical layer first",
     principleText:
@@ -83,7 +83,7 @@ export const SCENARIOS = {
   },
 
   "internet-down": {
-    floor: "floor3", cert: "Network+ \u00b7 5.2 Troubleshooting methodology",
+    floor: "floor3", day: 1, cert: "Network+ N10-009 \u00b7 5.1 Troubleshooting methodology",
     title: "\"The internet is down\"",
     principle: "Scope the problem",
     principleText:
@@ -121,7 +121,7 @@ export const SCENARIOS = {
   },
 
   "dns": {
-    floor: "floor3", cert: "Network+ \u00b7 1.6 DNS",
+    floor: "floor3", day: 2, cert: "Network+ N10-009 \u00b7 3.4 / 5.3 DNS & network services",
     title: "Can't reach the file share",
     principle: "Name vs IP (DNS)",
     principleText:
@@ -164,7 +164,7 @@ export const SCENARIOS = {
   },
 
   "printer": {
-    floor: "floor3", cert: "A+ \u00b7 3.6 Printers",
+    floor: "floor3", day: 1, cert: "A+ 220-1201 \u00b7 5.6 Printer issues",
     title: "\"The printer won't print\"",
     principle: "Three-system print stack",
     principleText:
@@ -199,7 +199,7 @@ export const SCENARIOS = {
   },
 
   "slow": {
-    floor: "floor3", cert: "A+ \u00b7 5.2 Performance",
+    floor: "floor3", day: 2, cert: "A+ 220-1202 \u00b7 3.0 Software troubleshooting",
     title: "\"The internet is so slow today\"",
     principle: "Resource vs network",
     principleText:
@@ -239,7 +239,7 @@ export const SCENARIOS = {
   },
 
   "permissions": {
-    floor: "floor3", cert: "Security+ \u00b7 4.6 Access control",
+    floor: "floor3", day: 2, cert: "Security+ SY0-701 \u00b7 4.6 Identity & access mgmt",
     title: "\"Why can he print and I can't?\"",
     principle: "Environment vs user",
     principleText:
@@ -277,7 +277,7 @@ export const SCENARIOS = {
   },
 
   "change": {
-    floor: "floor3", cert: "Security+ \u00b7 1.2 SPF/DKIM/DMARC \u00b7 Change mgmt",
+    floor: "floor3", day: 3, cert: "Security+ SY0-701 \u00b7 1.3 Change mgmt / 4.5 Email security",
     title: "\"Email broke overnight\"",
     principle: "Change management",
     principleText:
@@ -318,7 +318,7 @@ export const SCENARIOS = {
   // FLOOR 7 — SECURITY OPERATIONS / RED-TEAM LAB (advanced)
   // ===================================================================
   "phish-ir": {
-    floor: "floor7", cert: "Security+ \u00b7 2.4 Social engineering / 4.x IR",
+    floor: "floor7", cert: "Security+ SY0-701 \u00b7 2.2 Threat vectors / 4.8 Incident response",
     title: "User entered creds on a lookalike site",
     principle: "Contain the credential, not just the email",
     principleText:
@@ -361,7 +361,7 @@ export const SCENARIOS = {
   },
 
   "privesc": {
-    floor: "floor7", cert: "PenTest+ \u00b7 3.x Privilege escalation",
+    floor: "floor7", cert: "PenTest+ PT0-003 \u00b7 Attacks & exploits (privesc)",
     title: "Pentest: low-priv shell on a Linux host",
     principle: "Check configuration before reaching for an exploit",
     principleText:
@@ -404,7 +404,7 @@ export const SCENARIOS = {
   },
 
   "lateral": {
-    floor: "floor7", cert: "Security+ \u00b7 4.1 Detection / lateral movement",
+    floor: "floor7", cert: "Security+ SY0-701 \u00b7 2.4 Indicators / 4.4 Monitoring",
     title: "One host is authenticating to everything",
     principle: "One source, many targets, odd hours = lateral movement",
     principleText:
@@ -447,7 +447,7 @@ export const SCENARIOS = {
   },
 
   "segmentation": {
-    floor: "floor7", cert: "Network+ \u00b7 2.1 Segmentation / subnetting",
+    floor: "floor7", cert: "Network+ N10-009 \u00b7 1.7 IPv4 addressing / 4.1 Segmentation",
     title: "A lobby camera can reach Finance",
     principle: "Segment by trust",
     principleText:
@@ -490,7 +490,7 @@ export const SCENARIOS = {
   },
 
   "tls-chain": {
-    floor: "floor7", cert: "Security+ \u00b7 3.x PKI / certificates",
+    floor: "floor7", cert: "Security+ SY0-701 \u00b7 1.4 Cryptographic solutions (PKI)",
     title: "Cert warnings after a renewal",
     principle: "A cert is only as valid as its chain",
     principleText:
@@ -528,7 +528,7 @@ export const SCENARIOS = {
   },
 
   "ransomware": {
-    floor: "floor7", cert: "Security+ \u00b7 4.x Incident response",
+    floor: "floor7", cert: "Security+ SY0-701 \u00b7 4.8 Incident response",
     title: "A file share is encrypting itself",
     principle: "Isolate first, then eradicate",
     principleText:
@@ -566,7 +566,7 @@ export const SCENARIOS = {
   },
 
   "rogue-ap": {
-    floor: "floor7", cert: "Security+ \u00b7 2.4 Wireless attacks",
+    floor: "floor7", cert: "Security+ SY0-701 \u00b7 2.4 Indicators (wireless / on-path)",
     title: "Two 'CorpWiFi' networks, one is fake",
     principle: "Same SSID, two BSSIDs, deauths = evil twin",
     principleText:

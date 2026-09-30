@@ -137,9 +137,79 @@ function drawTileProc(c, x, y, code) {
     for (let i = 0; i < 4; i++) { c.fillStyle = PAL.serverShade; c.fillRect(px + 7, py + 6 + i * 5, TILE - 14, 2); }
     // blinking LED
     c.fillStyle = PAL.serverLed; c.fillRect(px + TILE - 9, py + 5, 2, 2);
-  } else {
+  } else if (!drawTileV2(c, x, y, code, px, py)) {
     drawFloorBase(c, px, py, PAL.floor, PAL.floorShade);
   }
+}
+
+// ---- v2 tiles: home, street, lobby, bar ----
+function drawTileV2(c, x, y, code, px, py) {
+  if (code === "f") { // warm wood planks
+    drawFloorBase(c, px, py, "#C49A6C", "#A97F55");
+    c.fillStyle = "rgba(0,0,0,0.08)"; c.fillRect(px, py + 10, TILE, 1); c.fillRect(px, py + 21, TILE, 1);
+    c.fillRect(px + ((x * 7 + y * 3) % 24), py, 1, 10); return true;
+  }
+  if (code === "k") { // checker kitchen tile
+    c.fillStyle = (x + y) % 2 ? "#E9E6DC" : "#CFCBBE"; c.fillRect(px, py, TILE, TILE);
+    c.fillStyle = "rgba(0,0,0,0.06)"; c.fillRect(px, py + TILE - 1, TILE, 1); return true;
+  }
+  if (code === "s") { // sidewalk slabs
+    drawFloorBase(c, px, py, "#B9B6AE", "#A09D95");
+    c.fillStyle = "rgba(0,0,0,0.12)"; c.fillRect(px, py, TILE, 1); c.fillRect(px, py, 1, TILE);
+    if ((x * 13 + y * 7) % 11 === 0) { c.fillStyle = "rgba(0,0,0,0.1)"; c.fillRect(px + 9, py + 14, 6, 2); }
+    return true;
+  }
+  if (code === "m") { // lobby marble
+    drawFloorBase(c, px, py, "#E4E1DA", "#CCC8BE");
+    c.strokeStyle = "rgba(120,110,100,0.18)"; c.lineWidth = 1; c.beginPath();
+    c.moveTo(px + ((x * 5) % 20), py); c.lineTo(px + 12 + ((y * 3) % 18), py + TILE); c.stroke(); return true;
+  }
+  if (code === "t") { // dark bar floor
+    drawFloorBase(c, px, py, "#5A3E2B", "#47301F");
+    c.fillStyle = "rgba(255,255,255,0.04)"; c.fillRect(px, py + 15, TILE, 1); return true;
+  }
+  if (code === "R") { // road
+    c.fillStyle = "#3A3B3F"; c.fillRect(px, py, TILE, TILE);
+    if (y === 19 && x % 3 === 0) { c.fillStyle = "#E8C547"; c.fillRect(px + 4, py + 15, 18, 3); }
+    if (y === 18) { c.fillStyle = "#8E8B84"; c.fillRect(px, py, TILE, 4); }
+    return true;
+  }
+  if (code === "K") { // counter
+    drawFloorBase(c, px, py, "#9B8E7E", "#857868");
+    c.fillStyle = "#6E5E4C"; c.fillRect(px, py + 6, TILE, TILE - 6);
+    c.fillStyle = "#D8CBB6"; c.fillRect(px, py + 4, TILE, 5);
+    c.fillStyle = "rgba(0,0,0,0.2)"; c.fillRect(px, py + TILE - 3, TILE, 3); return true;
+  }
+  if (code === "H") { // shelf with boxes
+    c.fillStyle = "#4E4A45"; c.fillRect(px, py, TILE, TILE);
+    for (let i = 0; i < 3; i++) {
+      c.fillStyle = "#2E2B28"; c.fillRect(px + 2, py + 3 + i * 10, TILE - 4, 1);
+      const cols = ["#C9A37A", "#85B7EB", "#D4537E", "#63B370"];
+      c.fillStyle = cols[(x + y + i) % 4]; c.fillRect(px + 4 + ((x + i) % 3) * 3, py + 4 + i * 10 - 0, 9, 6);
+      c.fillStyle = cols[(x + i * 2) % 4]; c.fillRect(px + 17, py + 4 + i * 10, 8, 6);
+    }
+    return true;
+  }
+  if (code === "B") { // bed foot (the head is the bed prop)
+    drawFloorBase(c, px, py, "#C49A6C", "#A97F55");
+    c.fillStyle = "#5E7CA8"; c.fillRect(px + 3, py, TILE - 6, TILE - 6);
+    c.fillStyle = "#4A6690"; c.fillRect(px + 3, py + TILE - 10, TILE - 6, 4);
+    c.fillStyle = "#6B4A2A"; c.fillRect(px + 2, py + TILE - 6, TILE - 4, 4); return true;
+  }
+  if (code === "C") { // couch
+    drawFloorBase(c, px, py, "#C49A6C", "#A97F55");
+    c.fillStyle = "#7A3E48"; c.fillRect(px, py + 6, TILE, TILE - 10);
+    c.fillStyle = "#5E2E36"; c.fillRect(px, py + 6, TILE, 6);
+    c.fillStyle = "rgba(255,255,255,0.08)"; c.fillRect(px + 3, py + 14, TILE - 6, 2); return true;
+  }
+  if (code === "P") { // planter
+    const base = y >= 10 ? "#B9B6AE" : "#E4E1DA";
+    drawFloorBase(c, px, py, base, "#A09D95");
+    c.fillStyle = "#6B4A2A"; c.fillRect(px + 6, py + 16, TILE - 12, 12);
+    c.fillStyle = "#3E8E4E"; c.beginPath(); c.arc(px + 16, py + 13, 10, 0, Math.PI * 2); c.fill();
+    c.fillStyle = "#2E6E3C"; c.beginPath(); c.arc(px + 11, py + 11, 5, 0, Math.PI * 2); c.fill(); return true;
+  }
+  return false;
 }
 
 function getMapCanvas(name) {
@@ -471,6 +541,8 @@ function drawPrompt(ctx, px, py, tick) {
 }
 
 function npcBubbleKind(n, state) {
+  if (n._vis) return n._vis.want ? "quest" : null;
+  if (n.ticket && state.ticketOpen && !state.ticketOpen(n.ticket) && !state.solved.has(n.ticket)) return n.sideQuest && !state.sqSolved.has(n.sideQuest) ? "sq" : null;
   if (n.ticket) return state.solved.has(n.ticket) ? "done" : "quest";
   if (n.sideQuest) return state.sqSolved.has(n.sideQuest) ? "done" : "sq";
   return null;
@@ -510,7 +582,7 @@ export function draw(ctx, state, facedTarget) {
 
   // props (under people)
   for (const p of PROPS) {
-    if (p.needFlag && !state.flags.has(p.needFlag)) continue; // hidden until revealed
+    if (state.propVisible ? !state.propVisible(p) : (p.needFlag && !state.flags.has(p.needFlag))) continue; // hidden until revealed
     const sx = p.x * TILE - camX, sy = p.y * TILE - camY;
     const kind = p.kind || (p.isMonitor ? "monitor" : p.isPrinter ? "printer" : "");
     if (kind === "monitor") {
@@ -529,6 +601,8 @@ export function draw(ctx, state, facedTarget) {
       drawElevator(ctx, sx, sy, state.tick);
     } else if (kind === "device") {
       drawDevice(ctx, sx, sy, p.device, state.tick);
+    } else {
+      drawPropV2(ctx, sx, sy, p, state);
     }
     const bk = propBubbleKind(p, state);
     if (bk) drawBubble(ctx, sx, sy, bk, state.tick);
@@ -536,8 +610,9 @@ export function draw(ctx, state, facedTarget) {
 
   // NPCs
   for (const n of NPCS) {
-    const sx = n.x * TILE - camX, sy = n.y * TILE - camY;
-    drawPerson(ctx, sx, sy, `npc_${n.id}`, n.sprite, n.facing || "down", false, state.tick, seedFor(n.id));
+    if (state.npcVisible && !state.npcVisible(n)) continue;
+    const sx = (n.rx != null ? n.rx : n.x * TILE) - camX, sy = (n.ry != null ? n.ry : n.y * TILE) - camY;
+    drawPerson(ctx, sx, sy, `npc_${n.id}`, n.sprite, n.facing || "down", !!(n._vis && n._vis.moving), state.tick, seedFor(n.id));
     const kind = npcBubbleKind(n, state);
     if (kind) drawBubble(ctx, sx, sy, kind, state.tick);
     // prompt over the faced target
@@ -547,7 +622,7 @@ export function draw(ctx, state, facedTarget) {
   }
 
   // prompt over a faced prop
-  if (facedTarget && ["monitor", "prop-sq", "pet", "search", "chest", "elevator"].includes(facedTarget.kind) && !state.moving) {
+  if (facedTarget && ["monitor", "prop-sq", "pet", "search", "chest", "elevator", "prop"].includes(facedTarget.kind) && !state.moving) {
     const p = facedTarget.target;
     drawPrompt(ctx, p.x * TILE - camX, p.y * TILE - camY, state.tick);
   }
@@ -555,11 +630,15 @@ export function draw(ctx, state, facedTarget) {
   // player
   drawPerson(ctx, state.renderX - camX, state.renderY - camY, "player", state.playerSprite || PLAYER_SPRITE, state.facing, state.moving, state.tick, 0);
 
+  // v2: the NEXT UP arrow over the target tile
+  if (state.nuTarget && !state.moving) drawTargetArrow(ctx, state.nuTarget.x * TILE - camX, state.nuTarget.y * TILE - camY, state.tick);
+
   // room labels
   drawRoomLabels(ctx, camX, camY);
 
   // lighting: a soft warm wash + corner vignette for depth
   drawAmbientLight(ctx, cw, ch);
+  drawTimeTint(ctx, cw, ch, state);
   drawVignette(ctx, cw, ch);
 }
 
@@ -571,6 +650,109 @@ function drawAmbientLight(ctx, cw, ch) {
   g.addColorStop(0.5, "rgba(255,255,255,0)");
   g.addColorStop(1, "rgba(20,24,40,0.07)");
   ctx.fillStyle = g; ctx.fillRect(0, 0, cw, ch);
+}
+
+// ---- v2 props ----
+function drawPropV2(ctx, x, y, p, state) {
+  const t = state.tick;
+  const k = p.kind;
+  if (k === "workpc" || k === "laptop") {
+    const glow = 0.5 + 0.5 * Math.sin(t / 20);
+    ctx.fillStyle = `rgba(252,222,90,${0.12 + 0.12 * glow})`; ctx.fillRect(x - 1, y + 4, TILE + 2, TILE - 6);
+    ctx.fillStyle = "#2C2C2A"; ctx.fillRect(x + 6, y + 9, 20, 13);
+    ctx.fillStyle = k === "laptop" ? "#9FE1CB" : "#85B7EB"; ctx.fillRect(x + 8, y + 11, 16, 9);
+    ctx.fillStyle = "#fff"; ctx.fillRect(x + 10, y + 13, 7, 1); ctx.fillRect(x + 10, y + 16, 10, 1);
+    ctx.fillStyle = "#5F5E5A"; ctx.fillRect(x + 4, y + 22, 24, 3);
+  } else if (k === "kiboard") {
+    ctx.fillStyle = "#F4F4F0"; ctx.fillRect(x + 3, y + 4, TILE - 6, TILE - 10);
+    ctx.strokeStyle = "#888780"; ctx.lineWidth = 1; ctx.strokeRect(x + 3.5, y + 4.5, TILE - 7, TILE - 11);
+    ctx.fillStyle = "#C0392B"; ctx.fillRect(x + 7, y + 9, 10, 2); ctx.fillStyle = "#185FA5"; ctx.fillRect(x + 7, y + 14, 15, 2); ctx.fillRect(x + 7, y + 19, 12, 2);
+  } else if (k === "backup") {
+    ctx.fillStyle = "#23262B"; ctx.fillRect(x + 5, y + 5, TILE - 10, TILE - 9);
+    ctx.fillStyle = "#0c1f14"; ctx.fillRect(x + 8, y + 8, TILE - 16, 8);
+    ctx.fillStyle = state.flags.has("backupVerified") ? "#63B370" : (Math.sin(t / 10) > 0 ? "#F2C94C" : "#5A4708"); ctx.fillRect(x + 10, y + 10, 4, 4);
+    ctx.fillStyle = "#63B370"; ctx.fillRect(x + 16, y + 11, 6, 1);
+    ctx.fillStyle = "#3A3A38"; ctx.fillRect(x + 8, y + 19, TILE - 16, 3);
+  } else if (k === "assettag") {
+    if (state.flags.has("tag_" + p.id)) { ctx.fillStyle = "#FCDE5A"; ctx.fillRect(x + 22, y + 22, 7, 5); ctx.fillStyle = "#412402"; ctx.fillRect(x + 23, y + 24, 5, 1); }
+    else if (state.day === 1 && state.flags.has("kit")) { const b = Math.sin(t / 12) > 0; ctx.strokeStyle = b ? "#FCDE5A" : "rgba(252,222,90,0.35)"; ctx.lineWidth = 1.5; ctx.strokeRect(x + 2, y + 9, TILE - 4, TILE - 11); }
+  } else if (k === "station") {
+    const on = state.flags.has("st_" + p.station) || (p.station === "bench" && state.flags.has("staged"));
+    if (p.station === "wait") {
+      ctx.fillStyle = "#7A6B5D"; ctx.fillRect(x + 4, y + 16, 10, 10); ctx.fillRect(x + 17, y + 16, 10, 10);
+      ctx.fillStyle = "#9AA0A6"; ctx.fillRect(x + 12, y + 4, 8, 12); ctx.fillStyle = "#2C2C2A"; ctx.fillRect(x + 14, y + 7, 4, 2);
+    } else {
+      for (let i = 0; i < 3; i++) { ctx.fillStyle = "#2C2C2A"; ctx.fillRect(x + 3 + i * 9, y + 12, 8, 6); ctx.fillStyle = on ? "#63B370" : "#85B7EB"; ctx.fillRect(x + 4 + i * 9, y + 13, 6, 4); }
+    }
+    if (on) { ctx.fillStyle = "#63B370"; ctx.fillRect(x + TILE - 7, y + 3, 4, 4); }
+  } else if (k === "notice") {
+    ctx.fillStyle = "#FCDE5A"; ctx.fillRect(x + 7, y + 5, 18, 14); ctx.fillStyle = "#2C2C2A"; ctx.fillRect(x + 10, y + 8, 12, 2); ctx.fillRect(x + 10, y + 12, 9, 1); ctx.fillRect(x + 10, y + 15, 11, 1);
+    ctx.fillStyle = "#EF9F27"; ctx.fillRect(x + 7, y + 5, 18, 2);
+  } else if (k === "violation") {
+    const b = Math.sin(t / 8) > 0;
+    if (p.id === "v-sticky") { ctx.fillStyle = "#FCDE5A"; ctx.fillRect(x + 18, y + 10, 8, 8); ctx.fillStyle = "#2C2C2A"; ctx.fillRect(x + 19, y + 13, 6, 1); }
+    else if (p.id === "v-screen") { ctx.fillStyle = "#FFFFFF"; ctx.fillRect(x + 9, y + 14, 12, 7); }
+    else if (p.id === "v-door") { ctx.fillStyle = "#A88862"; ctx.beginPath(); ctx.moveTo(x + 8, y + 26); ctx.lineTo(x + 22, y + 26); ctx.lineTo(x + 8, y + 20); ctx.fill(); }
+    else { ctx.fillStyle = "#FFFFFF"; ctx.fillRect(x + 10, y + 11, 11, 13); ctx.fillStyle = "#888780"; ctx.fillRect(x + 12, y + 14, 7, 1); ctx.fillRect(x + 12, y + 17, 7, 1); }
+    ctx.strokeStyle = b ? "#E24B4A" : "rgba(226,75,74,0.35)"; ctx.lineWidth = 2; ctx.strokeRect(x + 2, y + 2, TILE - 4, TILE - 4);
+  } else if (k === "ewaste") {
+    const bob = Math.sin((t + p.x * 7) / 16) * 1;
+    ctx.fillStyle = PAL.shadow; ctx.beginPath(); ctx.ellipse(x + 16, y + 26, 9, 3, 0, 0, Math.PI * 2); ctx.fill();
+    if (/drive/.test(p.label)) { ctx.fillStyle = "#6a7078"; ctx.fillRect(x + 10, y + 14 + bob, 12, 9); ctx.fillStyle = "#3A3A38"; ctx.fillRect(x + 12, y + 16 + bob, 8, 2); }
+    else { ctx.fillStyle = "#3A3A38"; ctx.fillRect(x + 7, y + 15 + bob, 18, 10); ctx.fillStyle = "#5F5E5A"; ctx.fillRect(x + 8, y + 16 + bob, 16, 7); ctx.fillStyle = "#FCDE5A"; ctx.fillRect(x + 20, y + 20 + bob, 3, 2); }
+    ctx.fillStyle = "#63B370"; ctx.font = "bold 9px ui-monospace, monospace"; ctx.fillText("\u267B", x + 22, y + 11);
+  } else if (k === "cage") {
+    ctx.fillStyle = "#1f1f1d"; ctx.fillRect(x + 2, y + 2, TILE - 4, TILE - 4);
+    ctx.fillStyle = "#6a7078"; for (let i = x + 4; i < x + TILE - 3; i += 5) ctx.fillRect(i, y + 3, 1, TILE - 6);
+    ctx.fillStyle = "#F2C94C"; ctx.fillRect(x + 13, y + 14, 6, 6);
+  } else if (k === "subway") {
+    ctx.fillStyle = "#1a1a18"; ctx.fillRect(x + 2, y + 6, TILE - 4, TILE - 8);
+    ctx.fillStyle = "#3E8E4E"; ctx.fillRect(x + 2, y + 2, TILE - 4, 6);
+    ctx.fillStyle = "#FCCC0A"; ctx.beginPath(); ctx.arc(x + 11, y + 17, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#2C2C2A"; ctx.font = "bold 7px ui-monospace, monospace"; ctx.fillText("N", x + 8.5, y + 19.5);
+    ctx.fillStyle = "#FCCC0A"; ctx.beginPath(); ctx.arc(x + 22, y + 17, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#2C2C2A"; ctx.fillText("W", x + 19, y + 19.5);
+    ctx.fillStyle = "#EEE"; ctx.fillRect(x + 5, y + 26, TILE - 10, 2);
+  } else if (k === "bed") {
+    ctx.fillStyle = "#6B4A2A"; ctx.fillRect(x + 2, y + 2, TILE - 4, TILE - 2);
+    ctx.fillStyle = "#F1EFE8"; ctx.fillRect(x + 6, y + 5, TILE - 12, 9);
+    ctx.fillStyle = "#5E7CA8"; ctx.fillRect(x + 3, y + 16, TILE - 6, TILE - 16);
+  } else if (k === "decor") {
+    if (p.art === "cart") {
+      ctx.fillStyle = "#B03A2E"; ctx.fillRect(x + 3, y + 10, TILE - 6, 14); ctx.fillStyle = "#F1EFE8"; ctx.fillRect(x + 3, y + 6, TILE - 6, 5);
+      ctx.fillStyle = "#2C2C2A"; ctx.beginPath(); ctx.arc(x + 9, y + 27, 3, 0, 7); ctx.arc(x + 23, y + 27, 3, 0, 7); ctx.fill();
+      ctx.fillStyle = "#FFF"; ctx.font = "bold 7px ui-monospace, monospace"; ctx.fillText("\u2615", x + 12, y + 20);
+    } else if (p.art === "loaner") {
+      ctx.fillStyle = "#9AA0A6"; ctx.fillRect(x + 3, y + 8, TILE - 6, 3); ctx.fillRect(x + 3, y + 19, TILE - 6, 3);
+      ctx.fillStyle = "#C9A37A"; ctx.fillRect(x + 6, y + 11, 8, 8); ctx.fillRect(x + 16, y + 12, 9, 7);
+      ctx.fillStyle = "#2C2C2A"; ctx.beginPath(); ctx.arc(x + 7, y + 27, 2.5, 0, 7); ctx.arc(x + 25, y + 27, 2.5, 0, 7); ctx.fill();
+    }
+  } else if (k === "bardoor") {
+    ctx.fillStyle = "#2C1B10"; ctx.fillRect(x + 2, y, TILE - 4, TILE);
+    ctx.fillStyle = "#1a1a18"; ctx.fillRect(x + 5, y + 3, TILE - 10, 12);
+    ctx.fillStyle = "#F4F4F0"; ctx.font = "bold 6px ui-monospace, monospace"; ctx.fillText("6PM", x + 9, y + 11);
+    ctx.fillStyle = "#E8B923"; ctx.fillRect(x + TILE - 9, y + 18, 2, 3);
+  }
+}
+
+// the NEXT UP arrow: a bouncing yellow chevron over the target tile
+function drawTargetArrow(ctx, x, y, tick) {
+  const b = REDUCE_MOTION ? 0 : Math.sin(tick / 9) * 3;
+  const cx = x + TILE / 2, cy = y - 14 + b;
+  ctx.fillStyle = "rgba(0,0,0,0.45)"; ctx.beginPath(); ctx.moveTo(cx - 8, cy - 5); ctx.lineTo(cx + 8, cy - 5); ctx.lineTo(cx, cy + 6); ctx.fill();
+  ctx.fillStyle = "#FCDE5A"; ctx.beginPath(); ctx.moveTo(cx - 7, cy - 7); ctx.lineTo(cx + 7, cy - 7); ctx.lineTo(cx, cy + 4); ctx.fill();
+  ctx.strokeStyle = "#EF9F27"; ctx.lineWidth = 1; ctx.stroke();
+  ctx.strokeStyle = `rgba(252,222,90,${0.35 + 0.25 * Math.sin(tick / 7)})`; ctx.lineWidth = 2;
+  ctx.strokeRect(x + 1, y + 1, TILE - 2, TILE - 2);
+}
+
+// time-of-day: evenings at home go blue, the happy hour glows warm
+function drawTimeTint(ctx, cw, ch, state) {
+  let c = null;
+  if (state.map === "home" && state.dayOver && state.dayOver()) c = "rgba(14,22,60,0.42)";
+  else if (state.map === "lobby" && state.flags.has("partyOpen")) c = "rgba(90,40,10,0.18)";
+  if (!c) return;
+  ctx.fillStyle = c; ctx.fillRect(0, 0, cw, ch);
 }
 
 // stable per-id seed so each NPC's idle bob is out of phase

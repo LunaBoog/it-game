@@ -12,6 +12,9 @@ import {
   ACCESSORIES, SHOP_ITEMS, PREMIUM_SHIRTS, darken, randomSprite, DEFAULT_SPRITE
 } from "./cosmetics.js";
 import { rank, ACHIEVEMENTS, ACHTOTAL, XP } from "./progression.js";
+import { ticketOpen, afterTicketSolved, orientationPagesV2 } from "./days.js";
+import { BADGES, LINGO } from "./pools.js";
+import { DD } from "./core.js";
 import {
   THEMES, currentTheme, applyTheme, prefs,
   setReducedMotion, setColorblind, setBigText
@@ -40,7 +43,7 @@ export function initUI(globalState, onCloseCb) {
 function openModal(title, subtitle, avatarLetter, bodyHtml, opts = {}) {
   els.title.textContent = title;
   els.subtitle.textContent = subtitle;
-  els.avatar.textContent = avatarLetter || "?";
+  setAvatar(avatarLetter, opts.sprite);
   els.body.innerHTML = bodyHtml;
   els.bg.hidden = false;
   els.close.hidden = !!opts.hideClose;
@@ -50,6 +53,49 @@ function openModal(title, subtitle, avatarLetter, bodyHtml, opts = {}) {
     try { els.bg.scrollIntoView({ behavior: "smooth", block: "center" }); } catch { els.bg.scrollIntoView(); }
   });
 }
+
+// v2: the avatar can be a letter/emoji OR a little pixel portrait.
+function setAvatar(letter, sprite) {
+  if (sprite) {
+    els.avatar.innerHTML = "";
+    const c = document.createElement("canvas");
+    c.width = 40; c.height = 40; c.className = "avatar-canvas";
+    try { drawSpritePreview(c, sprite, "down", 2); } catch { /* ignore */ }
+    els.avatar.appendChild(c);
+    els.avatar.classList.add("has-portrait");
+  } else {
+    els.avatar.classList.remove("has-portrait");
+    els.avatar.textContent = letter || "?";
+  }
+}
+
+// ---- v2 panel API: build modal content with DOM helpers ------------------
+// panel() opens the side panel with an empty body; pAdd/pBtn append to it.
+export function panel(title, subtitle, avatar, opts = {}) {
+  state.inDialog = true;
+  const sprite = avatar && typeof avatar === "object" ? avatar : null;
+  openModal(title, subtitle || "", sprite ? "" : (avatar || "i"), "", { ...opts, sprite });
+  return els.body;
+}
+export function pAdd(html, cls) {
+  const d = document.createElement("div");
+  if (cls) d.className = cls;
+  d.innerHTML = html;
+  els.body.appendChild(d);
+  return d;
+}
+export function pBtn(label, fn, cls = "primary-btn act") {
+  const b = document.createElement("button");
+  b.className = cls; b.innerHTML = label;
+  b.addEventListener("click", fn);
+  els.body.appendChild(b);
+  return b;
+}
+export function pClear() { els.body.innerHTML = ""; }
+export function pBody() { return els.body; }
+export function pSubtitle(t) { els.subtitle.textContent = t; }
+export function panelOpen() { return els.bg && !els.bg.hidden; }
+export function closePanel() { closeModal(); }
 
 function closeModal() {
   els.bg.hidden = true;
@@ -113,88 +159,15 @@ export function openIntro() {
   input.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); go(); } });
 }
 
-// --- end of day -----------------------------------------------------------
-
-export function openEndOfDay() {
-  state.inEndOfDay = true;
-  const here = state.floor;
-  const meta = FLOOR_META[here] || { name: here, tag: "" };
-  const floorScenIds = scenarioIdsForFloor(here);
-  const floorTotal = scenarioCountForFloor(here);
-  const principles = floorScenIds.map((id) => SCENARIOS[id] && SCENARIOS[id].principle).filter(Boolean);
-
-  // side quests / sharp calls counted for THIS floor only
-  const floorSqIds = sideQuestIdsForFloor(here);
-  const sqCount = floorSqIds.filter((id) => state.sqSolved.has(id)).length;
-  const sqTotal = floorSqIds.length;
-  const sharpCount = floorScenIds.filter((id) => state.sharp.has(id)).length;
-
-  const principleList = principles
-    .map((p) => `<li>${escapeHtml(p)}</li>`)
-    .join("");
-
-  const sqStatus = sqTotal === 0
-    ? "No side quests on this floor today \u2014 the queue was the whole job."
-    : sqCount === sqTotal
-    ? "You found every side quest on this floor. That's the rare 'actually pays attention' tier."
-    : sqCount > 0
-    ? `You found ${sqCount} of ${sqTotal} side quests here. The rest are still out there \u2014 noticing them is its own skill.`
-    : "You didn't find any side quests on this floor. Try walking through every room before clearing the queue next time.";
-
-  const sharpStatus = sharpCount === floorTotal
-    ? "And you nailed every diagnosis on the first call. Clean sheet."
-    : sharpCount >= Math.ceil(floorTotal / 2)
-    ? `You called ${sharpCount} of ${floorTotal} right on the first try \u2014 the evidence work is paying off.`
-    : `You called ${sharpCount} of ${floorTotal} right on the first try. Investigating one more clue before committing usually settles it.`;
-
-  const name = escapeHtml(state.playerName || "you");
-
-  // If Floor 3 just got cleared and Floor 7 is still locked-by-progress, nudge.
-  const unlockNote = (here === "floor3" && state.hasFlag("floor3Cleared"))
-    ? `<div style="margin-top:12px;padding:10px;border:0.5px solid var(--border);border-radius:8px;background:rgba(43,179,163,0.08);font-size:12px;">
-         <strong>Floor 7 is unlocked.</strong> Take the elevator in the corner to reach Security Operations \u2014 Security+, PenTest+, and advanced Network+ scenarios.
-       </div>`
-    : "";
-
-  openModal(
-    `End of day ${state.day} \u00b7 ${escapeHtml(meta.name)}`,
-    meta.tag || "Ticket monitor",
-    "i",
-    `<div style="margin-bottom:10px;">Nice work, ${name}. All ${floorTotal} tickets on ${escapeHtml(meta.name)} closed.</div>
-     <div style="margin-bottom:6px;color:var(--text-muted);font-size:12px;">${sqStatus}</div>
-     <div style="margin-bottom:14px;color:var(--text-muted);font-size:12px;">${sharpStatus}</div>
-
-     <div class="eod-stats">
-       <div class="eod-stat"><div class="eod-stat-num">${sharpCount}/${floorTotal}</div><div class="eod-stat-label">first-try calls</div></div>
-       <div class="eod-stat"><div class="eod-stat-num">${state.day}</div><div class="eod-stat-label">days worked</div></div>
-       <div class="eod-stat"><div class="eod-stat-num">${state.lifeTickets}</div><div class="eod-stat-label">tickets, all-time</div></div>
-       <div class="eod-stat"><div class="eod-stat-num">${state.lifeSideQuests}</div><div class="eod-stat-label">side quests, all-time</div></div>
-     </div>
-     ${unlockNote}
-
-     <div class="scenario-section-label" style="margin-top:14px;">Principles you used today</div>
-     <ol class="principle-list">${principleList}</ol>
-
-     <div class="eod-actions">
-       <button id="eod-newday" class="primary-btn">Start day ${state.day + 1} \u2192</button>
-       <button id="eod-stay">Stay and wander</button>
-     </div>
-     <div style="font-size:11px;color:var(--text-faint);margin-top:8px;">A new day brings a fresh queue. Anyone you helped today will still have something to say if you visit them.</div>`
-  );
-
-  document.getElementById("eod-newday").addEventListener("click", () => {
-    state.startNewDay();
-    closeModal();
-  });
-  document.getElementById("eod-stay").addEventListener("click", closeModal);
-}
-
 // --- NPC casual chat ------------------------------------------------------
 
 export function openNpcChat(n) {
-  const lines = n.chat || ["Everything's good here right now, thanks for checking in."];
+  // before their ticket has been solved, people talk like it hasn't happened yet
+  const pre = n.preChat && n.ticket && !state.solved.has(n.ticket);
+  const lines = (pre ? n.preChat : n.chat) || ["Everything's good here right now, thanks for checking in."];
   const line = lines[Math.floor(Math.random() * lines.length)];
-  openModal(n.name, n.role, n.name[0], `<p style="margin:0;">${escapeHtml(line)}</p>`);
+  state.inDialog = true;
+  openModal(n.name, n.role || "", n.name[0], `<p style="margin:0;">${escapeHtml(line)}</p>`, { sprite: n.sprite });
 }
 
 // --- Ticket monitor -------------------------------------------------------
@@ -203,7 +176,7 @@ export function openTicketBoard() {
   state.inTicketBoard = true;
   const here = state.floor;
   const meta = FLOOR_META[here] || { name: here, tag: "" };
-  const ids = scenarioIdsForFloor(here);
+  const ids = scenarioIdsForFloor(here).filter((id) => ticketOpen(id) || state.solved.has(id));
   const rows = ids.map((id) => {
     const s = SCENARIOS[id];
     if (!s) return "";
@@ -225,9 +198,9 @@ export function openTicketBoard() {
     `${meta.name} ticket queue`,
     `${escapeHtml(meta.tag)} \u00b7 Day ${state.day}`,
     "i",
-    `<div>${rows}</div>
+    `<div>${rows || '<div class="ev-empty">Queue is empty. Enjoy it while it lasts.</div>'}</div>
      <div style="font-size:11px;color:var(--text-faint);margin-top:10px;padding-top:8px;border-top:0.5px solid var(--border);">
-       Walk to the person named on the ticket to take it on. Hit <strong>Exam</strong> in the top bar to practice-test everything on this floor.
+       New tickets land each morning. Walk to the person named on the ticket to take it on. Every close is a chance to write good notes; Gloria reads them all.
      </div>`
   );
 }
@@ -454,8 +427,8 @@ function commitDiagnosis(key) {
        <div class="principle-callout">
          <strong>Principle \u2014 ${escapeHtml(s.principle)}.</strong> ${escapeHtml(s.principleText)}
        </div>
-       <div style="margin-top:10px;"><button id="dx-close" class="primary-btn">Done \u2192</button></div>`;
-    document.getElementById("dx-close").addEventListener("click", closeModal);
+       <div id="dx-doc"></div>`;
+    afterTicketSolved(state.currentScenario, firstTry, document.getElementById("dx-doc"));
   } else {
     fb.innerHTML = `<div><strong>Ticket still open.</strong></div><div>${escapeHtml(dx.feedback)}</div>`;
   }
@@ -550,14 +523,14 @@ export function openChest(p) {
 function currentObjectives() {
   const o = [];
   const here = state.floor;
-  if (here === "floor3") {
+  if (here !== "floor7") {
     if (!state.hasFlag("catMet")) o.push("Find the office cat (she's in the conf. room).");
     else if (!state.hasFlag("hasCatFood")) o.push("Mittens is hungry \u2014 find cat food in the print room supply cabinet.");
     else if (!state.hasFlag("catFed")) o.push("Bring the cat food back to Mittens.");
     else if (state.hasFlag("catRevealed") && !state.hasFlag("stashTaken")) o.push("Check the loose ceiling tile Mittens pawed open.");
     if (!state.sqSolved.has("usbDrop")) o.push("Deal with the mystery USB stick on the open-desk floor.");
-    if (!state.hasFlag("floor3Cleared")) o.push("Clear the Floor 3 queue to unlock the elevator to Floor 7.");
-    else o.push("Floor 7 (Security Operations) is unlocked \u2014 take the elevator up.");
+    if (!state.floor7Open()) o.push("Floor 7 opens when Security calls you up, or once you clear every Floor 3 ticket.");
+    else o.push("Floor 7 (Security Operations) is open \u2014 take the elevator up.");
   } else {
     // Floor 7 side quests live on devices around the SOC.
     const sqLabels = {
@@ -597,7 +570,26 @@ export function openDiscoveries() {
      <div class="scenario-section-label" style="margin-top:12px;">On your radar</div>
      <ul class="principle-list">${objs}</ul>
      <div class="scenario-section-label" style="margin-top:12px;">Discoveries</div>
-     <div class="find-grid">${cards}</div>`);
+     <div class="find-grid">${cards}</div>
+     ${v2CompanionExtras()}`);
+}
+
+function v2CompanionExtras() {
+  let d; try { d = DD(); } catch { return ""; }
+  if (!d) return "";
+  const b = Object.entries(BADGES).map(([id, x]) => {
+    const got = d.badges.includes(id);
+    return `<div class="find-card ${got ? "got" : "locked"}"><div class="find-icon">${got ? x.icon : "\u{1F512}"}</div>
+      <div class="find-text"><div class="find-name">${escapeHtml(x.name)}</div><div class="find-note">${escapeHtml(x.desc)}</div></div></div>`;
+  }).join("");
+  const l = Object.entries(LINGO).map(([id, x]) => {
+    const got = d.lingo.includes(id);
+    return `<div class="lingo-card ${got ? "got" : "locked"}"><b>${got ? escapeHtml(x.term) : "???"}</b><span>${got ? escapeHtml(x.def) : "Hear it on the job to unlock."}</span></div>`;
+  }).join("");
+  return `<div class="scenario-section-label" style="margin-top:12px;">Badges \u00b7 ${d.badges.length}/${Object.keys(BADGES).length}</div>
+    <div class="find-grid">${b}</div>
+    <div class="scenario-section-label" style="margin-top:12px;">Lingo \u00b7 ${d.lingo.length}/${Object.keys(LINGO).length}</div>
+    <div class="lingo-grid">${l}</div>`;
 }
 
 // --- Elevator: travel between floors ---------------------------------------
@@ -607,15 +599,15 @@ export function openElevator(p) {
   const cards = FLOOR_ORDER.map((id) => {
     const m = FLOOR_META[id];
     const isHere = id === here;
-    // Floor 7 stays locked until Floor 3's queue is cleared.
-    const locked = id === "floor7" && !state.hasFlag("floor3Cleared");
+    // Floor 7 stays locked until Floor 3's queue is cleared or the SOC calls you up.
+    const locked = id === "floor7" && !state.floor7Open();
     let statusChip, btn;
     if (isHere) {
       statusChip = `<span class="floor-chip here">you are here</span>`;
       btn = `<button class="floor-btn" disabled>Current floor</button>`;
     } else if (locked) {
       statusChip = `<span class="floor-chip locked">\u{1F512} locked</span>`;
-      btn = `<button class="floor-btn" disabled>Clear Floor 3 first</button>`;
+      btn = `<button class="floor-btn" disabled>Badge access pending</button>`;
     } else {
       statusChip = `<span class="floor-chip open">ready</span>`;
       btn = `<button class="floor-btn primary-btn" data-floor="${escapeAttr(id)}">Go to ${escapeHtml(m.name)} \u2192</button>`;
@@ -631,9 +623,9 @@ export function openElevator(p) {
       </div>`;
   }).join("");
 
-  const lockHint = !state.hasFlag("floor3Cleared")
-    ? `<div style="font-size:11px;color:var(--text-faint);margin-top:10px;">Floor 7 unlocks once every Floor 3 ticket is solved. You can practice-test anything anytime with the <strong>Exam</strong> button \u2014 no need to wait.</div>`
-    : `<div style="font-size:11px;color:var(--text-faint);margin-top:10px;">Both floors are open. Your progress on each is saved separately.</div>`;
+  const lockHint = !state.floor7Open()
+    ? `<div style="font-size:11px;color:var(--text-faint);margin-top:10px;">Your badge opens Floor 7 (Security Ops) once Security calls you up, or once you've cleared every Floor 3 ticket. The <strong>Exam</strong> button practice-tests any floor anytime.</div>`
+    : `<div style="font-size:11px;color:var(--text-faint);margin-top:10px;">Your badge opens every floor.</div>`;
 
   openModal("The elevator", "Choose a floor", "\u{1F6D7}",
     `<div class="floor-list">${cards}</div>${lockHint}`);
@@ -642,7 +634,7 @@ export function openElevator(p) {
     b.addEventListener("click", () => {
       const id = b.dataset.floor;
       closeModal();
-      state.goToFloor(id);
+      state.goToFloor(id, "elevator");
     });
   });
 }
@@ -650,7 +642,8 @@ export function openElevator(p) {
 // --- Practice Test: a 5-question quiz on the current floor ------------------
 export function openQuiz() {
   state.inDialog = true;
-  const here = state.floor;
+  // home + lobby study the Help Desk pool
+  const here = state.floor === "floor7" ? "floor7" : "floor3";
   const meta = FLOOR_META[here] || { name: here, tag: "" };
   const bestKey = "quiz-best-" + here;
 
@@ -800,8 +793,11 @@ export function showAchievementToast(ach) {
     el.innerHTML = `<span class="toast-icon">${ach.icon || "\u2728"}</span>
       <span class="toast-text"><strong>${escapeHtml(ach.name)}</strong><br>${escapeHtml(ach.desc || "")}</span>`;
     host.appendChild(el);
+    // never stack more than three: the oldest makes room
+    const all = host.querySelectorAll(".toast");
+    for (let i = 0; i < all.length - 3; i++) all[i].remove();
     requestAnimationFrame(() => el.classList.add("show"));
-    setTimeout(() => { el.classList.remove("show"); setTimeout(() => el.remove(), 350); }, 3200);
+    setTimeout(() => { el.classList.remove("show"); setTimeout(() => el.remove(), 350); }, 3600);
   } catch { /* ignore */ }
 }
 
@@ -1110,7 +1106,7 @@ function armConfirm(id, confirmLabel, action) {
 export function openOrientation(onDone) {
   state.inDialog = true;
   const name = escapeHtml(state.playerName || "you");
-  const pages = [
+  const pages = orientationPagesV2(name) || [
     { t: "Welcome to the team", a: "\u{1F44B}",
       h: `<p style="margin:0 0 8px;">Morning, ${name}. Welcome to your first day in IT support. I'm your onboarding buddy \u2014 quick orientation, then you're on the floor.</p>
           <p style="margin:0;color:var(--text-muted);">This whole job is one loop: a problem comes in, you investigate, you find the real cause, you fix it. Do that well and you'll be ready for the CompTIA exams without even trying.</p>` },
@@ -1146,7 +1142,7 @@ export function openOrientation(onDone) {
   render();
 }
 
-function escapeHtml(s) {
+export function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
   }[c]));

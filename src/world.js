@@ -1,11 +1,15 @@
-// World data: the map, the rooms, the people, the things you can interact with.
+// World data: the maps, the rooms, the people, the things you can interact with.
 //
-// The game now has TWO playable floors, reached by an elevator:
+// v2 "Cutover Week" has FOUR maps (all 30x22 so the renderer's letterbox and
+// camera never change):
+//   home   = your Astoria apartment + the street + the subway entrance
+//   lobby  = the office building's ground floor: security desk, IT storeroom,
+//            the sidewalk, Byte Bodega (supplies), the coffee cart, The Stack (bar)
 //   floor3 = Help Desk (fundamentals)   floor7 = Security Operations (advanced)
 //
 // MAP / ROOMS / NPCS / PROPS / PLAYER_START / LOC_LABEL / FLOOR_ID are exported
 // as `let` and reassigned by setFloor(id). ES-module live bindings mean the
-// renderer and engine see the swap automatically \u2014 no per-floor branching.
+// renderer and engine see the swap automatically — no per-map branching.
 
 export const TILE = 32;
 export const MAP_W = 30;
@@ -14,7 +18,10 @@ export const MAP_H = 22;
 // Tile codes:
 //   W wall   . office floor   o open-plan carpet   e cool/exam floor
 //   D desk (solid)   c chair (walkable)   S server rack (solid)
-// The map is built programmatically so every row is guaranteed uniform width.
+//   v2:  f wood floor   k kitchen tile   s sidewalk   m lobby marble   t bar floor
+//        R road (solid)  K counter (solid)  H shelf (solid)  B bed foot (solid)
+//        C couch (solid) P planter (solid)
+// Maps are built programmatically so every row is guaranteed uniform width.
 function blank() {
   const m = [];
   for (let y = 0; y < MAP_H; y++) {
@@ -29,7 +36,7 @@ function carve(m, x0, y0, w, h, tile) {
     for (let x = x0; x < x0 + w; x++)
       if (x > 0 && y > 0 && x < MAP_W - 1 && y < MAP_H - 1) m[y][x] = tile;
 }
-function door(m, x, y) { if (m[y] && m[y][x] !== undefined) m[y][x] = "."; }
+function door(m, x, y, t = ".") { if (m[y] && m[y][x] !== undefined) m[y][x] = t; }
 function stamp(m, x, y, tile) { if (m[y] && m[y][x] !== undefined) m[y][x] = tile; }
 
 // Shared office skeleton. Both floors share the proven, fully-reachable layout;
@@ -57,7 +64,7 @@ function buildOfficeMap() {
   door(m, 3, 7);  door(m, 4, 7);    door(m, 12, 7); door(m, 13, 7);  door(m, 24, 7);  door(m, 25, 7);
   door(m, 3, 14); door(m, 4, 14);   door(m, 11, 14); door(m, 12, 14); door(m, 24, 14); door(m, 25, 14);
 
-  // Furniture (solid: D, S \u00b7 walkable: c)
+  // Furniture (solid: D, S · walkable: c)
   stamp(m, 2, 2, "D"); stamp(m, 3, 2, "D"); stamp(m, 2, 4, "c");
   for (let x = 9; x <= 15; x++) stamp(m, x, 2, "D");
   stamp(m, 9, 4, "c"); stamp(m, 15, 4, "c");
@@ -82,10 +89,66 @@ function coolifyFloor(rows) {
   );
 }
 
+// ---- v2: home (Astoria apartment + street) --------------------------------
+function buildHomeMap() {
+  const m = blank();
+  carve(m, 1, 1, 9, 8, "f");      // bedroom      x1-9   y1-8
+  carve(m, 11, 1, 10, 8, "f");    // living room  x11-20 y1-8
+  carve(m, 22, 1, 7, 8, "k");     // kitchen      x22-28 y1-8
+  door(m, 10, 4, "f"); door(m, 10, 5, "f");
+  door(m, 21, 4, "f"); door(m, 21, 5, "f");
+  door(m, 15, 9, "f"); door(m, 16, 9, "f");   // front door -> stoop
+  carve(m, 1, 10, 28, 8, "s");    // sidewalk     y10-17
+  carve(m, 1, 18, 28, 3, "R");    // 31st St      y18-20 (solid)
+  // bedroom: bed (prop at 3,2 + foot tile), dresser
+  stamp(m, 3, 3, "B"); stamp(m, 7, 1, "H"); stamp(m, 8, 1, "H");
+  // living room: laptop desk + couch
+  stamp(m, 13, 1, "D"); stamp(m, 14, 1, "D");
+  for (let x = 16; x <= 19; x++) stamp(m, x, 6, "C");
+  // kitchen counters
+  for (let x = 22; x <= 28; x++) stamp(m, x, 1, "K");
+  stamp(m, 28, 2, "K"); stamp(m, 28, 3, "K");
+  // street planters
+  stamp(m, 4, 16, "P"); stamp(m, 11, 16, "P"); stamp(m, 20, 16, "P"); stamp(m, 27, 16, "P");
+  return m.map((row) => row.join(""));
+}
+
+// ---- v2: lobby (ground floor + the block) ----------------------------------
+function buildLobbyMap() {
+  const m = blank();
+  carve(m, 1, 1, 16, 8, "m");     // building lobby  x1-16  y1-8
+  carve(m, 18, 1, 11, 8, ".");    // IT storeroom    x18-28 y1-8
+  door(m, 17, 4, "."); door(m, 17, 5, ".");
+  door(m, 8, 9, "m"); door(m, 9, 9, "m");      // revolving doors -> sidewalk
+  carve(m, 1, 10, 28, 3, "s");    // sidewalk        y10-12
+  carve(m, 1, 14, 9, 7, ".");     // Byte Bodega     x1-9   y14-20
+  carve(m, 11, 14, 6, 7, "s");    // plaza           x11-16 y14-20
+  carve(m, 18, 14, 11, 7, "t");   // The Stack (bar) x18-28 y14-20
+  door(m, 5, 13, "."); door(m, 13, 13, "s"); door(m, 14, 13, "s"); door(m, 23, 13, "t");
+  // lobby security desk (Lou stands at 8,4)
+  stamp(m, 6, 4, "K"); stamp(m, 7, 4, "K"); stamp(m, 9, 4, "K"); stamp(m, 10, 4, "K");
+  stamp(m, 13, 7, "P"); stamp(m, 3, 7, "P");
+  // storeroom shelving
+  for (let x = 19; x <= 25; x++) stamp(m, x, 1, "H");
+  stamp(m, 28, 5, "H"); stamp(m, 28, 6, "H");
+  // bodega counter (Ray at 4,15) + shelves
+  stamp(m, 2, 15, "K"); stamp(m, 3, 15, "K"); stamp(m, 5, 15, "K"); stamp(m, 6, 15, "K");
+  for (let x = 2; x <= 8; x++) stamp(m, x, 19, "H");
+  stamp(m, 8, 16, "H"); stamp(m, 8, 17, "H");
+  // bar counter (Nico at 23,15)
+  for (let x = 19; x <= 27; x++) if (x !== 23) stamp(m, x, 15, "K");
+  stamp(m, 20, 18, "D"); stamp(m, 25, 18, "D");
+  // plaza planters
+  stamp(m, 11, 19, "P"); stamp(m, 16, 19, "P");
+  return m.map((row) => row.join(""));
+}
+
 const OFFICE = buildOfficeMap();
 const SOC = coolifyFloor(OFFICE);
+const HOME = buildHomeMap();
+const LOBBYMAP = buildLobbyMap();
 
-const BLOCKING = new Set(["W", "D", "S"]);
+const BLOCKING = new Set(["W", "D", "S", "R", "K", "H", "B", "C", "P"]);
 
 export const PLAYER_SPRITE = { body:"#2E6FB0", body2:"#1B4E84", accent:"#FCDE5A", hair:"#2C2C2A", skin:"#C9926B" };
 
@@ -201,19 +264,200 @@ const PROPS7 = [
   { id: "osint-repo", x: 26, y: 18, label: "the OSINT terminal", room: "Red-team lab", kind: "device", device: "terminal", walkable: true, sideQuest: "secretInRepo" }
 ];
 
-// ---- floor registry + live-binding switch ---------------------------------
-export const FLOOR_ORDER = ["floor3", "floor7"];
+
+// ---- v2 cast on Floor 3 (ids stay stable; display names live in `name`) ----
+// Chain of command: Director Chen (IT Director) -> Tasha (Help Desk Lead,
+// your boss, the kit-giver) -> YOU (Tier 1 tech) -> Kai (IT intern).
+// Beside you: Benny (Service Desk Coordinator, the lifeline), Gloria (Service
+// Desk Manager, runs the ticket audit), Harold (Change Manager, runs the bridge).
+NPCS3.push(
+  { id: "tasha", name: "Tasha", role: "Help Desk Lead · your boss", x: 1, y: 4, facing: "right", cast: true,
+    sprite: { body:"#6C3FA0", body2:"#4A2A70", accent:"#FCDE5A", hair:"#1a1a18", skin:"#8A5A3A", glasses:true },
+    chat: ["If it isn't in the ticket, it didn't happen.","Verify the human, then fix the thing.","You're doing great. Drink some water."] },
+  { id: "kai", name: "Kai", role: "IT intern", x: 5, y: 6, cast: true,
+    sprite: { body:"#EF9F27", body2:"#BA7517", accent:"#FFF3D6", hair:"#412402", skin:"#E0B080" },
+    chat: ["I labeled the labels. Is that too far?","Tasha says I'm allowed to watch you image a laptop.","Is it normal that the printer knows my name?"] },
+  { id: "benny", name: "Benny", role: "Service Desk Coordinator", x: 24, y: 4, cast: true,
+    sprite: { body:"#1D7FA8", body2:"#135A78", accent:"#D6F2FF", hair:"#6B4A2A", skin:"#D8B088" },
+    chat: ["I route the queue. Call me if you're stuck; that's literally my job.","Priority is impact times urgency. Everything else is vibes.","Three calls a week. Use 'em when it counts."] },
+  { id: "gloria", name: "Gloria", role: "Service Desk Manager · ticket QA", x: 21, y: 12, cast: true,
+    sprite: { body:"#A33A5A", body2:"#72283F", accent:"#F7D6E0", hair:"#888780", skin:"#C9926B", glasses:true },
+    chat: ["I read every closed ticket. Every. One.","A ticket with no notes is a mystery novel with the last page torn out.","Honesty I can work with. Surprises I can't."] },
+  { id: "harold", name: "Harold", role: "Change Manager · runs the bridge", x: 15, y: 19, cast: true,
+    sprite: { body:"#44505C", body2:"#2E3740", accent:"#FFFFFF", hair:"#C8C4B4", skin:"#E0B080", glasses:true },
+    chat: ["No change without a backout plan. Not on my bridge.","Go/no-go is a question, not a formality.","Hypercare means we stay close until the business says it's boring."] }
+);
+// Director Chen keeps his id and his "change" ticket; he's the IT Director now.
+{ const c = NPCS3.find((n) => n.id === "chen"); if (c) { c.name = "Director Chen"; c.role = "IT Director"; } }
+// Sign-off owners: Ed runs Accounting, Karen runs Reception, Riley runs Ops.
+{ const e = NPCS3.find((n) => n.id === "ed"); if (e) e.role = "Accounting lead"; }
+{ const r = NPCS3.find((n) => n.id === "riley"); if (r) r.role = "Office / Ops manager"; }
+
+// Before their ticket shows up, people don't talk like it's already fixed.
+const PRECHAT = {
+  priya: ["New laptop tomorrow, right? Please tell me my shortcuts come with it."],
+  jordan: ["I have 74 tabs open and I refuse to explain myself."],
+  riley: ["Ops is ready for the swap. Mostly. Emotionally."],
+  chen: ["Welcome aboard. Tasha says you listen. That's the whole job, honestly."],
+  karen: ["Front desk. If a stranger asks for the server room, I send them to you."],
+  marcus: ["Wi-Fi's been fine. I'm knocking on my desk as I say that."],
+  dana: ["The printer and I have an understanding."]
+};
+for (const [id, lines] of Object.entries(PRECHAT)) {
+  const n = NPCS3.find((x) => x.id === id); if (n) n.preChat = lines;
+}
+
+PROPS3.push(
+  { id: "workpc", x: 3, y: 2, label: "your work PC", room: "IT room", kind: "workpc" },
+  { id: "kiboard", x: 1, y: 1, label: "the known-issues whiteboard", room: "IT room", kind: "kiboard" },
+  { id: "backup", x: 3, y: 16, label: "the backup console", room: "Server closet", kind: "backup" },
+  // D1 inventory walk: asset-tag every machine in Reception + Accounting
+  { id: "tag-r1", x: 10, y: 2, label: "Reception PC #1", room: "Reception", kind: "assettag", serial: "5CG31872QX", user: "front desk (shared)" },
+  { id: "tag-r2", x: 14, y: 2, label: "Karen's PC", room: "Reception", kind: "assettag", serial: "5CG31872RB", user: "Karen" },
+  { id: "tag-a1", x: 19, y: 16, label: "Ed's PC", room: "Accounting", kind: "assettag", serial: "5CG29904KM", user: "Ed" },
+  { id: "tag-a2", x: 26, y: 16, label: "Lisa's PC", room: "Accounting", kind: "assettag", serial: "5CG29904LA", user: "Lisa" },
+  { id: "tag-a3", x: 19, y: 19, label: "AP clerk PC", room: "Accounting", kind: "assettag", serial: "5CG29904LZ", user: "Brenda" },
+  { id: "tag-a4", x: 26, y: 19, label: "Payroll PC", room: "Accounting", kind: "assettag", serial: "5CG29904MC", user: "Luis" },
+  // D2 swap station on the conference table
+  { id: "st-bench", x: 10, y: 17, label: "the imaging bench", room: "Conf. room", kind: "station", station: "bench" },
+  { id: "st-xfer", x: 12, y: 17, label: "the data-transfer station", room: "Conf. room", kind: "station", station: "xfer" },
+  { id: "st-wait", x: 7, y: 16, label: "the waiting area", room: "Conf. room", kind: "station", station: "wait" },
+  // "Maintenance in progress" notices: posted on D1 with the user notice, pulled on D3
+  { id: "sign-r", x: 18, y: 1, label: "a maintenance notice", room: "Reception", kind: "notice", needFlag: "noticeSent", hideFlag: "pulled_sign-r", walkable: true },
+  { id: "sign-a", x: 22, y: 15, label: "a maintenance notice", room: "Accounting", kind: "notice", needFlag: "noticeSent", hideFlag: "pulled_sign-a", walkable: true },
+  { id: "sign-o", x: 7, y: 8, label: "a maintenance notice", room: "Open desks 2", kind: "notice", needFlag: "noticeSent", hideFlag: "pulled_sign-o", walkable: true }
+);
+
+// Spots the visitor systems use on Floor 3 (validated as walkable).
+export const F3_SPOTS = {
+  arrive: { x: 5, y: 2 },            // step out of the elevator
+  swapQueue: [ { x: 8, y: 19 }, { x: 10, y: 19 }, { x: 12, y: 19 }, { x: 14, y: 18 } ],
+  vendorPost: { x: 3, y: 18 },
+  hideouts: [
+    { x: 2, y: 12, where: "the print room" }, { x: 8, y: 20, where: "the conference room" },
+    { x: 27, y: 6, where: "the open desks" }, { x: 27, y: 8, where: "outside Director Chen's office" },
+    { x: 10, y: 13, where: "open desks 2" }, { x: 18, y: 20, where: "Accounting" },
+    { x: 16, y: 5, where: "Reception" }
+  ],
+  violations: [
+    { id: "v-screen", x: 12, y: 9, label: "an unlocked, unattended screen", fix: "Lock it (Win+L) and remind the owner" , desk: true },
+    { id: "v-sticky", x: 15, y: 9, label: "a password on a sticky note", fix: "Pull the note, get the user into the password manager", desk: true },
+    { id: "v-door", x: 6, y: 17, label: "the server closet door, propped open", fix: "Kick the wedge, let it latch, report it", walkable: true },
+    { id: "v-print", x: 2, y: 9, label: "a payroll printout left on the printer desk", fix: "Collect it and drop it in the locked shred bin", desk: true }
+  ],
+  ewaste: [
+    { id: "ew1", x: 11, y: 5, label: "old Reception laptop" }, { id: "ew2", x: 17, y: 3, label: "old front-desk laptop" },
+    { id: "ew3", x: 21, y: 17, label: "old laptop (Ed's)" }, { id: "ew4", x: 24, y: 20, label: "old laptop (Brenda's)" },
+    { id: "ew5", x: 27, y: 17, label: "old laptop (Lisa's)" }, { id: "ew6", x: 23, y: 16, label: "old laptop (Luis's)" },
+    { id: "ew7", x: 1, y: 17, label: "a pulled server drive" }, { id: "ew8", x: 5, y: 20, label: "a pulled server drive" }
+  ]
+};
+
+// ---- HOME: rooms / people / props ----------------------------------------
+const ROOMSH = [
+  { name: "Bedroom", x: 1, y: 1, w: 9, h: 8 },
+  { name: "Living room", x: 11, y: 1, w: 10, h: 8 },
+  { name: "Kitchen", x: 22, y: 1, w: 7, h: 8 },
+  { name: "31st St · Astoria", x: 1, y: 10, w: 28, h: 8 }
+];
+const NPCSH = [
+  { id: "ahmed", name: "Ahmed", role: "Bodega coffee · 31st St", x: 8, y: 12, coffee: true,
+    sprite: { body:"#3B7A57", body2:"#255038", accent:"#FFFFFF", hair:"#1a1a18", skin:"#A8744E" },
+    chat: ["Regular? Milk, two sugars. I remember everybody.","You look like you fix computers. My register beeps. Forever."] }
+];
+const PROPSH = [
+  { id: "bed", x: 3, y: 2, label: "your bed", room: "Bedroom", kind: "bed" },
+  { id: "laptop", x: 13, y: 1, label: "your laptop", room: "Living room", kind: "laptop" },
+  { id: "subway-h", x: 25, y: 13, label: "the 36 Av station (N/W)", room: "31st St", kind: "subway", to: "lobby" },
+  { id: "cart-h", x: 7, y: 12, label: "Ahmed's coffee cart", room: "31st St", kind: "decor", art: "cart" }
+];
+
+// ---- LOBBY: rooms / people / props ---------------------------------------
+const ROOMSL = [
+  { name: "Lobby", x: 1, y: 1, w: 16, h: 8 },
+  { name: "IT storeroom", x: 18, y: 1, w: 11, h: 8 },
+  { name: "W 49th St", x: 1, y: 10, w: 28, h: 3 },
+  { name: "Byte Bodega", x: 1, y: 14, w: 9, h: 7 },
+  { name: "The Stack", x: 18, y: 14, w: 11, h: 7 }
+];
+const NPCSL = [
+  { id: "lou", name: "Lou", role: "Building security", x: 8, y: 4, cast: true,
+    sprite: { body:"#2C3E50", body2:"#1B2631", accent:"#F1C40F", hair:"#888780", skin:"#8A5A3A", hat:"#2C3E50" },
+    chat: ["Badge in, badge out. Every time. Even you.","Nobody goes upstairs without a badge or an escort.","I've seen every trick. The pizza box one is my favorite."] },
+  { id: "mo", name: "Mo", role: "IT storeroom · assets", x: 23, y: 4, cast: true,
+    sprite: { body:"#7A4E2D", body2:"#55361F", accent:"#FFD9A0", hair:"#2C2C2A", skin:"#C9926B" },
+    chat: ["If it has a serial number, it has a line in my book.","Loaners come back. That's what 'loan' means.","The cage is locked for a reason. The reason is me."] },
+  { id: "ray", name: "Ray", role: "Byte Bodega", x: 4, y: 15, cast: true, shop: true,
+    sprite: { body:"#C0392B", body2:"#8E261B", accent:"#FFFFFF", hair:"#1a1a18", skin:"#D8B088" },
+    chat: ["Cables, dongles, snacks, and a cat named Router.","You IT people always need one more adapter.","Receipt? Just ask. I print 'em all day."] },
+  { id: "lupe", name: "Lupe", role: "Coffee cart · W 49th", x: 4, y: 11, coffee: true,
+    sprite: { body:"#D4537E", body2:"#993556", accent:"#FFF3D6", hair:"#412402", skin:"#C9926B" },
+    chat: ["Cold brew hits different at 7 AM.","Your whole floor drinks oat milk now. I don't ask."] },
+  { id: "nico", name: "Nico", role: "Bartender · The Stack", x: 23, y: 15, cast: true,
+    sprite: { body:"#1f1f1d", body2:"#0d0d0c", accent:"#E8B923", hair:"#6B4A2A", skin:"#E0B080" },
+    chat: ["Private event tonight. IT? You're in.","The WiFi password here is on the chalkboard, and yes, that's on purpose."] },
+  // happy-hour crowd (appears when the party opens on Day 3)
+  { id: "p-tasha", name: "Tasha", role: "Help Desk Lead", x: 21, y: 17, needFlag: "partyOpen", party: true,
+    sprite: { body:"#6C3FA0", body2:"#4A2A70", accent:"#FCDE5A", hair:"#1a1a18", skin:"#8A5A3A", glasses:true },
+    chat: ["To the new kid! Who is not a kid. Who is great."] },
+  { id: "p-benny", name: "Benny", role: "Service Desk Coordinator", x: 22, y: 19, needFlag: "partyOpen", party: true,
+    sprite: { body:"#1D7FA8", body2:"#135A78", accent:"#D6F2FF", hair:"#6B4A2A", skin:"#D8B088" },
+    chat: ["Zero P1s this week. I'm framing the dashboard."] },
+  { id: "p-kai", name: "Kai", role: "IT intern", x: 26, y: 17, needFlag: "partyOpen", party: true,
+    sprite: { body:"#EF9F27", body2:"#BA7517", accent:"#FFF3D6", hair:"#412402", skin:"#E0B080" },
+    chat: ["I imaged six laptops and I've never felt more alive."] },
+  { id: "p-chen", name: "Director Chen", role: "IT Director", x: 27, y: 19, needFlag: "partyOpen", party: true,
+    sprite: { body:"#378ADD", body2:"#185FA5", accent:"#F1EFE8", hair:"#2C2C2A", skin:"#B08050", glasses:true },
+    chat: ["First round's on the department. Second round's on the budget I don't have."] },
+  { id: "p-gloria", name: "Gloria", role: "Service Desk Manager", x: 19, y: 20, needFlag: "partyOpen", party: true,
+    sprite: { body:"#A33A5A", body2:"#72283F", accent:"#F7D6E0", hair:"#888780", skin:"#C9926B", glasses:true },
+    chat: ["I read your tickets. I'm not crying, the bar's just dusty."] },
+  { id: "p-harold", name: "Harold", role: "Change Manager", x: 24, y: 20, needFlag: "partyOpen", party: true,
+    sprite: { body:"#44505C", body2:"#2E3740", accent:"#FFFFFF", hair:"#C8C4B4", skin:"#E0B080", glasses:true },
+    chat: ["Change successful. Hypercare closed. I may even smile."] }
+];
+const PROPSL = [
+  { id: "elevator-l", x: 2, y: 1, label: "the elevator", room: "Lobby", kind: "elevator" },
+  { id: "subway-l", x: 14, y: 11, label: "the 49 St station (N/R/W)", room: "W 49th St", kind: "subway", to: "home" },
+  { id: "cage", x: 27, y: 2, label: "the e-waste cage", room: "IT storeroom", kind: "cage" },
+  { id: "cart-l", x: 3, y: 11, label: "Lupe's coffee cart", room: "W 49th St", kind: "decor", art: "cart" },
+  { id: "loaner", x: 20, y: 7, label: "the loaner cart", room: "IT storeroom", kind: "decor", art: "loaner", hideFlag: "cartOut" },
+  { id: "bar-door", x: 23, y: 13, label: "The Stack's door", room: "W 49th St", kind: "bardoor", hideFlag: "partyOpen" },
+  { id: "bb-shelf", x: 7, y: 19, label: "the cable wall", room: "Byte Bodega", kind: "decor", art: "shelf" }
+];
+export const LOBBY_SPOTS = {
+  arrive: { x: 2, y: 2 },
+  street: { x: 13, y: 11 },
+  recycler: { x: 26, y: 7 },
+  socEntry: { x: 8, y: 11 }
+};
+
+// ---- map registry + live-binding switch -----------------------------------
+// FLOOR_ORDER is what the elevator offers (home is reached by subway only).
+export const FLOOR_ORDER = ["lobby", "floor3", "floor7"];
 export const FLOOR_META = {
-  floor3: { id: "floor3", name: "Floor 3", short: "F3", label: "IT SUPPORT \u00b7 FLOOR 3",
-            tag: "Help Desk", blurb: "Fundamentals: A+ and Network+ triage.", locked: false },
-  floor7: { id: "floor7", name: "Floor 7", short: "F7", label: "SECURITY OPS \u00b7 FLOOR 7",
+  home:   { id: "home", name: "Home", short: "HM", label: "HOME · ASTORIA, QUEENS",
+            tag: "Your apartment", blurb: "Bed, laptop, coffee. The subway's on the corner.", locked: false },
+  lobby:  { id: "lobby", name: "Lobby", short: "L", label: "GROUND FLOOR · W 49TH ST",
+            tag: "Lobby · storeroom · the block", blurb: "Security desk, IT storeroom, Byte Bodega, The Stack.", locked: false },
+  floor3: { id: "floor3", name: "Floor 3", short: "F3", label: "IT SUPPORT · FLOOR 3",
+            tag: "Help Desk", blurb: "Your desk, the queue, Accounting and Reception.", locked: false },
+  floor7: { id: "floor7", name: "Floor 7", short: "F7", label: "SECURITY OPS · FLOOR 7",
             tag: "Security Operations", blurb: "Advanced: Security+, PenTest+, Network+.", locked: true }
 };
 
 const FLOORS = {
-  floor3: { map: OFFICE, rooms: ROOMS3, npcs: NPCS3, props: PROPS3, start: { x: 2, y: 5, dir: "down" }, label: FLOOR_META.floor3.label },
-  floor7: { map: SOC,    rooms: ROOMS7, npcs: NPCS7, props: PROPS7, start: { x: 2, y: 5, dir: "down" }, label: FLOOR_META.floor7.label }
+  home:   { map: HOME,     rooms: ROOMSH, npcs: NPCSH, props: PROPSH, start: { x: 4, y: 2, dir: "left" }, label: FLOOR_META.home.label,
+            arrive: { subway: { x: 24, y: 13, dir: "left" } } },
+  lobby:  { map: LOBBYMAP, rooms: ROOMSL, npcs: NPCSL, props: PROPSL, start: { x: 2, y: 2, dir: "down" }, label: FLOOR_META.lobby.label,
+            arrive: { elevator: { x: 2, y: 2, dir: "down" }, subway: { x: 13, y: 11, dir: "right" } } },
+  floor3: { map: OFFICE, rooms: ROOMS3, npcs: NPCS3, props: PROPS3, start: { x: 2, y: 5, dir: "down" }, label: FLOOR_META.floor3.label,
+            arrive: { elevator: { x: 5, y: 2, dir: "down" } } },
+  floor7: { map: SOC,    rooms: ROOMS7, npcs: NPCS7, props: PROPS7, start: { x: 2, y: 5, dir: "down" }, label: FLOOR_META.floor7.label,
+            arrive: { elevator: { x: 5, y: 2, dir: "down" } } }
 };
+export const MAP_IDS = Object.keys(FLOORS);
+export function mapDef(id) { return FLOORS[id] || null; }
 
 // Live bindings reassigned by setFloor.
 export let MAP = FLOORS.floor3.map;
@@ -232,7 +476,29 @@ export function setFloor(id) {
   return FLOOR_ID;
 }
 
+// Where you land when you arrive by elevator / subway (falls back to start).
+export function arrivalFor(id, via) {
+  const f = FLOORS[id]; if (!f) return { x: 2, y: 5, dir: "down" };
+  return (f.arrive && f.arrive[via]) || f.start;
+}
+
 export function isWalkable(x, y) {
   if (x < 0 || y < 0 || x >= MAP_W || y >= MAP_H) return false;
   return !BLOCKING.has(MAP[y][x]);
+}
+// Same test against any map (visitors + validators).
+export function isWalkableOn(id, x, y) {
+  const f = FLOORS[id]; if (!f) return false;
+  if (x < 0 || y < 0 || x >= MAP_W || y >= MAP_H) return false;
+  return !BLOCKING.has(f.map[y][x]);
+}
+
+// v2: audit findings + e-waste devices are real props, hidden until their flag.
+for (const v of F3_SPOTS.violations) {
+  PROPS3.push({ id: v.id, x: v.x, y: v.y, label: v.label, fix: v.fix, room: "Floor 3", kind: "violation",
+    needFlag: "aud_" + v.id, hideFlag: "fixed_" + v.id, walkable: !!v.walkable });
+}
+for (const e of F3_SPOTS.ewaste) {
+  PROPS3.push({ id: e.id, x: e.x, y: e.y, label: e.label, room: "Floor 3", kind: "ewaste",
+    needFlag: "signoffsDone", hideFlag: "ew_" + e.id, walkable: true });
 }
