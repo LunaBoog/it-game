@@ -19,6 +19,7 @@ const MODULE_ORDER = [
   "storage.js",
   "core.js",
   "world.js",
+  "decor.js",
   "scenarios.js",
   "sideQuests.js",
   "collectables.js",

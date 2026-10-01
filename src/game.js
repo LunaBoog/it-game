@@ -644,7 +644,7 @@ export async function startGame() {
   try {
     Object.assign(window.__tq, { interact, nextUp, dayTick: (ms) => dayTick(ms, false), facedTarget, isModalOpen, finalScore, spawnWalkup, firePage });
     state._mapRows = () => mapDef(state.map).map;
-    state._occupied = (x, y) => !!(npcAt(x, y) || solidPropAt(x, y));
+    state._occupied = (x, y) => !isWalkable(x, y) || !!(npcAt(x, y) || solidPropAt(x, y));
     state._npcs = () => NPCS; state._props = () => PROPS;
   } catch { /* ignore */ }
 

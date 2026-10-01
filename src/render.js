@@ -6,8 +6,12 @@
 // list them in the manifest (game.js). Missing files fall back to procedural.
 
 import {
-  MAP, MAP_W, MAP_H, TILE, ROOMS, NPCS, PROPS, PLAYER_SPRITE
+  MAP, MAP_W, MAP_H, TILE, ROOMS, NPCS, PROPS, PLAYER_SPRITE, decorFor
 } from "./world.js";
+import {
+  paintWall, paintFloor, paintFloorShadows, paintDesk, paintCounter, paintChair, paintRack,
+  paintDecor, paintFixture, paintAnimated, paintRackLeds, bakeLight, FLOORISH
+} from "./decor.js";
 
 export const ASSETS = { tiles: {}, sprites: {}, props: {}, markers: {} };
 
@@ -212,21 +216,52 @@ function drawTileV2(c, x, y, code, px, py) {
   return false;
 }
 
+// pick the floor a solid tile stands on (for desks, racks, counters, chairs)
+function baseFloorFor(x, y) {
+  for (const [dx, dy] of [[0, 1], [-1, 0], [1, 0], [0, -1]]) {
+    const r = MAP[y + dy]; const ch = r && r[x + dx];
+    if (ch && FLOORISH.has(ch) && ch !== "c") return ch;
+  }
+  return ".";
+}
+function paintBase(c, x, y) {
+  const b = baseFloorFor(x, y);
+  if (!paintFloor(c, x, y, b)) drawTileProc(c, x, y, b);
+}
+
+let animCache = {};
 function getMapCanvas(name) {
   if (mapCanvasCache[name]) return mapCanvasCache[name];
   const oc = document.createElement("canvas");
   oc.width = MAP_W * TILE; oc.height = MAP_H * TILE;
   const c = oc.getContext("2d");
   c.imageSmoothingEnabled = false;
+  const rows = MAP;
+  const racks = [];
   for (let y = 0; y < MAP_H; y++) {
     for (let x = 0; x < MAP_W; x++) {
-      const code = MAP[y][x];
+      const code = rows[y][x];
       const img = ASSETS.tiles["tile_" + code];
-      if (img && img._ready) c.drawImage(img, x * TILE, y * TILE, TILE, TILE);
-      else drawTileProc(c, x, y, code);
+      if (img && img._ready) { c.drawImage(img, x * TILE, y * TILE, TILE, TILE); continue; }
+      if (code === "W") paintWall(c, x, y, rows, name);
+      else if (code === "D") { paintBase(c, x, y); paintDesk(c, x, y, rows, name); }
+      else if (code === "K") { paintBase(c, x, y); paintCounter(c, x, y, rows, name); }
+      else if (code === "S") { paintBase(c, x, y); paintRack(c, x, y, name); racks.push([x, y]); }
+      else if (code === "c") { paintBase(c, x, y); paintChair(c, x * TILE, y * TILE, rows[y - 1] && rows[y - 1][x] === "D"); }
+      else if (!paintFloor(c, x, y, code)) drawTileProc(c, x, y, code);
     }
   }
+  for (let y = 0; y < MAP_H; y++) for (let x = 0; x < MAP_W; x++) if (FLOORISH.has(rows[y][x])) paintFloorShadows(c, x, y, rows);
+  // decor: floor coverings, then chairs, then furniture/items/wall pieces top-to-bottom
+  const dec = decorFor(name);
+  const byKey = new Set(dec.map((d) => d.k + "@" + d.x + "," + d.y));
+  const at = (k, x, y) => (k === "D" ? !!(rows[y] && rows[y][x] === "D") : byKey.has(k + "@" + x + "," + y));
+  const rank = (d) => (["rug", "rugR", "mat"].includes(d.k) ? 0 : d.k.startsWith("chair") ? 1 : 2);
+  const sorted = dec.slice().sort((a, b) => rank(a) - rank(b) || a.y - b.y || a.x - b.x);
+  for (const d of sorted) { try { paintDecor(c, d, at, name); } catch { /* ignore */ } }
+  try { bakeLight(c, ROOMS, dec, name); } catch { /* ignore */ }
   mapCanvasCache[name] = oc;
+  animCache[name] = { racks, anim: dec.filter((d) => ["vwall", "wmap", "neon"].includes(d.k)) };
   return oc;
 }
 
@@ -342,12 +377,22 @@ function drawPrinter(ctx, px, py, tick, solved) {
   if (ASSETS.props.printer && ASSETS.props.printer._ready) {
     ctx.drawImage(ASSETS.props.printer, px, py, TILE, TILE); return;
   }
-  ctx.fillStyle = PAL.shadow; ctx.beginPath(); ctx.ellipse(px + TILE / 2, py + TILE - 4, 10, 3, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = PAL.printerBody; ctx.fillRect(px + 4, py + 8, TILE - 8, TILE - 14);
-  ctx.fillStyle = PAL.printerDark; ctx.fillRect(px + 7, py + 12, TILE - 14, 4);
-  ctx.fillStyle = "rgba(0,0,0,0.15)"; ctx.fillRect(px + 4, py + TILE - 7, TILE - 8, 1);
+  // v2.1: a proper office laser printer on a little stand
+  ctx.fillStyle = "rgba(0,0,0,0.25)"; ctx.fillRect(px + 4, py + TILE - 4, TILE - 8, 3);
+  ctx.fillStyle = "#5F5E5A"; ctx.fillRect(px + 6, py + 20, TILE - 12, 9);                    // stand
+  ctx.fillStyle = "#4A4A48"; ctx.fillRect(px + 8, py + 23, TILE - 16, 1); ctx.fillRect(px + 8, py + 26, TILE - 16, 1);
+  ctx.fillStyle = "#E3E6E9"; ctx.fillRect(px + 4, py + 6, TILE - 8, 15);                     // body
+  ctx.fillStyle = "#FFFFFF"; ctx.fillRect(px + 4, py + 6, TILE - 8, 2);
+  ctx.fillStyle = "#3A3A38"; ctx.fillRect(px + 7, py + 9, TILE - 18, 3);                      // output slot
+  ctx.fillStyle = "#FFFFFF"; ctx.fillRect(px + 9, py + 4, 10, 6);                             // a printed page
+  ctx.fillStyle = "#9AA0A6"; ctx.fillRect(px + 10, py + 5, 7, 1); ctx.fillRect(px + 10, py + 7, 5, 1);
+  ctx.fillStyle = "#0c1f14"; ctx.fillRect(px + TILE - 11, py + 9, 6, 4);                      // panel
+  ctx.fillStyle = "#63B370"; ctx.fillRect(px + TILE - 10, py + 10, 2, 1);
+  ctx.fillStyle = "#C9CED3"; ctx.fillRect(px + 6, py + 15, TILE - 12, 4);                     // paper tray
+  ctx.fillStyle = "#0f8fc0"; ctx.fillRect(px + 7, py + 16, 3, 2); ctx.fillStyle = "#c0158f"; ctx.fillRect(px + 11, py + 16, 3, 2);
+  ctx.fillStyle = "#e8c80f"; ctx.fillRect(px + 15, py + 16, 3, 2); ctx.fillStyle = "#1a1a18"; ctx.fillRect(px + 19, py + 16, 3, 2);
   if (!solved && Math.sin(tick / 12) > 0) {
-    ctx.fillStyle = PAL.inkBlink; ctx.fillRect(px + TILE - 9, py + 10, 2, 2);
+    ctx.fillStyle = PAL.inkBlink; ctx.fillRect(px + 7, py + 15, 4, 1);                        // cyan's running low
   }
 }
 
@@ -580,6 +625,14 @@ export function draw(ctx, state, facedTarget) {
   ctx.drawImage(getMapCanvas(state.map || "office"), 0, 0);
   ctx.restore();
 
+  // animated dressing: server LEDs, the SOC video wall, the threat map, neon
+  const an = animCache[state.map || "office"];
+  if (an) {
+    const tk = REDUCE_MOTION ? 0 : state.tick;
+    for (const [x, y] of an.racks) paintRackLeds(ctx, x * TILE - camX, y * TILE - camY, x, y, tk);
+    for (const d of an.anim) paintAnimated(ctx, d, d.x * TILE - camX, d.y * TILE - camY, tk);
+  }
+
   // props (under people)
   for (const p of PROPS) {
     if (state.propVisible ? !state.propVisible(p) : (p.needFlag && !state.flags.has(p.needFlag))) continue; // hidden until revealed
@@ -727,6 +780,8 @@ function drawPropV2(ctx, x, y, p, state) {
       ctx.fillStyle = "#C9A37A"; ctx.fillRect(x + 6, y + 11, 8, 8); ctx.fillRect(x + 16, y + 12, 9, 7);
       ctx.fillStyle = "#2C2C2A"; ctx.beginPath(); ctx.arc(x + 7, y + 27, 2.5, 0, 7); ctx.arc(x + 25, y + 27, 2.5, 0, 7); ctx.fill();
     }
+  } else if (k === "fixture") {
+    paintFixture(ctx, x, y, p.art, REDUCE_MOTION ? 0 : t);
   } else if (k === "bardoor") {
     ctx.fillStyle = "#2C1B10"; ctx.fillRect(x + 2, y, TILE - 4, TILE);
     ctx.fillStyle = "#1a1a18"; ctx.fillRect(x + 5, y + 3, TILE - 10, 12);
@@ -765,14 +820,16 @@ function seedFor(id) {
 function drawRoomLabels(ctx, camX, camY) {
   ctx.font = "bold 10px ui-sans-serif, system-ui, sans-serif";
   ctx.textAlign = "left";
+  // v2.1: room names live on the wall trim above each room, like door signs
+  ctx.font = "bold 8px ui-sans-serif, system-ui, sans-serif";
   for (const r of ROOMS) {
-    const sx = r.x * TILE - camX, sy = r.y * TILE - camY;
+    const sx = r.x * TILE - camX, sy = (r.y - 1) * TILE - camY;
     const label = r.name.toUpperCase();
     const w = ctx.measureText(label).width;
-    ctx.fillStyle = "rgba(0,0,0,0.5)";
-    roundRect(ctx, sx + 3, sy + 3, w + 9, 15, 3); ctx.fill();
-    ctx.fillStyle = "rgba(255,255,255,0.85)";
-    ctx.fillText(label, sx + 7, sy + 14);
+    ctx.fillStyle = "rgba(10,12,16,0.55)";
+    roundRect(ctx, sx + 2, sy + 0.5, w + 8, 9, 2); ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,0.9)";
+    ctx.fillText(label, sx + 6, sy + 8);
   }
 }
 
@@ -789,7 +846,7 @@ function roundRect(ctx, x, y, w, h, r) {
 function drawVignette(ctx, cw, ch) {
   const g = ctx.createRadialGradient(cw/2, ch/2, Math.min(cw,ch)*0.42, cw/2, ch/2, Math.max(cw,ch)*0.72);
   g.addColorStop(0, "rgba(0,0,0,0)");
-  g.addColorStop(1, "rgba(0,0,0,0.4)");
+  g.addColorStop(1, "rgba(0,0,0,0.2)");
   ctx.fillStyle = g; ctx.fillRect(0, 0, cw, ch);
 }
 

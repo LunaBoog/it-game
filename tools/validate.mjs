@@ -17,7 +17,11 @@ const { FINDS } = await import(join(root, "src", "collectables.js"));
 
 let fails = 0, checks = 0;
 const ok = (cond, msg) => { checks++; if (!cond) { fails++; console.log("FAIL", msg); } };
-const SOLID = new Set(["W", "D", "S", "R", "K", "H", "B", "C", "P"]);
+const SOLID_T = new Set(["W", "D", "S", "R", "K", "H", "B", "C", "P"]);
+// a tile is solid if its code is, or a solid decor piece sits on it
+let CUR = "floor3";
+const SOLID = { has: (ch, x, y) => SOLID_T.has(ch) };
+const solidAt = (id, x, y) => SOLID_T.has(W.mapDef(id).map[y][x]) || (W.decorSolidAt && W.decorSolidAt(id, x, y));
 
 // ---- maps -------------------------------------------------------------------
 const reach = {};
@@ -32,13 +36,13 @@ for (const id of W.MAP_IDS) {
   for (const p of m.props) if (!p.walkable && !p.hideFlag) block.add(p.x + "," + p.y);
   const starts = [m.start, ...Object.values(m.arrive || {})];
   const seen = new Set(); const q = [];
-  for (const s of starts) { ok(!SOLID.has(m.map[s.y][s.x]), `${id}: start/arrival ${s.x},${s.y} walkable`); q.push([s.x, s.y]); seen.add(s.x + "," + s.y); }
+  for (const s of starts) { ok(!solidAt(id, s.x, s.y), `${id}: start/arrival ${s.x},${s.y} walkable`); q.push([s.x, s.y]); seen.add(s.x + "," + s.y); }
   while (q.length) {
     const [x, y] = q.shift();
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
       const nx = x + dx, ny = y + dy, k = nx + "," + ny;
       if (nx < 0 || ny < 0 || nx >= W.MAP_W || ny >= W.MAP_H || seen.has(k)) continue;
-      if (SOLID.has(m.map[ny][nx]) || block.has(k)) continue;
+      if (solidAt(id, nx, ny) || block.has(k)) continue;
       seen.add(k); q.push([nx, ny]);
     }
   }
@@ -46,13 +50,21 @@ for (const id of W.MAP_IDS) {
   const adjReach = (x, y) => [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => seen.has((x + dx) + "," + (y + dy)));
   for (const n of m.npcs) {
     ok(n.x > 0 && n.y > 0 && n.x < W.MAP_W - 1 && n.y < W.MAP_H - 1, `${id}: npc ${n.id} in bounds`);
-    ok(!SOLID.has(m.map[n.y][n.x]), `${id}: npc ${n.id} not on a solid tile`);
+    ok(!solidAt(id, n.x, n.y), `${id}: npc ${n.id} not on a solid tile`);
     ok(adjReach(n.x, n.y), `${id}: npc ${n.id} has a reachable neighbor tile`);
   }
   for (const p of m.props) {
     ok(p.x >= 0 && p.y >= 0 && p.x < W.MAP_W && p.y < W.MAP_H, `${id}: prop ${p.id} in bounds`);
     if (p.walkable) ok(seen.has(p.x + "," + p.y) || adjReach(p.x, p.y), `${id}: walkable prop ${p.id} reachable`);
     else ok(adjReach(p.x, p.y), `${id}: prop ${p.id} has a reachable neighbor tile`);
+  }
+  // solid decor never shares a tile with an NPC or prop; decor sits on sensible tiles
+  for (const d of W.decorFor(id)) {
+    const ch = m.map[d.y][d.x];
+    if (d.wall) ok(ch === "W" && d.y + 1 < W.MAP_H && m.map[d.y + 1][d.x] !== "W", `${id}: wall decor ${d.k}@${d.x},${d.y} is on a visible wall face`);
+    else if (d.item) ok(["D", "K"].includes(ch), `${id}: desk item ${d.k}@${d.x},${d.y} sits on a desk/counter`);
+    else ok(!SOLID_T.has(ch), `${id}: floor decor ${d.k}@${d.x},${d.y} sits on floor`);
+    if (d.solid) ok(!m.npcs.some((n) => n.x === d.x && n.y === d.y) && !m.props.some((p) => p.x === d.x && p.y === d.y), `${id}: solid decor ${d.k}@${d.x},${d.y} doesn't cover an entity`);
   }
   // overlaps
   const at = {};
@@ -64,7 +76,7 @@ for (const id of W.MAP_IDS) {
 
 // ---- F3 spots used by the visitor systems -------------------------------------
 const f3 = W.mapDef("floor3"), r3 = reach.floor3;
-const walk3 = (s) => !SOLID.has(f3.map[s.y][s.x]);
+const walk3 = (s) => !solidAt("floor3", s.x, s.y);
 ok(walk3(W.F3_SPOTS.arrive) && r3.has(W.F3_SPOTS.arrive.x + "," + W.F3_SPOTS.arrive.y), "F3 arrive spot reachable");
 ok(walk3(W.F3_SPOTS.vendorPost) && r3.has(W.F3_SPOTS.vendorPost.x + "," + W.F3_SPOTS.vendorPost.y), "vendor post reachable");
 for (const h of W.F3_SPOTS.hideouts) ok(walk3(h) && r3.has(h.x + "," + h.y), `hideout ${h.x},${h.y} (${h.where}) reachable`);
@@ -72,7 +84,7 @@ for (const e of W.F3_SPOTS.ewaste) ok(walk3(e) && r3.has(e.x + "," + e.y), `e-wa
 for (const s of W.F3_SPOTS.swapQueue) ok(walk3(s), `swap queue spot ${s.x},${s.y} walkable`);
 for (const p of P.PAGES.filter((x) => x.go)) ok(walk3(p.spawn.spot) && r3.has(p.spawn.spot.x + "," + p.spawn.spot.y), `go-find ${p.id} spawn reachable`);
 const lob = W.mapDef("lobby");
-for (const [k, s] of Object.entries(W.LOBBY_SPOTS)) ok(!SOLID.has(lob.map[s.y][s.x]) && reach.lobby.has(s.x + "," + s.y), `lobby spot ${k} reachable`);
+for (const [k, s] of Object.entries(W.LOBBY_SPOTS)) ok(!solidAt("lobby", s.x, s.y) && reach.lobby.has(s.x + "," + s.y), `lobby spot ${k} reachable`);
 
 // ---- route + flag ids referenced by the day engine ----------------------------
 const days = readFileSync(join(root, "src", "days.js"), "utf8");

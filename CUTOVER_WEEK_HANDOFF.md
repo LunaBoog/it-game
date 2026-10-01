@@ -1,4 +1,4 @@
-# THE TICKET QUEUE: Complete Handoff (v2.0, "Cutover Week")
+# THE TICKET QUEUE: Complete Handoff (v2.1, "Cutover Week" + office dressing)
 
 **Written:** Sept 30, 2026 · **Built from:** `handoffs for games/ON_LOCATION_to_IT_GAME_Handoff.md` (ON LOCATION · NYC v7.3 → IT game)
 **Audience:** the next Claude (and Moon). Dense on purpose.
@@ -30,6 +30,7 @@ Netlify builds `npm run build` → `dist/` as before. `standalone.html` was rege
 | Version | Moon asked / decided | Claude picked (defaults, tune freely) |
 |---|---|---|
 | v2.0 | "Use this handoff to enhance this IT game into a new version." Build in `it-game-v2`; ON LOCATION at `~/Desktop/on-locations` for reference. | Premise **Cutover Week** (handoff default). Change = **laptop refresh for Accounting + Reception**. Player = **Tier 1 Help Desk Technician** (XP ladder titles stay as career rank). **Home + commute kept.** Coins/shop **separate** from in-fiction cash/card. Board **local-first**. Lifeline "**Ask Benny**" (the Coordinator), 3 per week, −50. Names invented, ids stable (§8). |
+| v2.1 | "Improve the look of the offices... walls, desks, plants, printer, watering hole, break room. Go hard on dressing the environment." | New `decor.js` painter; 3/4-view walls with windows; per-room floors; desk pods; a real **Break room** split from Open desks 2; usable fixtures; Floor 7 dressed as a SOC; brick street facades. Gameplay unchanged. |
 | v2.0 | Old saves? (handoff: ask; default bump + tolerant import) | **No prefix bump.** Added `saveVersion`. An older save keeps who you are (character, name, XP/rank, coins, cosmetics, achievements, theme, quiz bests) and starts a fresh Cutover Week run. v1 save files still import (then migrate on reload). |
 
 ---
@@ -259,3 +260,37 @@ npm run bot -- thorough        # or: tasks ; add --shots for screenshots
 5. Seeded **Daily Shift**: seed `rollDay()` from the date.
 6. Walk-ups currently spawn at the elevator; a swap-station queue that fills visibly would sell Day 2 even more.
 7. Break-room mini-game (tokens are still waiting for it).
+
+
+---
+
+## 12. v2.1 Office dressing (Oct 1, 2026)
+
+**What changed visually**
+- **Walls** are 3/4 view: a wall tile with floor below shows its face (dark cap, painted wall, baseboard), others show the top with trim. Exterior top walls are **windows** with a Midtown skyline (night skyline + lit windows on Floor 7). Walls over a sidewalk are **brick facades**. Floors get contact shadows at walls and door thresholds.
+- **Floors per room** (new walkable codes): `.` vinyl (IT, print), `f` oak (reception), `o` blue-gray carpet tiles (open desks), `k` checker (break room), `q` warm carpet (Director), `x` raised data-center floor (server closet, F7 closet + data center), `g` navy (conference / IR war room), `u` sage (accounting), `z` dark SOC carpet (F7 bullpen, pit, red-team lab).
+- **Desks** join into pods (seamless tops, modesty panels), with monitors/dual monitors, keyboards, mugs, sticky notes, papers, phones. Counters have a stone top and walnut front. Office/conference/break-room chairs face their desks. Server racks have blinking LEDs.
+- **Lighting:** baked ceiling-panel light pools per room + daylight falling from the windows. Vignette softened. Room names moved off the floor onto the wall trim (door-sign style).
+- **Printer** (printerInk side quest) redrawn as an office laser printer with toner colors; the low-cyan light still blinks.
+
+**Floor 3 layout changes** (all validated reachable)
+- **Break room** = east end of Open desks 2 (x15–18, y8–13), partition wall at x14 with a doorway at y10–11. Fridge, coffee machine, microwave, sink, round table + chairs, vending machine, **water cooler**.
+- Open desks 2 (now x7–13) and Open desks / Accounting / F7 red-team lab use **desk pods**. Riley moved to (10,10); `v-sticky` moved to (8,12).
+- Reception: front counter x10–14 (bell, phone, plant, two PCs), couch + rug waiting area, fish tank, door mats, NORTHWIND logo between windows.
+- Director's office (was "Manager"): long executive desk, patterned rug, bookshelves, plants, art.
+- Server closet: second rack row, CRAC unit, UPS. Print room: copier, paper boxes, shredder, supply shelf, corkboard.
+
+**Usable fixtures** (props `kind: "fixture"`, `art`): water cooler (rotating day-aware gossip; first visit unlocks the "off and on again" lingo, third visit +1 rep), coffee machine (free 60 s walk buff), vending machine (opens the coin cosmetics shop), fridge, microwave, fish tank (Ping and Pong), copier (a note on copier hard drives). All in `fixture()` in `flows.js`.
+
+**Floor 7**: SOC video wall (animated graphs) across the bullpen's top wall, animated threat-map pings in Threat intel, patch panels, rack rows, antenna + Faraday cage + spectrum analyzer in the Wireless lab, IR board, "HACK THE PLANET" neon (flickers), RGB keyboards, beanbags.
+
+**Code map additions**
+- `src/decor.js` (new, in `MODULE_ORDER` after `world.js`): `paintWall`, `paintFacade`, `paintFloor`, `paintFloorShadows`, `paintDesk`, `paintCounter`, `paintChair`, `paintRack`, `paintDecor` (~45 kinds), `paintFixture`, `paintAnimated`, `paintRackLeds`, `bakeLight`, `STYLE` palettes per map.
+- `world.js`: `buildFloor3()`, `buildFloor7()`, `refloor()`, the `DECOR` registry (`dz(map, kind, [[x,y]...], {solid|wall|item})`), `decorFor(id)`, `decorSolidAt(id,x,y)`. `isWalkable`/`isWalkableOn` respect solid decor.
+- `render.js`: map cache now bakes walls/floors/desks/decor/light; per-frame layer draws rack LEDs, video wall, threat map, neon, fixtures.
+- Decor flags: `wall` (on a visible wall face), `item` (on a desk/counter), `solid` (blocks). Non-solid floor decor: rugs, mats, chairs.
+- `tools/validate.mjs` now checks decor too: wall pieces sit on visible faces, items sit on desks/counters, floor decor on floor, solid decor never covers an NPC/prop, and reachability counts solid decor. **917/917** pass.
+
+**Adding dressing:** add a `dz(...)` line in `world.js`, give it a painter case in `paintDecor` if it's a new kind, run `npm run validate`.
+
+**Validation (v2.1):** module + bundle syntax ✅ · validator 917/917 ✅ · `bot tasks` full arc, 0 errors (4,640, C) · `bot thorough` full arc, 0 errors (14/14 tickets, 8/8 side quests) · fixture script: all 7 fixtures open, solid decor blocks movement ✅.

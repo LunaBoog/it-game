@@ -144,11 +144,150 @@ function buildLobbyMap() {
 }
 
 const OFFICE = buildOfficeMap();
-const SOC = coolifyFloor(OFFICE);
+
+// ---- v2.1 dressing: per-room floors + a real break room on Floor 3 ---------
+// Floor codes (all walkable): . vinyl  o blue-gray carpet  f wood  k break-room
+// checker  q warm office carpet  x raised data-center floor  g conference
+// carpet  u sage carpet  z dark SOC carpet  e cool tile.
+function refloor(m, x0, y0, w, h, tile) {
+  for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++)
+    if (m[y] && ".oe".includes(m[y][x])) m[y][x] = tile;
+}
+function buildFloor3() {
+  const m = OFFICE.map((r) => r.split(""));
+  refloor(m, 7, 1, 12, 6, "f");      // reception: wood
+  refloor(m, 20, 1, 8, 6, "o");      // open desks: carpet
+  refloor(m, 20, 8, 8, 6, "q");      // manager: warm carpet
+  refloor(m, 1, 15, 5, 6, "x");      // server closet: raised floor
+  refloor(m, 7, 15, 9, 6, "g");      // conference: navy carpet
+  refloor(m, 17, 15, 11, 6, "u");    // accounting: sage carpet
+  // the break room: split off the east end of Open desks 2
+  for (let y = 8; y <= 13; y++) m[y][14] = "W";
+  m[10][14] = "k"; m[11][14] = "k";
+  for (let y = 8; y <= 13; y++) for (let x = 15; x <= 18; x++) m[y][x] = "k";
+  // Open desks 2: two desk pods instead of scattered singles
+  for (const [x, y] of [[15, 9], [15, 12]]) m[y][x] = "k";
+  for (const [x, y] of [[8, 9], [9, 9], [11, 9], [12, 9], [8, 12], [9, 12], [11, 12], [12, 12]]) m[y][x] = "D";
+  // reception: a proper front counter, waiting chairs replaced by a couch (decor)
+  for (let x = 9; x <= 15; x++) m[2][x] = "f";
+  for (let x = 10; x <= 14; x++) m[2][x] = "K";
+  m[4][9] = "f"; m[4][15] = "f";
+  // open desks: pods of two
+  m[2][23] = "D"; m[2][25] = "D"; m[5][23] = "D";
+  // Chen's office: one long executive desk, no stray chair
+  m[9][23] = "D"; m[9][24] = "D"; m[12][25] = "q";
+  // accounting: pods of two
+  for (const [x, y] of [[20, 16], [25, 16], [20, 19], [25, 19]]) m[y][x] = "D";
+  // server closet: a second row of racks
+  m[20][2] = "S"; m[20][4] = "S";
+  return m.map((r) => r.join(""));
+}
+function buildFloor7() {
+  const m = OFFICE.map((r) => r.split(""));
+  const re = (x0, y0, w, h, t) => refloor(m, x0, y0, w, h, t);
+  re(1, 1, 5, 6, "e"); re(7, 1, 12, 6, "z"); re(20, 1, 8, 6, "e");
+  re(1, 8, 5, 6, "x"); re(7, 8, 12, 6, "z"); re(20, 8, 8, 6, "e");
+  re(1, 15, 5, 6, "x"); re(7, 15, 9, 6, "g"); re(17, 15, 11, 6, "z");
+  // network closet + data center: more racks
+  m[8][5] = "S"; m[12][1] = "S"; m[13][1] = "S";
+  for (const [x, y] of [[2, 17], [4, 17], [2, 20], [4, 20]]) m[y][x] = "S";
+  // SOC bullpen: the console row stays; analyst pit gets pods
+  for (const [x, y] of [[8, 9], [11, 9], [16, 9], [8, 12], [16, 12]]) m[y][x] = "D";
+  m[12][25] = "e";
+  // red-team lab: pods of two, like a real lab
+  for (const [x, y] of [[20, 16], [25, 16], [20, 19], [25, 19]]) m[y][x] = "D";
+  return m.map((r) => r.join(""));
+}
+const FLOOR3MAP = buildFloor3();
+const SOC = buildFloor7();
 const HOME = buildHomeMap();
 const LOBBYMAP = buildLobbyMap();
 
 const BLOCKING = new Set(["W", "D", "S", "R", "K", "H", "B", "C", "P"]);
+
+// ---- decor layer -------------------------------------------------------------
+// Non-interactive dressing, baked into the map cache. { x, y, k, solid?, wall?, item? }
+//   wall: drawn on a wall tile's visible face (windows, art, screens)
+//   item: drawn on top of a desk/counter (monitors, mugs, plants)
+//   solid: blocks movement (plants, cabinets, shelves, couches)
+const DECOR = { home: [], lobby: [], floor3: [], floor7: [] };
+function dz(map, k, list, opts = {}) { for (const [x, y] of list) DECOR[map].push({ x, y, k, ...opts }); }
+// Floor 3
+dz("floor3", "window", [[1, 0], [2, 0], [3, 0], [4, 0], [7, 0], [8, 0], [9, 0], [10, 0], [15, 0], [16, 0], [17, 0], [18, 0], [20, 0], [21, 0], [22, 0], [23, 0], [24, 0], [25, 0], [26, 0], [27, 0]], { wall: true });
+dz("floor3", "logo", [[12, 0]], { wall: true }); dz("floor3", "logo2", [[13, 0]], { wall: true });
+dz("floor3", "clock", [[11, 0], [5, 7], [21, 14]], { wall: true });
+dz("floor3", "cork", [[2, 7], [18, 14]], { wall: true });
+dz("floor3", "wbL", [[8, 7]], { wall: true }); dz("floor3", "wbR", [[9, 7]], { wall: true });
+dz("floor3", "art", [[10, 7], [21, 7], [26, 7], [23, 14]], { wall: true });
+dz("floor3", "poster", [[16, 7]], { wall: true }); dz("floor3", "menu", [[17, 7]], { wall: true });
+dz("floor3", "tvL", [[8, 14]], { wall: true }); dz("floor3", "tvR", [[9, 14]], { wall: true });
+dz("floor3", "wbL", [[13, 14]], { wall: true }); dz("floor3", "wbR", [[14, 14]], { wall: true });
+dz("floor3", "calendar", [[27, 14]], { wall: true }); dz("floor3", "exit", [[1, 14]], { wall: true });
+dz("floor3", "plant", [[7, 1], [7, 6], [20, 1], [27, 1], [1, 13], [7, 13], [13, 13], [20, 8], [27, 13], [15, 15], [7, 20], [17, 15], [22, 20]], { solid: true });
+dz("floor3", "couchL", [[8, 6]], { solid: true }); dz("floor3", "couchR", [[9, 6]], { solid: true });
+dz("floor3", "shelfParts", [[1, 6]], { solid: true });
+dz("floor3", "boxes", [[4, 1], [5, 8]], { solid: true });
+dz("floor3", "shred", [[5, 13]], { solid: true });
+dz("floor3", "shelfSupply", [[1, 11]], { solid: true });
+dz("floor3", "fcab", [[20, 6], [20, 13], [27, 15], [27, 20]], { solid: true });
+dz("floor3", "books", [[27, 10], [27, 11]], { solid: true });
+dz("floor3", "ups", [[5, 15]], { solid: true }); dz("floor3", "crac", [[1, 15]], { solid: true });
+dz("floor3", "sink", [[18, 8]], { solid: true });
+dz("floor3", "tableL", [[16, 12]], { solid: true }); dz("floor3", "tableR", [[17, 12]], { solid: true });
+dz("floor3", "chairB", [[16, 11], [17, 11], [16, 13], [17, 13]]);
+dz("floor3", "chairC", [[9, 16], [11, 16], [13, 16], [9, 18], [11, 18], [13, 18]]);
+dz("floor3", "chairO", [[8, 10], [11, 10], [12, 11], [8, 13], [11, 13], [22, 1], [26, 1], [22, 6], [26, 6], [19, 15], [26, 15], [19, 20], [26, 20], [3, 3], [23, 10]]);
+dz("floor3", "rug", [[21, 10], [22, 10], [23, 10], [24, 10], [25, 10], [21, 11], [22, 11], [23, 11], [24, 11], [25, 11]]);
+dz("floor3", "rugR", [[8, 4], [9, 4], [8, 5], [9, 5]]);
+dz("floor3", "mat", [[12, 6], [13, 6]]);
+dz("floor3", "mon2", [[2, 2], [8, 9], [12, 9], [9, 12], [11, 12], [22, 2], [26, 2], [22, 5], [26, 5], [19, 16], [26, 16], [19, 19], [26, 19]], { item: true });
+dz("floor3", "mon", [[10, 2], [14, 2], [9, 9], [11, 9], [8, 12], [12, 12], [23, 2], [25, 2], [23, 5], [20, 16], [25, 16], [20, 19], [25, 19], [24, 9]], { item: true });
+dz("floor3", "phone", [[11, 2]], { item: true }); dz("floor3", "bell", [[12, 2]], { item: true });
+dz("floor3", "plantS", [[13, 2], [22, 9]], { item: true });
+dz("floor3", "papers", [[23, 9], [2, 9], [25, 9]], { item: true });
+dz("floor3", "proj", [[11, 17]], { item: true }); dz("floor3", "notepad", [[9, 17], [13, 17]], { item: true });
+// Floor 7 (Security Operations)
+dz("floor7", "window", [[1, 0], [2, 0], [4, 0], [20, 0], [21, 0], [27, 0]], { wall: true });
+dz("floor7", "seclogo", [[3, 0]], { wall: true });
+dz("floor7", "vwall", [[7, 0], [8, 0], [9, 0], [10, 0], [11, 0], [12, 0], [13, 0], [14, 0], [15, 0], [16, 0], [17, 0], [18, 0]], { wall: true });
+dz("floor7", "wmap", [[22, 0], [23, 0], [24, 0], [25, 0], [26, 0]], { wall: true });
+dz("floor7", "patch", [[1, 7], [2, 7], [5, 7]], { wall: true });
+dz("floor7", "wbL", [[8, 14]], { wall: true }); dz("floor7", "wbR", [[9, 14]], { wall: true });
+dz("floor7", "ir", [[13, 14], [14, 14]], { wall: true });
+dz("floor7", "neon", [[18, 14], [19, 14], [20, 14]], { wall: true });
+dz("floor7", "clock", [[10, 7], [27, 7]], { wall: true });
+dz("floor7", "plant", [[1, 6], [7, 6], [18, 6], [7, 13], [18, 13], [20, 1], [15, 15]], { solid: true });
+dz("floor7", "antenna", [[27, 9]], { solid: true }); dz("floor7", "faraday", [[27, 12]], { solid: true });
+dz("floor7", "spectrum", [[20, 13]], { solid: true });
+dz("floor7", "crac", [[1, 15]], { solid: true }); dz("floor7", "ups", [[5, 15]], { solid: true });
+dz("floor7", "beanbag", [[27, 20], [22, 20]], { solid: true });
+dz("floor7", "wbL", [[21, 14]], { wall: true }); dz("floor7", "wbR", [[22, 14]], { wall: true });
+dz("floor7", "art", [[26, 14]], { wall: true }); dz("floor7", "patch", [[27, 14]], { wall: true });
+dz("floor7", "rgbkb", [[20, 16], [25, 19]], { item: true }); dz("floor7", "mon2", [[25, 16], [20, 19]], { item: true });
+dz("floor7", "boxes", [[17, 20]], { solid: true }); dz("floor7", "plant", [[27, 17]], { solid: true }); dz("floor7", "fcab", [[20, 6]], { solid: true });
+dz("floor7", "chairO", [[9, 3], [11, 3], [13, 3], [15, 3], [8, 10], [11, 10], [16, 10], [22, 1], [26, 1], [19, 15], [26, 15], [19, 20], [26, 20]]);
+dz("floor7", "chairC", [[9, 16], [11, 16], [13, 16], [9, 18], [11, 18], [13, 18]]);
+dz("floor7", "mon2", [[9, 2], [10, 2], [11, 2], [12, 2], [13, 2], [14, 2], [15, 2], [8, 9], [9, 9], [11, 9], [12, 9], [15, 9], [16, 9], [22, 2], [26, 2], [19, 16], [26, 16]], { item: true });
+dz("floor7", "rgbkb", [[19, 19], [26, 19], [8, 12], [9, 12], [15, 12], [16, 12]], { item: true });
+dz("floor7", "mon", [[2, 2], [22, 5], [26, 5], [22, 9], [25, 9]], { item: true });
+dz("floor7", "papers", [[3, 2], [2, 9], [10, 17], [12, 17]], { item: true });
+// Lobby
+dz("lobby", "window", [[1, 0], [3, 0], [4, 0], [5, 0], [6, 0], [10, 0], [11, 0], [12, 0], [13, 0], [14, 0], [15, 0], [16, 0]], { wall: true });
+dz("lobby", "directory", [[7, 0]], { wall: true }); dz("lobby", "logo", [[8, 0]], { wall: true }); dz("lobby", "logo2", [[9, 0]], { wall: true });
+dz("lobby", "couchL", [[13, 2]], { solid: true }); dz("lobby", "couchR", [[14, 2]], { solid: true });
+dz("lobby", "plant", [[16, 1], [12, 2], [1, 8]], { solid: true });
+dz("lobby", "mon", [[7, 4]], { item: true }); dz("lobby", "phone", [[9, 4]], { item: true });
+dz("home", "window", [[2, 0], [3, 0], [5, 0], [6, 0], [12, 0], [17, 0], [18, 0], [19, 0], [24, 0], [25, 0]], { wall: true });
+dz("home", "art", [[11, 0]], { wall: true }); dz("home", "clock", [[26, 0]], { wall: true });
+dz("home", "rug", [[16, 3], [17, 3], [18, 3], [19, 3], [16, 4], [17, 4], [18, 4], [19, 4]]);
+dz("home", "plant", [[20, 1], [9, 8]], { solid: true });
+dz("home", "books", [[11, 8]], { solid: true });
+dz("home", "chairO", [[13, 2]]);
+
+const DSOLID = {};
+for (const [id, list] of Object.entries(DECOR)) DSOLID[id] = new Set(list.filter((d) => d.solid).map((d) => d.x + "," + d.y));
+export function decorFor(id) { return DECOR[id] || []; }
+export function decorSolidAt(id, x, y) { return !!(DSOLID[id] && DSOLID[id].has(x + "," + y)); }
 
 export const PLAYER_SPRITE = { body:"#2E6FB0", body2:"#1B4E84", accent:"#FCDE5A", hair:"#2C2C2A", skin:"#C9926B" };
 
@@ -158,8 +297,9 @@ const ROOMS3 = [
   { name: "Reception",     x: 7,  y: 1,  w: 12, h: 6 },
   { name: "Open desks",    x: 20, y: 1,  w: 8,  h: 6 },
   { name: "Print room",    x: 1,  y: 8,  w: 5,  h: 6 },
-  { name: "Open desks 2",  x: 7,  y: 8,  w: 12, h: 6 },
-  { name: "Manager",       x: 20, y: 8,  w: 8,  h: 6 },
+  { name: "Open desks 2",  x: 7,  y: 8,  w: 7,  h: 6 },
+  { name: "Break room",    x: 15, y: 8,  w: 4,  h: 6 },
+  { name: "Director",      x: 20, y: 8,  w: 8,  h: 6 },
   { name: "Server closet", x: 1,  y: 15, w: 5,  h: 6 },
   { name: "Conf. room",    x: 7,  y: 15, w: 9,  h: 6 },
   { name: "Accounting",    x: 17, y: 15, w: 11, h: 6 }
@@ -181,7 +321,7 @@ const NPCS3 = [
   { id: "jordan", name: "Jordan", role: "Open desks 2", x: 12, y: 10, ticket: "slow",
     sprite: { body:"#0F6E56", body2:"#085041", accent:"#85B7EB", hair:"#412402", skin:"#8A5A3A" },
     chat: ["I close my tabs now. Mostly.","Wasn't the wifi. Got it.","Task Manager is my friend. Reluctantly."] },
-  { id: "riley", name: "Riley", role: "Open desks 2", x: 15, y: 11, ticket: "permissions",
+  { id: "riley", name: "Riley", role: "Open desks 2", x: 10, y: 10, ticket: "permissions",
     sprite: { body:"#D85A30", body2:"#993C1D", accent:"#FCDE5A", hair:"#BA7517", skin:"#E0B080" },
     chat: ["Color access went through, thanks.","Operations finally got added to the group. Took a week.","If Sam can do it and I can't, it's me, not the printer."] },
   { id: "chen", name: "Mgr Chen", role: "Manager", x: 24, y: 12, ticket: "change",
@@ -328,6 +468,17 @@ PROPS3.push(
   { id: "sign-o", x: 7, y: 8, label: "a maintenance notice", room: "Open desks 2", kind: "notice", needFlag: "noticeSent", hideFlag: "pulled_sign-o", walkable: true }
 );
 
+// v2.1 fixtures: furniture you can actually use (drawn by the decor painter).
+PROPS3.push(
+  { id: "fx-fridge", x: 15, y: 8, label: "the break-room fridge", room: "Break room", kind: "fixture", art: "fridge" },
+  { id: "fx-coffee", x: 16, y: 8, label: "the coffee machine", room: "Break room", kind: "fixture", art: "coffee" },
+  { id: "fx-micro", x: 17, y: 8, label: "the microwave", room: "Break room", kind: "fixture", art: "micro" },
+  { id: "fx-vending", x: 18, y: 13, label: "the vending machine", room: "Break room", kind: "fixture", art: "vending" },
+  { id: "fx-cooler", x: 15, y: 13, label: "the water cooler", room: "Break room", kind: "fixture", art: "cooler" },
+  { id: "fx-tank", x: 16, y: 1, label: "the reception fish tank", room: "Reception", kind: "fixture", art: "aquarium" },
+  { id: "fx-copier", x: 1, y: 9, label: "the big copier", room: "Print room", kind: "fixture", art: "copier" }
+);
+
 // Spots the visitor systems use on Floor 3 (validated as walkable).
 export const F3_SPOTS = {
   arrive: { x: 5, y: 2 },            // step out of the elevator
@@ -341,7 +492,7 @@ export const F3_SPOTS = {
   ],
   violations: [
     { id: "v-screen", x: 12, y: 9, label: "an unlocked, unattended screen", fix: "Lock it (Win+L) and remind the owner" , desk: true },
-    { id: "v-sticky", x: 15, y: 9, label: "a password on a sticky note", fix: "Pull the note, get the user into the password manager", desk: true },
+    { id: "v-sticky", x: 8, y: 12, label: "a password on a sticky note", fix: "Pull the note, get the user into the password manager", desk: true },
     { id: "v-door", x: 6, y: 17, label: "the server closet door, propped open", fix: "Kick the wedge, let it latch, report it", walkable: true },
     { id: "v-print", x: 2, y: 9, label: "a payroll printout left on the printer desk", fix: "Collect it and drop it in the locked shred bin", desk: true }
   ],
@@ -451,7 +602,7 @@ const FLOORS = {
             arrive: { subway: { x: 24, y: 13, dir: "left" } } },
   lobby:  { map: LOBBYMAP, rooms: ROOMSL, npcs: NPCSL, props: PROPSL, start: { x: 2, y: 2, dir: "down" }, label: FLOOR_META.lobby.label,
             arrive: { elevator: { x: 2, y: 2, dir: "down" }, subway: { x: 13, y: 11, dir: "right" } } },
-  floor3: { map: OFFICE, rooms: ROOMS3, npcs: NPCS3, props: PROPS3, start: { x: 2, y: 5, dir: "down" }, label: FLOOR_META.floor3.label,
+  floor3: { map: FLOOR3MAP, rooms: ROOMS3, npcs: NPCS3, props: PROPS3, start: { x: 2, y: 5, dir: "down" }, label: FLOOR_META.floor3.label,
             arrive: { elevator: { x: 5, y: 2, dir: "down" } } },
   floor7: { map: SOC,    rooms: ROOMS7, npcs: NPCS7, props: PROPS7, start: { x: 2, y: 5, dir: "down" }, label: FLOOR_META.floor7.label,
             arrive: { elevator: { x: 5, y: 2, dir: "down" } } }
@@ -484,13 +635,13 @@ export function arrivalFor(id, via) {
 
 export function isWalkable(x, y) {
   if (x < 0 || y < 0 || x >= MAP_W || y >= MAP_H) return false;
-  return !BLOCKING.has(MAP[y][x]);
+  return !BLOCKING.has(MAP[y][x]) && !decorSolidAt(FLOOR_ID, x, y);
 }
 // Same test against any map (visitors + validators).
 export function isWalkableOn(id, x, y) {
   const f = FLOORS[id]; if (!f) return false;
   if (x < 0 || y < 0 || x >= MAP_W || y >= MAP_H) return false;
-  return !BLOCKING.has(f.map[y][x]);
+  return !BLOCKING.has(f.map[y][x]) && !decorSolidAt(id, x, y);
 }
 
 // v2: audit findings + e-waste devices are real props, hidden until their flag.

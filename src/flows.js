@@ -6,7 +6,7 @@
 import { CORE, DD, ddSave, curDay, esc, shuffleArr, addNote, addRep, bump, recordAnswer, notesFor, dayName, DAY_SHORT } from "./core.js";
 import { SUPPLY_LIST, SUPPLY, DISTRACT, KNOWN_ISSUES, RESOLVER_GROUPS } from "./pools.js";
 import { mapDef, F3_SPOTS, LOBBY_SPOTS } from "./world.js";
-import { panel, pAdd, pBtn, pClear, closePanel } from "./ui.js";
+import { panel, pAdd, pBtn, pClear, closePanel, openShop } from "./ui.js";
 import { award, ping, blip, hearLingo, chatPost } from "./comms.js";
 import { openAudit, docStats, spentOn, hasCard } from "./ledger.js";
 import { tasksFor, dayTasksDone, currentTask, SIGNOFFS, judgment } from "./days.js";
@@ -119,6 +119,7 @@ export function propTask(p) {
         pBtn("Close", closePanel, "act ghost"); return true;
       }
       return false;
+    case "fixture": fixture(p); return true;
     case "workpc": workPc(); return true;
     case "kiboard": knownBoard(); return true;
     case "backup": backupConsole(); return true;
@@ -137,6 +138,60 @@ export function propTask(p) {
     }
   }
   return false;
+}
+
+// ============================ the break room ==================================
+// The watering hole: overheard office gossip that tracks the week.
+const GOSSIP = {
+  1: ["“New laptops tomorrow. Brenda's already named hers.”", "“Harold made a Gantt chart for his Gantt charts.”",
+      "“If you see Gloria smiling, a ticket somewhere has perfect notes.”", "“Have you tried turning it off and on again? Kidding. Mostly.”",
+      "“Lou caught a guy with a pizza box trying to tailgate last month. Pineapple, too.”"],
+  2: ["“Harold hasn't blinked since eight.”", "“Someone said the CFO wants hers first. Of course she does.”",
+      "“There's an auditor on the floor with a clipboard the size of a door.”", "“If a guy from 'the ISP' asks for the network closet, he's not from the ISP.”",
+      "“The coffee machine is the only thing on this floor nobody's migrating.”"],
+  3: ["“Gloria's been reading tickets since six this morning.”", "“Happy hour at The Stack tonight. First round's on Chen!”",
+      "“The old laptops are going to the shredder. All of them. Even the one with the stickers.”", "“I heard SOC Week is next. Floor 7 people are weird. Cool, but weird.”"]
+};
+function fixture(p) {
+  const d = DD(), day = Math.min(curDay(), 3);
+  const close = () => pBtn("Close", closePanel, "act ghost");
+  switch (p.art) {
+    case "cooler": {
+      panel("The water cooler", "Break room · the watering hole", "\u{1F4A7}");
+      d.gossip = (d.gossip || 0) + 1; ddSave();
+      const lines = GOSSIP[day];
+      pAdd(`<p style="margin:0 0 6px;">You fill a paper cone. Somebody nearby is mid-story:</p><p><i>${lines[(d.gossip - 1) % lines.length]}</i></p>`);
+      if (d.gossip === 1) hearLingo("offon");
+      if (d.gossip === 3) { addRep(1); pAdd(`<div class="banner ok">You're a water-cooler regular now. People tell regulars things. <b>(+1 rep)</b></div>`); }
+      close(); return;
+    }
+    case "coffee": {
+      panel("Coffee machine", "Break room · free, as long as you refill the beans", "☕");
+      const ready = Date.now() > (d.buffUntil || 0);
+      pAdd(`<p style="margin:0 0 6px;">${ready ? "It grinds, it gurgles, it judges you a little. Office coffee: free, hot, and fine." : "You're still buzzing from the last cup."}</p>
+        <div class="set-hint">Company coffee is a perk, not a purchase: no receipt needed. ☕ Walk faster for a minute.</div>`);
+      if (ready) pBtn("☕ Pour a cup", () => { d.buffUntil = Date.now() + 60000; ddSave(); closePanel(); ping("☕", "Caffeinated", "You walk faster for 60 seconds."); });
+      close(); return;
+    }
+    case "vending": openShop(); return;
+    case "fridge":
+      panel("The fridge", "Break room", "\u{1F9CA}");
+      pAdd(`<p style="margin:0 0 6px;">A sticky note on the door: <b>“THIS IS GARY'S YOGURT. I KNOW WHO YOU ARE.”</b></p><p class="set-hint">Inside: eleven oat milks, someone's birthday cake from last year, and a single heroic lime.</p>`);
+      close(); return;
+    case "micro":
+      panel("The microwave", "Break room", "\u{1F525}");
+      pAdd(`<p style="margin:0 0 6px;">A laminated sign: <i>“NO FISH. We have talked about this. — Facilities”</i></p><p class="set-hint">Its clock is still on daylight saving time from two years ago. Not your ticket.</p>`);
+      close(); return;
+    case "aquarium":
+      panel("The fish tank", "Reception", "\u{1F420}");
+      pAdd(`<p style="margin:0 0 6px;">Two fish: an orange one Karen calls <b>Ping</b> and a yellow one she calls <b>Pong</b>. There's a tiny plastic server rack at the bottom.</p><p class="set-hint">The filter's label says IT installed it in 2019. You decide not to ask.</p>`);
+      close(); return;
+    case "copier":
+      panel("The big copier", "Print room", "\u{1F5A8}️");
+      pAdd(`<p style="margin:0 0 6px;">The multifunction monster. It prints, scans, faxes (why), and keeps an internal hard drive of everything it has ever copied.</p>
+        <div class="banner fact">Many office copiers store images of scanned pages on an internal drive. When one is retired, that drive gets sanitized like any laptop's.</div>`);
+      close(); return;
+  }
 }
 
 // ================================ DAY 1 ======================================
