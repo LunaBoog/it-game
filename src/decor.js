@@ -17,6 +17,7 @@ const FLOORISH = new Set([".", "o", "e", "f", "k", "s", "m", "t", "q", "x", "g",
 // per-map palettes
 const STYLE = {
   floor3: { cap: "#3E434B", capHi: "#555B64", paint: "#E4DED3", paintSh: "#D3CCBF", base: "#8F8578", desk: "#E9E4DA", deskEdge: "#C9C1B2", deskFront: "#A99F8F", wood: "#B88A5B" },
+  floor5: { cap: "#2B333D", capHi: "#3F4955", paint: "#C7D2DC", paintSh: "#B5C1CC", base: "#5E6B78", desk: "#DCE3E8", deskEdge: "#B8C3CC", deskFront: "#8E9BA6", wood: "#8C6A48" },
   floor7: { cap: "#1E232C", capHi: "#2E3542", paint: "#343C4B", paintSh: "#2B3240", base: "#151920", desk: "#4A5262", deskEdge: "#3A4150", deskFront: "#262B35", wood: "#5A4A3A" },
   lobby:  { cap: "#4A4038", capHi: "#5E5248", paint: "#D9CBB4", paintSh: "#C8B99F", base: "#6E5A44", desk: "#E9E4DA", deskEdge: "#C9C1B2", deskFront: "#A99F8F", wood: "#9C6B3E" },
   home:   { cap: "#4E4640", capHi: "#625850", paint: "#E8DCC6", paintSh: "#D9CBB1", base: "#7A6248", desk: "#C49A6C", deskEdge: "#A97F55", deskFront: "#8A6440", wood: "#B88A5B" }

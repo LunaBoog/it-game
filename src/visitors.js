@@ -12,7 +12,7 @@ const VIS_STEP_MS = 230;
 
 export function visAll() {
   const out = [];
-  for (const id of ["home", "lobby", "floor3", "floor7"]) {
+  for (const id of ["home", "lobby", "floor3", "floor5", "floor7"]) {
     const m = mapDef(id); if (!m) continue;
     for (const n of m.npcs) if (n._vis) out.push(n);
   }
@@ -107,9 +107,8 @@ export function visUpdate(dtMs) {
     const v = n._vis; if (!v) continue;
     if (v.moving) {
       v.t += dtMs / VIS_STEP_MS;
-      if (v.t >= 1) { v.t = 1; v.moving = false; }
-      n.rx = (v.fx + (n.x - v.fx) * v.t) * TILE; n.ry = (v.fy + (n.y - v.fy) * v.t) * TILE;
-      continue;
+      if (v.t < 1) { n.rx = (v.fx + (n.x - v.fx) * v.t) * TILE; n.ry = (v.fy + (n.y - v.fy) * v.t) * TILE; continue; }
+      v.t = 1; v.moving = false;   // fall through: pick the next step this same frame (no dead frame)
     }
     n.rx = n.x * TILE; n.ry = n.y * TILE;
     if (!v.target) continue;

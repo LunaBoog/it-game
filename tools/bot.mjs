@@ -30,7 +30,11 @@ for (const f of readdirSync(join(root, "src")).filter((x) => x.endsWith(".js")))
   const src = readFileSync(join(root, "src", f), "utf8");
   for (const m of src.matchAll(/\[\s*"((?:[^"\\]|\\.)*)",\s*2[,\]]/g)) best.add(decode(m[1]));
   for (const m of src.matchAll(/t: "((?:[^"\\]|\\.)*)", real: true/g)) real.add(decode(m[1]));
+  if (f === "training.js") for (const m of src.matchAll(/\[\s*"((?:[^"\\]|\\.)*)",\s*1\]/g)) best.add(decode(m[1]));
+  if (f === "net.js") for (const m of src.matchAll(/(?:karen|ed|riley): \["((?:[^"\\]|\\.)*)"/g)) best.add(decode(m[1]));
 }
+const order = [];
+{ const soc = readFileSync(join(root, "src", "soc.js"), "utf8"); const m = soc.match(/socOrder\(\[([\s\S]*?)\]/); for (const x of m[1].matchAll(/"((?:[^"\\]|\\.)*)"/g)) order.push(decode(x[1])); }
 const scen = await import(join(root, "src", "scenarios.js"));
 const pools = await import(join(root, "src", "pools.js"));
 const quiz = await import(join(root, "src", "quiz.js"));
@@ -52,7 +56,7 @@ await page.reload();
 await page.waitForFunction(() => window.__tq && window.__tq.interact, null, { timeout: 10000 });
 await page.waitForTimeout(400);
 
-const K = { best: [...best], real: [...real], correctDx, kiGroup, quizBest: [...quizBest], sqBest: [...sqBest], mode: MODE };
+const K = { best: [...best], real: [...real], correctDx, kiGroup, quizBest: [...quizBest], sqBest: [...sqBest], mode: MODE, order };
 await page.evaluate((k) => { window.__K = k; }, K);
 
 let shot = 0;
@@ -157,6 +161,12 @@ async function solvePanel() {
       const send = btns.filter((b) => b.classList.contains("primary-btn") && !b.classList.contains("tick")).pop();
       return send ? click(send) : "ticks";
     }
+    // tabletop: click the steps in order
+    if (body.querySelector(".order-out")) {
+      const done = body.querySelectorAll(".order-out li").length;
+      const b = [...body.querySelectorAll(".dx-btn.opt")].filter(vis).find((o) => o.textContent.trim() === K.order[done]);
+      if (b) return click(b);
+    }
     // single judgment (walk-ups, pages, soceng, vendor, task questions)
     const opts = [...body.querySelectorAll(".dx-btn.opt")].filter(vis).filter((b) => !b.classList.contains("tick"));
     if (opts.length) {
@@ -179,7 +189,7 @@ async function solvePanel() {
     const floors = [...body.querySelectorAll(".floor-btn[data-floor]")].filter(vis);
     if (floors.length) {
       const nu = window.__tq.nextUp(); const sub = (nu && nu.sub) || "";
-      let want = /Lobby/.test(sub) ? "lobby" : /Floor 7/.test(sub) ? "floor7" : "floor3";
+      let want = /Lobby/.test(sub) ? "lobby" : /Floor 7/.test(sub) ? "floor7" : /Floor 5/.test(sub) ? "floor5" : "floor3";
       if (window.__botWantFloor) { want = window.__botWantFloor; window.__botWantFloor = null; }
       const b = floors.find((f) => f.dataset.floor === want) || floors[0];
       return click(b);
@@ -202,10 +212,10 @@ async function run() {
   // title -> START
   await page.keyboard.press("Enter");
   await page.waitForTimeout(200);
-  let last = "", same = 0, steps = 0, sideDone = false, reloaded = false;
+  let last = "", same = 0, steps = 0, sideDone = {}, reloaded = {};
   const seenShots = new Set();
   const log = [];
-  while (steps++ < 4000) {
+  while (steps++ < 14000) {
     if (errors.length) break;
     const st = await page.evaluate(() => {
       const S = window.__tq.S;
@@ -216,8 +226,8 @@ async function run() {
     });
     if (st.submitted) break;
     // reload test: mid clock-day, reload the page and CONTINUE from the title
-    if (process.env.RELOAD && !reloaded && st.day === 2 && !st.panel && !st.overlay && await page.evaluate(() => window.__tq.S.dd.windowOpen && window.__tq.S.dd.clockT > 120)) {
-      reloaded = true;
+    if (process.env.RELOAD && !reloaded[st.day] && [2, 5, 8].includes(st.day) && !st.panel && !st.overlay && await page.evaluate(() => window.__tq.S.dd.windowOpen && window.__tq.S.dd.clockT > 120)) {
+      reloaded[st.day] = true;
       const before = await page.evaluate(() => ({ t: Math.round(window.__tq.S.dd.clockT), vis: window.__tq.S._npcs().filter((n) => n._vis).length }));
       await page.reload();
       await page.waitForFunction(() => window.__tq && window.__tq.interact, null, { timeout: 10000 });
@@ -226,13 +236,18 @@ async function run() {
       await page.waitForTimeout(300);
       await page.keyboard.press("Enter"); await page.waitForTimeout(300);
       const after = await page.evaluate(() => ({ t: Math.round(window.__tq.S.dd.clockT), started: window.__tq.S.started, map: window.__tq.S.map, vendor: !!window.__tq.S._npcs().find((n) => n.id === "vendor") }));
-      console.log("RELOAD before " + JSON.stringify(before) + " after " + JSON.stringify(after));
+      console.log("RELOAD D" + st.day + " before " + JSON.stringify(before) + " after " + JSON.stringify(after));
       continue;
     }
     if (st.credits) { await page.keyboard.press("Enter"); await page.waitForTimeout(300); continue; }
     if (st.arcade) {
       if (st.arcadeInput) { await page.waitForTimeout(2800); await snap("arcade"); await page.keyboard.type("BOT"); await page.keyboard.press("Enter"); await page.waitForTimeout(300); }
-      else await page.waitForTimeout(500);
+      else {
+        await page.waitForTimeout(2600);
+        if (await page.evaluate(() => !!document.querySelector("#arcade #ar-back"))) await snap("weekreport-" + st.day);
+        const clicked = await page.evaluate(() => { const b = document.querySelector("#arcade #ar-back"); if (b) { b.click(); return true; } return false; });
+        if (clicked) log.push(`D${st.day} week report closed`);
+      }
       continue;
     }
     if (st.overlay) { await page.waitForTimeout(400); continue; }
@@ -241,8 +256,8 @@ async function run() {
       if (!seenShots.has(key) && !st.panel) { seenShots.add(key); await page.waitForTimeout(150); await snap(key); }
       if (st.panel) {
         const t = await page.evaluate(() => document.getElementById("modal-title").textContent);
-        const k2 = "panel-" + t.replace(/[^A-Za-z0-9]+/g, "_").slice(0, 30);
-        if (!seenShots.has(k2) && seenShots.size < 70) { seenShots.add(k2); await page.waitForTimeout(80); await snap(k2); }
+        const k2 = "panel-D" + st.day + "-" + t.replace(/[^A-Za-z0-9]+/g, "_").slice(0, 30);
+        if (!seenShots.has(k2) && seenShots.size < 400) { seenShots.add(k2); await page.waitForTimeout(80); await snap(k2); }
       }
     }
     if (st.panel) {
@@ -252,8 +267,9 @@ async function run() {
       continue;
     }
     // thorough side content, done once on Day 1 afternoon / Day 3
-    if (MODE === "thorough" && !sideDone && st.day === 3 && st.map === "floor3") {
-      sideDone = true; await doSideContent(); continue;
+    const SIDE = { 3: ["floor7", "floor3"], 6: ["floor5", "floor3"], 9: ["floor3", "floor7"] };
+    if (MODE === "thorough" && SIDE[st.day] && !sideDone[st.day] && st.map === SIDE[st.day][1]) {
+      sideDone[st.day] = true; await doSideContent(SIDE[st.day]); continue;
     }
     // follow NEXT UP
     const nu = st.nu;
@@ -278,8 +294,8 @@ async function run() {
 }
 
 // thorough: solve every open ticket on F3 (and F7), side quests, the cat
-async function doSideContent() {
-  for (const floor of ["floor3", "floor7"]) {
+async function doSideContent(floors) {
+  for (const floor of floors) {
     await page.evaluate((f) => { const S = window.__tq.S; if (S.map !== f) S.goToFloor(f, "elevator"); }, floor);
     const targets = await page.evaluate(() => {
       const S = window.__tq.S, out = [];
@@ -309,7 +325,7 @@ async function doSideContent() {
     if (r === "q") await solvePanel();
     await page.waitForTimeout(20);
   }
-  await page.evaluate(() => { const S = window.__tq.S; S.goToFloor("floor3", "elevator"); });
+  await page.evaluate((f) => { const S = window.__tq.S; S.goToFloor(f, "elevator"); }, floors[floors.length - 1]);
 }
 
 const log = await run();
@@ -317,10 +333,12 @@ await snap("end");
 const result = await page.evaluate(() => {
   const S = window.__tq.S;
   const hs = JSON.parse(localStorage.getItem("itgame_hiscores") || "[]");
-  const F = window.__tq.finalScore();
+  const F = window.__tq.careerScore();
+  F.rows = F.rows.concat([["TOTAL", F.grade, F.total]]);
+  for (const w of [1, 2, 3]) { const W = S.dd.weeks[w]; if (W) F.rows = F.rows.concat([["--- week " + w, W.grade, W.total]], W.rows); }
   const unsolved = Object.keys(window.__tq.S.solved ? {} : {});
   return { rows: F.rows.map((r) => r.join(" | ")), openTickets: [...document.querySelectorAll("x")].length, unsolvedSq: S._allSq ? S._allSq() : null, solvedList: [...S.solved], sqList: [...S.sqSolved], day: S.day, hs: hs[0], rep: S.dd.rep, docs: S.dd.docs.length, undoc: S.dd.docs.filter((d) => !d.documented).length,
-    badges: S.dd.badges, st: S.dd.st, finds: S.finds.size, solved: S.solved.size, caged: S.dd.caged.length };
+    badges: S.dd.badges, st: S.dd.st, finds: S.finds.size, solved: S.solved.size, quiz: S.dd.quiz };
 });
 console.log(log.slice(-40).join("\n"));
 console.log((result.rows || []).join("\n")); delete result.rows;

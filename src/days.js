@@ -9,7 +9,7 @@
 // Days change ONLY by going home, sending the EOD email, reading Tasha's
 // Marching Orders, setting the alarm and sleeping.
 
-import { CORE, DD, ddSave, curDay, esc, shuffleArr, addNote, addRep, bump, recordAnswer } from "./core.js";
+import { CORE, DD, ddSave, curDay, esc, shuffleArr, addNote, addRep, bump, recordAnswer, LAST_DAY, isClockDay, isWeekEnd, dayIn, weekOf, WEEKS } from "./core.js";
 import { ISSUES, PAGES, PERSONAS, SUPPLY_LIST } from "./pools.js";
 import { SCENARIOS } from "./scenarios.js";
 import { mapDef, FLOOR_META, F3_SPOTS, LOBBY_SPOTS, isWalkableOn } from "./world.js";
@@ -19,6 +19,10 @@ import { recordWork, docPrompt, openBodega, buyCoffee } from "./ledger.js";
 import { visAdd, visLeave, visAll, visFind, visUpdate } from "./visitors.js";
 import { npcTask, propTask, stepOn, restoreFlows } from "./flows.js";
 import { clockTick, clockRestore, clockPending, clockNextUp, clockNpc, clockProp, windowLeft } from "./clock.js";
+import { W2_TASKS, netNpc, netProp } from "./net.js";
+import { W3_TASKS, socNpc, socProp } from "./soc.js";
+import { taughtChip } from "./training.js";
+
 
 const S_ = () => CORE.S;
 const F = (f) => CORE.S.hasFlag(f);
@@ -26,8 +30,12 @@ const F = (f) => CORE.S.hasFlag(f);
 // ---- tickets by day -------------------------------------------------------
 export function ticketOpen(id) {
   const s = SCENARIOS[id]; if (!s) return false;
-  if ((s.floor || "floor3") === "floor7") return true;          // the floor lock gates F7
-  return (s.day || 1) <= Math.min(curDay(), 3);
+  const fl = s.floor || "floor3", day = curDay();
+  // Floor 7 opens in SOC Week; during Cutover Week only the live phish (the
+  // mid-cutover security interrupt) needs Help Desk eyes.
+  if (fl === "floor7") return day >= 7 ? (s.day || 7) <= day : id === "phish-ir" && F("f7Unlocked");
+  if (fl === "floor5") return day >= 4 && (s.day || 4) <= day;
+  return (s.day || 1) <= Math.min(day, 3);
 }
 export function afterTicketSolved(id, firstTry, host) {
   const S = S_(), s = SCENARIOS[id];
@@ -68,6 +76,8 @@ export const DAY_TASKS = {
       route: () => R("lobby", "lou", "Get your badge photo from Lou", "Security desk, lobby") },
     { id: "d1_kit", label: "Get your kit from Tasha (laptop, MFA, admin account, company card)", done: () => F("kit"),
       route: () => R("floor3", "tasha", "Get your kit from Tasha", "IT room, Floor 3") },
+    { id: "d1_train", label: "Day One training with Tasha + the quiz", done: () => F("trained_1"),
+      route: () => R("floor3", "tasha", "Day One training with Tasha", "Her slides, then a quiz. IT room") },
     { id: "d1_shadow", label: "Shadow Tasha on the queue: take Karen's ticket", done: () => S_().solved.has("monitor"),
       route: () => R("floor3", "karen", "Take Karen's ticket (Tasha's watching)", "Reception") },
     { id: "d1_supply", label: "Supply run on the company card, then drop it with Kai", done: () => F("suppliesDelivered"),
@@ -154,7 +164,7 @@ export const DAY_TASKS = {
   ]
 };
 
-export function tasksFor(day) { return DAY_TASKS[day] || []; }
+export function tasksFor(day) { return DAY_TASKS[day] || W2_TASKS[day] || W3_TASKS[day] || []; }
 export function currentTask() { return tasksFor(curDay()).find((t) => !t.done()) || null; }
 export function dayTasksDone(day = curDay()) { return tasksFor(day).every((t) => t.done()); }
 export function taskCount(day = curDay()) { const t = tasksFor(day); return { done: t.filter((x) => x.done()).length, total: t.length }; }
@@ -164,7 +174,7 @@ function findEnt(mapId, id) {
   const m = mapDef(mapId); if (!m || !id) return null;
   return m.npcs.find((n) => n.id === id) || m.props.find((p) => p.id === id) || null;
 }
-const ELEV = { floor3: "elevator-3", floor7: "elevator-7", lobby: "elevator-l" };
+const ELEV = { floor3: "elevator-3", floor5: "elevator-5", floor7: "elevator-7", lobby: "elevator-l" };
 export function resolveRoute(r) {
   const S = S_(); const cur = S.map;
   if (!r) return null;
@@ -184,33 +194,39 @@ export function resolveRoute(r) {
 // The NEXT UP card always knows what you should do. Interrupts override tasks.
 export function nextUp() {
   const S = S_(); const day = curDay();
-  if (day >= 4) return { text: "That's a wrap.", sub: "Final score's in. Replay from the title for a new week.", tgt: null };
+  if (day > LAST_DAY) return { text: "Career wrapped: help desk → network → security.", sub: "Start a new career from the title screen any time.", tgt: null };
   // interrupts: someone waiting on you, go-finds, the clock-day actors
   const gf = visFind((n) => n._vis.kind === "gofind");
   if (gf) return resolveRoute(R(gf._vis.map, gf.id, `Go find ${gf.name}`, gf._vis.data.where || ""));
   const wu = visFind((n) => n._vis.kind === "walkup" && n._vis.map === S.map && n._vis.arrived);
-  if (wu) return { text: `${wu.name} wants a word`, sub: "Face them and press E", tgt: { x: wu.x, y: wu.y } };
+  if (wu) return { text: `${wu.name} wants a word`, sub: "Face them and press Space", tgt: { x: wu.x, y: wu.y } };
+  const wu2 = visFind((n) => n._vis.kind === "walkup" && n._vis.want && n._vis.map !== S.map);
+  if (wu2) return resolveRoute(R(wu2._vis.map, wu2.id, `${wu2.name} is waiting for you`, (FLOOR_META[wu2._vis.map] || {}).name || ""));
   const cn = clockNextUp(); if (cn) return cn;
   const t = currentTask();
   if (t) { const r = resolveRoute(t.route()); if (r) { r.loud = !!t.loud; return r; } }
   // all done: the evening
-  if (day <= 2) {
-    if (!F("eod_" + day)) return resolveRoute(R("home", "laptop", "Head home and send your EOD email", "Your laptop, living room"));
-    if (!F("alarm_" + day)) return resolveRoute(R("home", "laptop", "Read Tasha's Marching Orders", "Your laptop"));
-    return resolveRoute(R("home", "bed", "Go to bed", "The alarm's set"));
+  const boss = WEEKS[weekOf(day)].bossName;
+  if (isWeekEnd(day)) {
+    if (day === LAST_DAY) return { text: "That's a wrap", sub: "Enjoy the party.", tgt: null };
+    if (!F("alarm_" + day)) return resolveRoute(R("home", "laptop", "Head home: Director Chen emailed", "Your promotion's official. Laptop, living room"));
+    return resolveRoute(R("home", "bed", "Go to bed", "New week tomorrow. The alarm's set"));
   }
-  return { text: "Enjoy the party", sub: "", tgt: null };
+  if (!F("eod_" + day)) return resolveRoute(R("home", "laptop", "Head home and send your EOD email", "Your laptop, living room"));
+  if (!F("alarm_" + day)) return resolveRoute(R("home", "laptop", `Read ${boss}'s Marching Orders`, "Your laptop"));
+  return resolveRoute(R("home", "bed", "Go to bed", "The alarm's set"));
 }
 
 // ---- per-day content roll (persisted; a reload never rerolls) ---------------
 export function rollDay(day = curDay()) {
   const d = DD();
   if (d.roll[day]) return d.roll[day];
-  const nI = { 1: 2, 2: 5, 3: 2 }[day] || 0, nP = { 1: 1, 2: 3, 3: 1 }[day] || 0;
-  const issues = shuffleArr(ISSUES.filter((i) => i.d === day)).slice(0, nI).map((i) => i.id);
+  const nI = { 1: 2, 2: 5, 3: 2 }[dayIn(day)] || 0, nP = { 1: 1, 2: 3, 3: 1 }[dayIn(day)] || 0;
+  const always = ISSUES.filter((i) => i.d === day && i.always);
+  const issues = always.concat(shuffleArr(ISSUES.filter((i) => i.d === day && !i.always))).slice(0, nI).map((i) => i.id);
   let pages;
-  if (day === 2) {
-    const go = shuffleArr(PAGES.filter((p) => p.d === 2 && p.go)), ans = shuffleArr(PAGES.filter((p) => p.d === 2 && !p.go));
+  if (isClockDay(day) && PAGES.some((p) => p.d === day && p.go)) {
+    const go = shuffleArr(PAGES.filter((p) => p.d === day && p.go)), ans = shuffleArr(PAGES.filter((p) => p.d === day && !p.go));
     pages = shuffleArr([go[0].id, ...ans.slice(0, nP - 1).map((p) => p.id)]);
   } else pages = shuffleArr(PAGES.filter((p) => p.d === day)).slice(0, nP).map((p) => p.id);
   const r = { issues, pages, pers: shuffleArr(PERSONAS.map((_, i) => i)), wIdx: 0 };
@@ -223,7 +239,7 @@ function personaFor(i) { const r = rollDay(); return PERSONAS[r.pers[i % r.pers.
 export function spawnWalkup(issueId, mapId) {
   const S = S_(); const iss = ISSUES.find((x) => x.id === issueId); if (!iss) return null;
   const r = rollDay(); const per = personaFor(r.wIdx++); ddSave();
-  const at = mapId === "lobby" ? LOBBY_SPOTS.arrive : F3_SPOTS.arrive;
+  const at = mapId === "lobby" ? LOBBY_SPOTS.arrive : F3_SPOTS.arrive;   // (5,2) on every office floor
   if (!isWalkableOn(mapId, at.x, at.y)) return null;
   if (visAll().some((v) => v._vis.map === mapId && v.x === at.x && v.y === at.y)) return null;
   if (S.map === mapId && S.px === at.x && S.py === at.y) return null;
@@ -258,7 +274,7 @@ export function openWalkup(n, issueOverride) {
   }
   function finish() {
     nxt.remove(); if (cut) cut.remove();
-    pAdd(`<p><b>“${esc(iss.ask)}”</b></p>`);
+    pAdd(`<p><b>“${esc(iss.ask)}”</b></p>` + taughtChip(iss.id));
     judgment(iss.opts, (score, opt) => {
       bump("heard"); if (score === 2) bump("best");
       addRep(score === 2 ? 2 : score === 1 ? 1 : -1);
@@ -306,13 +322,14 @@ export function judgment(opts, cb, ctx = "") {
 }
 
 // ---- pages / @helpdesk mentions ---------------------------------------------
-export function onFloorDuringWindow() { const S = S_(); return curDay() === 2 && DD().windowOpen && !DD().windowClosed && S.map === "floor3"; }
+export function onFloorDuringWindow() { const S = S_(); return isClockDay(curDay()) && DD().windowOpen && !DD().windowClosed && S.map !== "home" && S.map !== "lobby"; }
 export function firePage(id) {
   const p = PAGES.find((x) => x.id === id); if (!p) return false;
   DD().done["pg_" + id] = true; ddSave();
   const pager = onFloorDuringWindow();
-  panel(pager ? "\u{1F4DF} PAGE · Help Desk" : "\u{1F4AC} #helpdesk-team", pager ? `From ${p.who} · via the bridge` : `${p.who} mentioned you`, "\u{1F4DF}");
-  pAdd(`<p style="margin:0 0 8px;"><b>${esc(p.who)}:</b> “@helpdesk ${esc(p.ask)}”</p>`);
+  panel(pager ? "\u{1F4DF} PAGE · " + WEEKS[weekOf()].short : "\u{1F4AC} #" + { 1: "helpdesk", 2: "network", 3: "soc" }[weekOf()] + "-team", pager ? `From ${p.who} · via the bridge` : `${p.who} mentioned you`, "\u{1F4DF}");
+  const tag = { 1: "@helpdesk", 2: "@network", 3: "@soc" }[weekOf()];
+  pAdd(`<p style="margin:0 0 8px;"><b>${esc(p.who)}:</b> “${tag} ${esc(p.ask)}”</p>` + (p.go ? "" : taughtChip(p.id)));
   CORE.sfx && CORE.sfx("page");
   if (p.go) {
     hearLingo("escalation");
@@ -339,7 +356,7 @@ export function firePage(id) {
 }
 function spawnGoFind(p) {
   const per = PERSONAS[p.spawn.persona] || PERSONAS[0];
-  return visAdd("floor3", { id: "gf_" + p.id, name: per.name, role: per.sub, x: p.spawn.spot.x, y: p.spawn.spot.y, sprite: per.sprite },
+  return visAdd(p.spawn.map || "floor3", { id: "gf_" + p.id, name: per.name, role: per.sub, x: p.spawn.spot.x, y: p.spawn.spot.y, sprite: per.sprite },
     { kind: "gofind", data: { page: p.id, issue: p.spawn.issue, persona: per, where: p.where }, target: null });
 }
 export function restoreGoFind() {
@@ -365,12 +382,14 @@ export function dayNpc(n) {
     return npcTask(n);
   }
   if (clockNpc(n)) return true;
+  if (netNpc(n) || socNpc(n)) return true;
   if (n.coffee) { buyCoffee(n.name, n.sprite); return true; }
   if (n.shop) { openBodega(); return true; }
   return npcTask(n);
 }
 export function dayProp(p) {
   if (clockProp(p)) return true;
+  if (netProp(p) || socProp(p)) return true;
   return propTask(p);
 }
 
@@ -378,25 +397,27 @@ export function dayProp(p) {
 export function dayStep(x, y) { stepOn(x, y); }
 
 // ---- light scheduler for the non-clock days (walk-ups + pages) ---------------
-function officeMap(m) { return m === "floor3" || m === "lobby"; }
+function officeMap(m) { return m === "floor3" || m === "lobby" || m === "floor5" || m === "floor7"; }
 export function dayTick(dtMs, modalOpen) {
   const S = S_(); if (!S || !S.dd || !S.started) return;
   visUpdate(dtMs);
   const day = curDay();
-  if (day === 2) { clockTick(dtMs, modalOpen); return; }
-  if (modalOpen || !officeMap(S.map) || day > 3) return;
+  if (isClockDay(day)) { clockTick(dtMs, modalOpen); return; }
+  if (modalOpen || !officeMap(S.map) || day > LAST_DAY) return;
+  if (day <= 3 && S.map !== "floor3" && S.map !== "lobby") return;
+  if (F("barOpen")) return;            // the day's work is over once the party starts
   const d = DD();
-  const gate = day === 1 ? F("kit") : true;
+  const gate = day === 1 ? F("trained_1") : day === 4 ? F("kit2") : day === 7 ? F("kit3") : true;
   if (!gate) return;
   d.officeT = (d.officeT || 0) + dtMs / 1000;
   const r = rollDay();
   // walk-ups at ~50s and ~150s of office time; one page at ~95s
-  const wTimes = day === 1 ? [30, 90] : [25, 90];
+  const wTimes = dayIn(day) === 1 ? [30, 90] : [25, 90];
   r.issues.forEach((id, i) => {
     if (d.done["spawned_" + id] || d.done[id]) return;
     if (d.officeT >= (wTimes[i] || 200 + i * 60) && !visFind((v) => v._vis.kind === "walkup")) spawnWalkup(id, S.map);
   });
-  const pT = day === 1 ? 60 : 55;
+  const pT = dayIn(day) === 1 ? 60 : 55;
   const pid = r.pages[0];
   if (pid && !d.done["pg_" + pid] && d.officeT >= pT && !panelOpen()) firePage(pid);
 }
@@ -412,9 +433,10 @@ export function dayPending() { return clockPending(); }
 // ---- Day-1 orientation (v2 premise) ------------------------------------------
 export function orientationPagesV2(name) {
   return [
-    { t: "Welcome to Cutover Week", a: "\u{1F44B}",
+    { t: "Welcome to the ladder", a: "\u{1F44B}",
       h: `<p style="margin:0 0 8px;">Morning, ${name}. You're the new <strong>Tier 1 Help Desk Technician</strong>, and your first three days land on a big change: every laptop in <strong>Accounting and Reception</strong> gets swapped for a new one.</p>
-          <p style="margin:0;color:var(--text-muted);">Day 1 you prep. Day 2 it goes live, on a clock. Day 3 you close it out. Then happy hour and your final score.</p>` },
+          <p style="margin:0 0 8px;">Do well and you climb: <strong>Week 2</strong> you're a <strong>Network Technician</strong> on Floor 5, <strong>Week 3</strong> a <strong>Security Analyst</strong> in the SOC. Three days per rung: prep, a day on the clock, then close-out and happy hour.</p>
+          <p style="margin:0;color:var(--text-muted);">Each week opens with your new boss's training and a quiz. Watch for \u{1F4D8} on tickets: that's where the lesson pays off.</p>` },
     { t: "Your chain of command", a: "\u{1FA9C}",
       h: `<p style="margin:0 0 8px;"><strong>Director Chen</strong> runs IT. <strong>Tasha</strong>, the Help Desk Lead, is your boss: she issues your kit and emails your orders every night. <strong>Harold</strong> runs the change bridge, <strong>Benny</strong> routes the queue (and is your lifeline), <strong>Gloria</strong> audits every ticket, and <strong>Kai</strong> the intern is below you.</p>
           <p style="margin:0;color:var(--text-muted);">Tasks come from someone. Gear is issued by someone. That's the job.</p>` },

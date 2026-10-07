@@ -87,17 +87,20 @@ const lob = W.mapDef("lobby");
 for (const [k, s] of Object.entries(W.LOBBY_SPOTS)) ok(!solidAt("lobby", s.x, s.y) && reach.lobby.has(s.x + "," + s.y), `lobby spot ${k} reachable`);
 
 // ---- route + flag ids referenced by the day engine ----------------------------
-const days = readFileSync(join(root, "src", "days.js"), "utf8");
-for (const m of days.matchAll(/R\("(\w+)",\s*"([\w-]+)"/g)) {
+const days = readFileSync(join(root, "src", "days.js"), "utf8") + readFileSync(join(root, "src", "net.js"), "utf8") + readFileSync(join(root, "src", "soc.js"), "utf8");
+for (const m of days.matchAll(/R\d?\("(\w+)",\s*"([\w-]+)"/g)) {
   if (m[2].endsWith("-")) continue; // template ids like "st-" + station
   const def = W.mapDef(m[1]);
   ok(def && (def.npcs.some((n) => n.id === m[2]) || def.props.some((p) => p.id === m[2]) || m[2] === "recycler"), `route target ${m[1]}/${m[2]} exists`);
 }
-const flows = readFileSync(join(root, "src", "flows.js"), "utf8") + readFileSync(join(root, "src", "ledger.js"), "utf8") + days;
+const flows = readFileSync(join(root, "src", "flows.js"), "utf8") + readFileSync(join(root, "src", "ledger.js"), "utf8") + readFileSync(join(root, "src", "training.js"), "utf8") + days;
+for (const m of flows.matchAll(/addFind\("([\w]+)"\)/g)) ok(!!FINDS[m[1]], `find ${m[1]} registered (any module)`);
 for (const m of flows.matchAll(/addFind\("([\w]+)"\)/g)) ok(!!FINDS[m[1]], `find ${m[1]} registered`);
 for (const m of flows.matchAll(/addFind\("signoff_" \+/g)) for (const id of ["ed", "karen", "riley"]) ok(!!FINDS["signoff_" + id], `find signoff_${id}`);
 for (const m of flows.matchAll(/award\("(\w+)"\)/g)) ok(!!P.BADGES[m[1]], `badge ${m[1]} registered`);
 const clock = readFileSync(join(root, "src", "clock.js"), "utf8");
+for (const m of clock.matchAll(/award\("(\w+)"\)/g)) ok(!!P.BADGES[m[1]], `badge ${m[1]} registered (clock)`);
+for (const L of Object.values(P.BRIDGE_BY_DAY).flat()) if (L.lingo) ok(!!P.LINGO[L.lingo], `bridge lingo ${L.lingo}`);
 for (const m of (flows + clock).matchAll(/hearLingo\("(\w+)"\)/g)) ok(!!P.LINGO[m[1]], `lingo ${m[1]} registered`);
 for (const L of P.BRIDGE_LINES) if (L.lingo) ok(!!P.LINGO[L.lingo], `bridge lingo ${L.lingo}`);
 
@@ -109,11 +112,27 @@ const two = (opts) => opts.filter((o) => o[1] === 2).length === 1;
 for (const i of P.ISSUES) ok(two(i.opts) && i.opts.length === 3, `issue ${i.id}: 3 options, exactly one best`);
 for (const p of P.PAGES) { if (p.go) ok(two(p.spawn.issue.opts), `go-find ${p.id}: one best`); else ok(two(p.opts), `page ${p.id}: exactly one best`); }
 for (const s of P.SOCENG) ok(two(s.opts), `soceng ${s.id}: exactly one best`);
-for (const src of [flows, clock]) for (const m of src.matchAll(/mustGetRight\(\[([\s\S]*?)\]\s*,\s*\(/g)) ok((m[1].match(/",\s*2,/g) || []).length === 1, `inline judgment has exactly one best: ${m[1].slice(0, 50).replace(/\s+/g, " ")}`);
+for (const src of [flows, clock, days]) for (const m of src.matchAll(/mustGetRight\(\[([\s\S]*?)\]\s*,\s*\(/g)) ok((m[1].match(/["\]],\s*2,/g) || []).length === 1, `inline judgment has exactly one best: ${m[1].slice(0, 50).replace(/\s+/g, " ")}`);
 // pools sized for the per-day rolls
 for (const [d, n] of [[1, 2], [2, 5], [3, 2]]) ok(P.ISSUES.filter((i) => i.d === d).length >= n, `day ${d}: enough walk-ups`);
 ok(P.PAGES.filter((p) => p.d === 2 && p.go).length >= 1 && P.PAGES.filter((p) => p.d === 2 && !p.go).length >= 2, "day 2: pages incl. a go-find");
-ok(P.KNOWN_ISSUES.every((k) => P.RESOLVER_GROUPS.includes(k.group)), "known issues route to real groups");
+for (const k of P.KNOWN_ISSUES) ok((P.RESOLVER_BY_WEEK[k.w] || []).includes(k.group), `known issue ${k.id} routes to a real week-${k.w} group`);
+for (const w of [1, 2, 3]) ok(P.KNOWN_ISSUES.filter((k) => k.w === w).length >= 4, `week ${w}: at least 4 known issues`);
+for (const w of [1, 2, 3]) ok(P.SOCENG.filter((x) => x.w === w).length >= 1, `week ${w}: a social engineer`);
+// v3: nine days of pools
+for (const [d, n] of [[4, 2], [5, 5], [6, 2], [7, 2], [8, 5], [9, 2]]) ok(P.ISSUES.filter((i) => i.d === d).length >= n, `day ${d}: enough walk-ups`);
+for (const d of [5, 8]) ok(P.PAGES.filter((p) => p.d === d && p.go).length >= 1 && P.PAGES.filter((p) => p.d === d && !p.go).length >= 2, `day ${d}: pages incl. a go-find`);
+for (const d of [4, 6, 7, 9]) ok(P.PAGES.filter((p) => p.d === d).length >= 1, `day ${d}: a page`);
+for (const p of P.PAGES.filter((x) => x.go && x.spawn.map)) ok(!solidAt(p.spawn.map, p.spawn.spot.x, p.spawn.spot.y) && reach[p.spawn.map].has(p.spawn.spot.x + "," + p.spawn.spot.y), `go-find ${p.id} spawn reachable on ${p.spawn.map}`);
+for (const h of P.HOTSPOTS) {
+  const def = W.mapDef(h.at.map);
+  ok(def && (def.npcs.some((n) => n.id === h.at.id) || def.props.some((p) => p.id === h.at.id)), `hotspot ${h.id} target ${h.at.map}/${h.at.id} exists`);
+  ok(two(h.opts), `hotspot ${h.id}: exactly one best`);
+}
+for (const d of [5, 8]) ok(P.HOTSPOTS.filter((h) => h.d === d).length >= 3, `day ${d}: three hotspots`);
+const trSrc = readFileSync(join(root, "src", "training.js"), "utf8");
+for (const m of trSrc.matchAll(/o: \[(\[[\s\S]*?\])\],\s*\n\s*why/g)) ok((m[1].match(/",\s*1\]/g) || []).length === 1, `training quiz has exactly one correct: ${m[1].slice(0, 50)}`);
+ok([...trSrc.matchAll(/o: \[/g)].length >= 24, "training: 3 quizzes x 8 questions");
 ok(new Set(P.ISSUES.map((i) => i.id)).size === P.ISSUES.length, "issue ids unique");
 
 console.log(`\n${checks - fails}/${checks} checks passed${fails ? `, ${fails} FAILED` : ""}.`);

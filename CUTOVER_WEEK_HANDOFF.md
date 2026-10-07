@@ -1,4 +1,4 @@
-# THE TICKET QUEUE: Complete Handoff (v2.1, "Cutover Week" + office dressing)
+# THE TICKET QUEUE: Complete Handoff (v3.0 "The Ladder": 3 weeks × 3 days, help desk → network → security)
 
 **Written:** Sept 30, 2026 · **Built from:** `handoffs for games/ON_LOCATION_to_IT_GAME_Handoff.md` (ON LOCATION · NYC v7.3 → IT game)
 **Audience:** the next Claude (and Moon). Dense on purpose.
@@ -10,6 +10,8 @@
 v2.0 turns the IT game from "clear the ticket queue, end of day, repeat" into **three consecutive workdays of an IT job**: the new Tier 1 Help Desk Technician's first week lands on a laptop refresh for Accounting + Reception. Day 1 prep, Day 2 go-live on a real-time clock, Day 3 close-out, then happy hour, credits, an arcade final score and a top-10 board.
 
 Everything from v1 still works: investigate → commit → principle tickets, CompTIA tags (now corrected, §7), the practice exam, both floors, XP ranks, the MK character creator, coins + cosmetic shop, achievements, themes, save-to-file, the two-mode reset, Mittens.
+
+**v3.0 (Oct 2):** the game is now **The Ladder**: three weeks, three jobs (see §14). v2.2 (popups/Space/smooth walking) is §13.
 
 **Push status:** Claude can't push. Files were written straight into `~/Desktop/me/stuff/RPG_games/it-game-v2`. From that folder:
 
@@ -31,6 +33,8 @@ Netlify builds `npm run build` → `dist/` as before. `standalone.html` was rege
 |---|---|---|
 | v2.0 | "Use this handoff to enhance this IT game into a new version." Build in `it-game-v2`; ON LOCATION at `~/Desktop/on-locations` for reference. | Premise **Cutover Week** (handoff default). Change = **laptop refresh for Accounting + Reception**. Player = **Tier 1 Help Desk Technician** (XP ladder titles stay as career rank). **Home + commute kept.** Coins/shop **separate** from in-fiction cash/card. Board **local-first**. Lifeline "**Ask Benny**" (the Coordinator), 3 per week, −50. Names invented, ids stable (§8). |
 | v2.1 | "Improve the look of the offices... walls, desks, plants, printer, watering hole, break room. Go hard on dressing the environment." | New `decor.js` painter; 3/4-view walls with windows; per-room floors; desk pods; a real **Break room** split from Open desks 2; usable fixtures; Floor 7 dressed as a SOC; brick street facades. Gameplay unchanged. |
+| v2.2 | "Character choice as a popup over the map, same for every popup. Space instead of E. The walk is jittery, why, fix it." | §13. Modal moved inside the viewport as an overlay (phones: bottom sheet). Space interacts (E removed). Four jitter causes found and fixed. |
+| v3.0 | "When we gather things from Tasha, a day-one quiz/tutorial/presentation that teaches networking + IT know-how, then tests it; tasks use the teaching, some redundant; each level. 3 days at each level: Intro IT → Networking pro → Cyber security pro, a ladder. Give it a hard go." | §14. Three weeks: **Cutover Week** (Tier 1, Floor 3, Tasha) → **Network Week** (Network Technician, new Floor 5, Rosa) → **SOC Week** (Security Analyst, Floor 7, Omar). Each week opens with a slide-deck training + 8-question quiz; tickets, walk-ups, pages, hotspots and tasks show **📘 From your training** chips that point back to the slide. Per-week report card + promotion; career score + initials at the end of day 9. |
 | v2.0 | Old saves? (handoff: ask; default bump + tolerant import) | **No prefix bump.** Added `saveVersion`. An older save keeps who you are (character, name, XP/rank, coins, cosmetics, achievements, theme, quiz bests) and starts a fresh Cutover Week run. v1 save files still import (then migrate on reload). |
 
 ---
@@ -294,3 +298,79 @@ npm run bot -- thorough        # or: tasks ; add --shots for screenshots
 **Adding dressing:** add a `dz(...)` line in `world.js`, give it a painter case in `paintDecor` if it's a new kind, run `npm run validate`.
 
 **Validation (v2.1):** module + bundle syntax ✅ · validator 917/917 ✅ · `bot tasks` full arc, 0 errors (4,640, C) · `bot thorough` full arc, 0 errors (14/14 tickets, 8/8 side quests) · fixture script: all 7 fixtures open, solid decor blocks movement ✅.
+
+
+---
+
+## 13. v2.2 Popups over the map, Space to interact, smooth walking (Oct 1, 2026)
+
+- **Popups:** `#modal-bg` lives inside `.viewport-shell` (absolute, inset 8px, dimmed + blurred map behind). Phones (≤720px): fixed bottom sheet. Clicking the dimmed map no longer closes a panel (it used to lose half-done conversations); ×, Esc or the buttons close it. Every panel (character creator included) uses it.
+- **Space interacts** (`e.key === " "`, ignores key-repeat). Legend, hint ("Space: Talk to Karen"), touch button (␣) and intro text updated. E no longer does anything.
+- **Why the walk was jittery, and the fixes** (all in game.js/render.js/visitors.js):
+  1. A dead frame between tiles: arriving set `moving=false`, the next step only started on the following frame, and leftover time was thrown away. Now the step chains in the same frame and carries the remainder.
+  2. The interact hint rewrote DOM every frame and toggled per tile → layout thrash. Now cached and only changes on change.
+  3. Fractional camera + sprite positions made pixel art shimmer. Camera and sprites are rounded to whole pixels.
+  4. A synchronous localStorage write on every tile. Position saves are debounced (800 ms after you stop).
+  Plus a real 2-frame leg swing. Visitors got the same no-dead-frame fix.
+
+---
+
+## 14. v3.0 THE LADDER (Oct 1–2, 2026)
+
+### 14.1 Shape
+| Week | Days | Role | Base | Boss (trainer) | The change |
+|---|---|---|---|---|---|
+| 1 Cutover Week | 1–3 | Tier 1 Help Desk Technician | Floor 3 | Tasha | Laptop refresh (unchanged + training) |
+| 2 Network Week | 4–6 | Network Technician | **Floor 5 (new)** | Rosa (Hiro runs the bridge) | Replace Floor 3's access switches, phones → voice VLAN, new Wi-Fi APs |
+| 3 SOC Week | 7–9 | Security Analyst | Floor 7 | Omar (IR lead) | A real incident: MFA-fatigue account takeover in Accounting |
+
+Every week has the same rhythm: **day A** onboarding (badge with Lou, kit from the boss, training + quiz, prep tasks), **day B** on the clock (300 s active play; bridge lines, pages incl. a go-find, walk-ups, 2 log-its, 3 hotspots, 1–2 social engineers), **day C** close-out (known issues routed, sign-offs/briefing, Gloria's review, PIR/report, Chen's email, The Stack). Evenings: EOD → boss's Marching Orders → alarm → bed. Week ends: party → **week report + PROMOTED card** → Chen's "it's official" email → bed → next week. Day 9: party → credits → **career score** → initials → top-10. `S.day` 10 = career wrapped.
+
+`core.js` owns it: `WEEKS`, `LAST_DAY = 9`, `weekOf()`, `dayIn()`, `isClockDay()` (2/5/8), `isWeekEnd()` (3/6/9). Floors unlock by day: F5 from day 4, F7 from day 7 (or W1's security interrupt, which now only opens `phish-ir`).
+
+### 14.2 Training (training.js)
+- `TRAINING[w]`: `slides[]` ({t, say, pts[], fig}) + `quiz[]` (8 questions, `o: [[text, 1|0]]`, `s` = slide index, `why`). Pass mark 6/8.
+- Presentation UI: a "projector screen" (REC dot, timestamp, slide counter), inline SVG pixel diagrams (crisp, scale on phones), the trainer's portrait with a typewriter narration (instant with reduced motion), key points, Back/Next, progress dots. Repeat viewers get "skip to the quiz".
+- Quiz: one at a time, explanation + "📘 Slide N" after each. Below the pass mark → review the missed slides' points, retake only the missed ones until right. Score = first attempt (`dd.quiz[w]`), 60 pts each in the week score; perfect = **Star Student** badge + rep.
+- Where: W1 inside Tasha's kit hand-off (new task `d1_train`); W2 the Training-room projector on F5; W3 the IR war-room screen on F7. Rewatch any finished training from the Field Companion → Training library.
+- **The pay-off:** `TAUGHT` maps ticket / side-quest / walk-up / page / hotspot ids → [week, slide]. `taughtChip(id)` renders a collapsible "📘 From Rosa's training: Switching and VLANs" with that slide's points; `slideChip(w,i)` does it inside task flows (IP plan, staging, trace, verify, isolate, triage, vuln...). Chips only appear after that week's training is passed. Some content repeats across weeks on purpose (least privilege/JIT three times, test-restore twice, verify-the-human every week).
+- Content: W1 the job/tiers, priority = impact × urgency, the 6-step A+ method, bottom-up/physical first + OSI, DHCP/DNS/gateway path, printers, security basics. W2 OSI as gear, IPv4, subnet math, DORA + DNS records, VLANs/trunks/voice VLAN/LLDP-MED, loops/STP/BPDU guard, cabling 100 m + PoE af/at/bt + 2.4 GHz 1/6/11 + duplex, the 7-step Network+ method + config backups/labels. W3 CIA, SIEM funnel + TP/FP triage, initial-access methods, the IR lifecycle (NIST SP 800-61r3 → CSF 2.0), containment vs evidence (order of volatility, EDR isolation, hashes, custody), CVSS vs KEV, identity (JIT, access reviews, number matching, FIDO2, revoke sessions), incident comms.
+
+### 14.3 Week 2 · Network Week (net.js)
+Day 4 (10): Rosa's welcome email · badge for F5 + closets (Lou) · kit from Rosa (blue console cable keepsake; read-only vs change account) · training · **tone out 4 Floor 3 wall jacks** (one is mislabeled: trust the tone, fix the label + port map) · **IP plan** in IPAM (/25 for 90 phones, pool .10–.126) · **back up the running configs** (F3 closet) · CAB with Harold (window, backout = old switches racked, risk incl. 911 + payroll printer) · 🚨 outage notice · **staging** (firmware standard, PoE budget 460/740 W).
+Day 5 (5): huddle with Rosa · labeled cables from Sam · **core uplink came up as an access port** → make it an 802.1Q trunk · join Hiro's bridge (no-go criterion) · the window. Hotspots on F3: **switching loop** (Byte Bodega switch under a desk), **dark AP** (port set to 802.3af, needs at), **printers can't reach the print server** (VLAN 40 missing from the uplink trunk template).
+Day 6 (10): post-change checks (Reception phone incl. E911 location / Accounting wired bottom-up / conf-room Wi-Fi survey) · route known issues (Network, Voice/UC, Desktop, Facilities, Security) · sign-offs (Karen phones, Ed wired, Riley Wi-Fi) · **decommission** old switches (wipe configs, remove from monitoring/IPAM/DNS, custody to Mo's cage) · diagram + IPAM · Gloria · return the change account (JIT) · PIR · Chen's email · The Stack.
+Tickets (F5 "NOC queue" board, mostly people on F3): `dhcp-exhaust` (Kai, d4), `duplex` (Abby, d4), `voice-vlan` (Benny, d5), `poe-budget` (Wade, d5), `gateway` (Lisa, d6), `wifi-channel` (Harold, d6).
+
+### 14.4 Week 3 · SOC Week (soc.js)
+Day 7 (8): Omar's welcome · badge (report a lost badge immediately) · kit (FIDO2 key keepsake; vault checkout for privileged creds) · training · **triage 3 SIEM alerts** (benign-with-context, true positive to contain, user error to confirm) · **prioritize a scan** (KEV + internet-facing first) · **quarterly access review** (removes the leftover `adm-temp-cutover` from Week 1, Kai's Domain Admin, a departed user, an orphaned service account) · **ransomware tabletop** (click the IR phases in order + who owns outside comms). Luis's walk-up ("I approved one to make them stop") is forced into day 7's roll: it's the seed of day 8.
+Day 8 (5): 🚨 triage the HIGH alert (MFA fatigue → account takeover) · scope (IOCs into the case) · **contain Luis's laptop** on F3 with EDR (not unplugged) · join Omar's bridge · the incident window. Hotspots: **second infected host** (Brenda's PC, beaconing), **internal phish from the compromised mailbox** (search & purge), **password spraying** (Tomas). Social engineers: "Luis" calling to reset his MFA; a fake "Legal" asking for the forensic image on a thumb drive.
+Day 9 (10): eradicate (tick composer) · **restore from the pre-compromise snapshot** (F3 backup console: newest ≠ cleanest) · seal evidence (hashes + custody; IR challenge coin) · route follow-ups (Identity, Email/M365, Desktop, Network, Legal, Awareness) · brief Director Chen · incident report · Gloria · blameless lessons learned (5 actions, 5 owners) · Chen's "Three weeks" email · The Stack (everyone) → credits → career score.
+Tickets: the 7 existing F7 tickets, now day-gated (d7 `phish-ir`, `tls-chain`, `rogue-ap`; d8 `lateral`, `ransomware`; d9 `privesc`, `segmentation`).
+
+### 14.5 Engine changes
+- `days.js`: `tasksFor()` falls through to `W2_TASKS`/`W3_TASKS`; `ticketOpen` handles F5/F7 by day; `rollDay` works on any day (`always:` walk-ups; go-find page on clock days; `spawn.map`); walk-ups/pages run on every office floor (W1 stays on F3/lobby) and stop once the party opens; dispatch order: visitors → clock (incl. hotspots) → `netNpc/socNpc` → base flows. NEXT UP also routes to a walk-up stranded on another floor.
+- `clock.js`: day 2 unchanged; days 5/8 use `CLOCK_DAYS` (lead, open/last/final/close lines), `BRIDGE_BY_DAY`, `HOTSPOTS` (`at: {map, id}` = the entity that becomes the fix point, existing or a flag-gated `hotprop`), week-filtered `KNOWN_ISSUES`/`SOCENG`. A closed window sets `winClosed_<day>`. Safety valve: a walk-up stranded on another floor can't hold the window open past +150 s. Clock progress saves every 5 s (reload loses ≤ 5 s; bot-tested on days 2, 5, 8).
+- `flows.js`: helpers exported (`mustGetRight`, `tickComposer`, `email`); `knownBoard(p)` serves all three boards (`kiboard`, `kiboard-5`, `kiboard-7`) with `RESOLVER_BY_WEEK`; evening ritual + Marching Orders use the week's boss; `partyFinale(w)`; `rolloverWeek(w)` resets the per-week fields (st, known, act, clock, hot, carry, lifelines) and snapshots `weekStart` (rep, badges, finds), clears party flags; gossip for all nine days.
+- `score.js`: `finalScore(1)` (W1 rows + training quiz), `weekScore(w)` for 2–3, `archiveWeek`, `showWeekReport` (rows, grade, PROMOTED card with the ladder), `careerScore` (3 week totals + 500 for climbing it all) feeding the existing initials/top-10 board. The board now stores career scores.
+- `ledger.js`: `openAudit(onDone, {days, flag, label})` (weeks 2–3 skip receipts and count only that week's work).
+- `world.js`: Floor 5 map (`buildFloor5`), rooms (Elevator lobby, NOC, IPAM & planning, MDF, Network team, Network Lead, Telecom room, Training room, Staging lab), cast (rosa, hiro, abby, wade, sam), props (`netpc`, `ipam`, `core-console`, `projector`, `stage-bench`, `kiboard-5`, `elevator-5`, NOC board), decor. F3 gains wall jacks, `idf-3`, 3 hotprops, 3 verify points; F7 gains `socpc`, `soc-siem`, `vuln`, `ir-screen`, `ev-locker`, `kiboard-7`. Week-2 and week-3 party crowds in The Stack (`party2`, `party3`; the door now hides on `barOpen`).
+- `render.js`: new prop kinds (ipam/siem/console/projector/bench/jack/verify/locker/hotprop) + a red pulse on any live hotspot target. HUD: "Wk 2 · Day 5 · Switch Cutover" + a role pill.
+- Saves: same `SAVE_VERSION` (new dd fields default in). A v2 save that had finished Cutover Week ("Wrapped" = day 4) is migrated: Week 1 is archived and it picks up at Network Week, day 4.
+
+### 14.6 Validation
+- `node tools/validate.mjs` → **1543/1543**: map reachability for 5 maps, every route id in days/net/soc exists, every hotspot target exists, one best answer everywhere (tickets, walk-ups, pages, hotspots, social engineers, inline task judgments in all modules, all 24 training-quiz questions), pools sized for all nine days, known issues route to real per-week groups.
+- `node tools/bot.mjs thorough|tasks [--shots]` (now all nine days; `RELOAD=1` reloads mid-window on days 2, 5 and 8). Latest: **thorough** W1 S 9485 · W2 S 7520 · W3 S 6995 · career **S 24,500**; **tasks** W1 C 5440 · W2 C 4920 · W3 C 4150 · career **C 15,010**. Zero page errors, reloads keep the clock.
+- Visual checks: training deck + quiz + ticket chip at 1280 and 390 px; Floor 5; week report.
+
+### 14.7 Grades (score.js)
+W1 unchanged (S 9300 / A 7800 / B 6300 / C 4600). W2: S 7000 / A 6000 / B 5000 / C 3800. W3: S 6200 / A 5300 / B 4500 / C 3400. Career = sum of the three (S 22,500).
+
+### 14.8 Fact sources (checked Oct 1, 2026)
+CompTIA A+ 220-1201/1202 troubleshooting methodology (6 steps); Network+ N10-009 (7 steps incl. "establish a plan of action and identify potential effects"); IEEE 802.3af/at/bt PoE (15.4/30/60–90 W at the PSE; 12.95/25.5 W at the PD for af/at); 2.4 GHz non-overlapping channels 1/6/11 (US); APIPA 169.254.0.0/16; NIST SP 800-61 Rev. 3 (April 2025, maps incident response onto CSF 2.0 functions); NIST SP 800-88 (media sanitization); CISA KEV catalog; MFA number matching (CISA guidance on push-fatigue); E911 dispatchable location (Kari's Law / RAY BAUM'S Act); never place test calls to 911 without coordinating with the PSAP.
+
+### 14.9 Known gaps / next ideas
+- The best answer is still often the longest option (true across the game). A pass that evens option lengths would make it harder.
+- Weeks 2–3 have no purchases (no company card); Gloria's review skips receipts. A W2 "Byte Bodega: keystone jacks + label tape" run would bring receipts back.
+- More F5 side quests (none yet) and more week-specific keepsakes.
+- Practice exam: F5 now has 10 questions; F7 pool is unchanged.

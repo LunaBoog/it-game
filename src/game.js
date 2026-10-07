@@ -26,13 +26,14 @@ import { DEFAULT_SPRITE } from "./cosmetics.js";
 import { XP, rank, newlyUnlocked, ACHIEVEMENTS } from "./progression.js";
 import { applyTheme, currentTheme, applyPrefs } from "./theme.js";
 import { serializeSave, saveFilename, applySaveText } from "./savefile.js";
-import { CORE, ddFresh, ddLoad, ddSave, SAVE_VERSION, DAY_SHORT } from "./core.js";
+import { CORE, ddFresh, ddLoad, ddSave, SAVE_VERSION, DAY_SHORT, LAST_DAY, WEEKS, weekOf, dayIn } from "./core.js";
 import { dayNpc, dayProp, dayStep, dayTick, dayRestore, nextUp, taskCount, ticketOpen, dayTasksDone, spawnWalkup, firePage } from "./days.js";
-import { openMorning } from "./flows.js";
+import { openMorning, rolloverWeek } from "./flows.js";
 import { openWindow, windowLeft, clockActive } from "./clock.js";
 import { openPhone, openNotes } from "./comms.js";
-import { hsTable, showArcade, finalScore } from "./score.js";
+import { hsTable, showArcade, finalScore, archiveWeek, careerScore } from "./score.js";
 import { cardLeft } from "./ledger.js";
+import { HOTSPOTS } from "./pools.js";
 
 const DIRS = { up:[0,-1], down:[0,1], left:[-1,0], right:[1,0] };
 const KEY_TO_DIR = {
@@ -277,6 +278,7 @@ export async function startGame() {
     // --- SDV helpers ---
     setFlag(name) { if (!this.flags.has(name)) { this.flags.add(name); saveSet("flags", this.flags); } },
     hasFlag(name) { return this.flags.has(name); },
+    clearFlag(name) { if (this.flags.delete(name)) saveSet("flags", this.flags); },
     addFind(id) {
       if (this.finds.has(id)) return false;
       this.finds.add(id); saveSet("finds", this.finds); this.addXp(XP.find); this.updateProgressUI(); return true;
@@ -352,11 +354,16 @@ export async function startGame() {
       this.overlay = false;
     },
     savePos() { try { saveString("pos", JSON.stringify({ m: this.map, x: this.px, y: this.py, f: this.facing })); } catch { /* ignore */ } },
+    // storage writes are synchronous: never do one per tile, batch them
+    savePosSoon() { clearTimeout(this._posT); this._posT = setTimeout(() => this.savePos(), 800); },
     npcSprite(id) {
       for (const mid of MAP_IDS) { const m = mapDef(mid); const n = m && m.npcs.find((x) => x.id === id); if (n) return n.sprite; }
       return null;
     },
-    floor7Open() { return this.hasFlag("floor3Cleared") || this.hasFlag("f7Unlocked"); },
+    // The ladder opens floors as you climb: 5 in Network Week, 7 in SOC Week
+    // (or briefly during Cutover Week, when Security calls Help Desk up).
+    floor5Open() { return this.day >= 4; },
+    floor7Open() { return this.day >= 7 || this.hasFlag("floor3Cleared") || this.hasFlag("f7Unlocked"); },
     openWindow() { openWindow(); },
     // --- floors ---
     // how many of THIS floor's tickets are solved (solved Set is shared across floors)
@@ -384,18 +391,20 @@ export async function startGame() {
     },
     updateProgressUI() {
       const dd = this.dd;
-      const day = Math.min(this.day, 4);
+      const day = Math.min(this.day, LAST_DAY + 1);
       const dp = document.getElementById("day-pill");
-      if (dp) dp.textContent = day >= 4 ? "Wrapped" : `Day ${day} \u00b7 ${DAY_SHORT[day]}`;
+      if (dp) dp.textContent = day > LAST_DAY ? "Career wrapped" : `Wk ${weekOf(day)} \u00b7 Day ${day} \u00b7 ${DAY_SHORT[day]}`;
+      const rl = document.getElementById("role-pill");
+      if (rl) rl.textContent = day > LAST_DAY ? "\u{1F6E1}\uFE0F Security Analyst" : WEEKS[weekOf(day)].short;
       // Mark floors cleared (gates + achievements) the moment tickets are all solved.
       if (this.floorCleared("floor3")) this.setFlag("floor3Cleared");
       if (this.floorCleared("floor7")) this.setFlag("floor7Cleared");
       const tp = document.getElementById("today-pill");
-      if (tp && dd) { const tc = taskCount(Math.min(day, 3)); tp.textContent = day >= 4 ? "Week done" : `Today ${tc.done}/${tc.total}`; tp.classList.toggle("done", tc.done === tc.total); }
+      if (tp && dd) { const tc = taskCount(Math.min(day, LAST_DAY)); tp.textContent = day > LAST_DAY ? "All done" : `Today ${tc.done}/${tc.total}`; tp.classList.toggle("done", tc.done === tc.total); }
       const here = this.floor;
       const tpr = document.getElementById("ticket-progress");
       if (tpr) {
-        if (here === "floor3" || here === "floor7") {
+        if (here === "floor3" || here === "floor5" || here === "floor7") {
           const total = scenarioCountForFloor(here); const done = this.solvedOnFloor(here);
           tpr.textContent = `${done} / ${total} tickets`; tpr.hidden = false;
         } else tpr.hidden = true;
@@ -439,7 +448,7 @@ export async function startGame() {
     document.getElementById("nu-s").textContent = nu.sub || "";
     const cl = document.getElementById("nu-clock");
     const active = clockActive();
-    cl.hidden = !(state.day === 2 && state.dd.windowOpen && !state.dd.windowClosed);
+    cl.hidden = !(dayIn(state.day) === 2 && state.day <= LAST_DAY && state.dd.windowOpen && !state.dd.windowClosed);
     if (!cl.hidden) cl.textContent = windowLeft();
     const br = document.getElementById("nu-bridge");
     br.hidden = !(active && state.bridgeLine); if (!br.hidden) br.textContent = "\u{1F4DE} " + state.bridgeLine;
@@ -460,7 +469,16 @@ export async function startGame() {
   CORE.sfx = (k) => sfx(k, state.soundOn);
   CORE.toast = (a) => showAchievementToast(a);
   state.ticketOpen = ticketOpen;
-  state.dayOver = () => state.day <= 2 && dayTasksDone(state.day);
+  state.hotTargets = () => HOTSPOTS.filter((h) => state.dd && state.dd.hot && state.dd.hot[h.id] === "open");
+  state.dayOver = () => state.day <= LAST_DAY && dayTasksDone(state.day);
+  // v3 migration: a v2 save that finished Cutover Week ("Wrapped" = day 4 with
+  // the party done) picks up at the start of Network Week.
+  try {
+    if (state.day === 4 && state.hasFlag("partyDone") && !state.dd.weeks[1] && !state.hasFlag("wkMail_4") && !state.hasFlag("wk1over")) {
+      state.setDay(3); archiveWeek(1); rolloverWeek(1); state.setDay(4);
+      state.clearFlag("scoreSubmitted"); state.setFlag("morning_4");
+    }
+  } catch (e) { console.error(e); }
   // debug/test handle (used by the headless validator bot)
   try { window.__tq = { S: state, CORE }; } catch { /* ignore */ }
   function updateSoundUI(on) {
@@ -500,19 +518,21 @@ export async function startGame() {
   }
 
   function moveMs() { return state.dd && state.dd.buffUntil > Date.now() ? 100 : MOVE_MS; }
-  function startMove(dir) {
+  function startMove(dir, chained = false) {
     state.facing = dir;
     const [dx, dy] = DIRS[dir];
     const nx = state.px + dx, ny = state.py + dy;
     if (!isWalkable(nx, ny) || npcAt(nx, ny) || solidPropAt(nx, ny)) {
-      state.shake = 0.45;
-      return;
+      if (!chained) state.shake = 0.45;
+      return false;
     }
     state.fromX = state.px * TILE; state.fromY = state.py * TILE;
     state.px = nx; state.py = ny;            // logical position updates immediately
     state.toX = nx * TILE; state.toY = ny * TILE;
     state.moveT = 0; state.moving = true;
+    state.walkPhase = ((state.walkPhase || 0) + 1) % 4;   // drives the leg swing
     stepSound.play(state.soundOn);
+    return true;
   }
 
   function interact() {
@@ -546,10 +566,11 @@ export async function startGame() {
     }
   }
 
+  let hintCache = "", hintOn = false;
   function updateInteractHint(t) {
     const hintEl = document.getElementById("interact-hint");
     const actBtn = document.getElementById("touch-action");
-    if (t && !isModalOpen() && !state.moving) {
+    if (t && !isModalOpen()) {
       let label = "Interact";
       if (t.kind === "npc") label = `Talk to ${t.target.name}`;
       else if (t.kind === "monitor") label = "Read ticket board";
@@ -559,10 +580,11 @@ export async function startGame() {
       else if (t.kind === "chest") label = `Check ${t.target.label}`;
       else if (t.kind === "prop-sq") label = t.target.label;
       else if (t.kind === "prop") label = `Use ${t.target.label}`;
-      document.getElementById("interact-hint-text").textContent = `Press E: ${label}`;
-      hintEl.classList.add("visible");
-      if (actBtn) actBtn.classList.add("ready");
-    } else {
+      const txt = `Space: ${label}`;
+      if (txt !== hintCache) { hintCache = txt; document.getElementById("interact-hint-text").textContent = txt; }
+      if (!hintOn) { hintOn = true; hintEl.classList.add("visible"); if (actBtn) actBtn.classList.add("ready"); }
+    } else if (hintOn) {
+      hintOn = false;
       hintEl.classList.remove("visible");
       if (actBtn) actBtn.classList.remove("ready");
     }
@@ -571,6 +593,7 @@ export async function startGame() {
   // ---- main loop ----
   let lastT = 0;
   let nuAcc = 0;
+  let lastFaced = null;
   function loop(t) {
     if (!lastT) lastT = t;
     const dt = Math.min(50, t - lastT);  // clamp: tab-away then back won't teleport
@@ -579,9 +602,19 @@ export async function startGame() {
 
     if (state.moving) {
       state.moveT += dt / moveMs();
-      if (state.moveT >= 1) { state.moveT = 1; state.moving = false; state.savePos(); try { dayStep(state.px, state.py); } catch (e) { console.error(e); } }
+      if (state.moveT >= 1) {
+        // arrived: chain straight into the next step if a direction is still held,
+        // carrying the leftover time so speed stays perfectly even (no dead frame)
+        const carry = state.moveT - 1;
+        try { dayStep(state.px, state.py); } catch (e) { console.error(e); }
+        const d = (state.started && !isModalOpen()) ? heldDir() : null;
+        state.moving = false; state.moveT = 1;
+        if (d && startMove(d, true)) state.moveT = Math.min(carry, 0.5);
+        else { state.savePosSoon(); state.walkPhase = 0; }
+      }
       state.renderX = state.fromX + (state.toX - state.fromX) * state.moveT;
       state.renderY = state.fromY + (state.toY - state.fromY) * state.moveT;
+      if (!state.moving) { state.renderX = state.px * TILE; state.renderY = state.py * TILE; }
     } else {
       state.renderX = state.px * TILE; state.renderY = state.py * TILE;
       if (state.started && !isModalOpen()) {
@@ -596,7 +629,8 @@ export async function startGame() {
       try { dayTick(dt, isModalOpen()); } catch (e) { console.error(e); }
       nuAcc += dt; if (nuAcc > 200) { nuAcc = 0; refreshNextUp(); }
     }
-    const t2 = (state.started && !isModalOpen()) ? facedTarget() : null;
+    const t2 = (state.started && !isModalOpen() && !state.moving) ? facedTarget() : (state.moving ? lastFaced : null);
+    if (!state.moving) lastFaced = t2;
     draw(ctx, state, t2);
     updateInteractHint(t2);
     requestAnimationFrame(loop);
@@ -618,7 +652,7 @@ export async function startGame() {
     if (isModalOpen()) return;
     const dir = KEY_TO_DIR[e.key];
     if (dir) { e.preventDefault(); pressDir(dir); }
-    else if (e.key === "e" || e.key === "E" || e.key === " " || e.key === "Enter") { e.preventDefault(); interact(); }
+    else if (e.key === " " || e.code === "Space") { e.preventDefault(); if (!e.repeat) interact(); }
     else if (e.key === "n" || e.key === "N") { e.preventDefault(); openNotes(); }
     else if (e.key === "p" || e.key === "P") { e.preventDefault(); openPhone(); }
   });
@@ -642,7 +676,7 @@ export async function startGame() {
 
   // test handle for the headless validator bot (tools/bot.mjs)
   try {
-    Object.assign(window.__tq, { interact, nextUp, dayTick: (ms) => dayTick(ms, false), facedTarget, isModalOpen, finalScore, spawnWalkup, firePage });
+    Object.assign(window.__tq, { interact, nextUp, dayTick: (ms) => dayTick(ms, false), facedTarget, isModalOpen, finalScore, careerScore, spawnWalkup, firePage });
     state._mapRows = () => mapDef(state.map).map;
     state._occupied = (x, y) => !isWalkable(x, y) || !!(npcAt(x, y) || solidPropAt(x, y));
     state._npcs = () => NPCS; state._props = () => PROPS;
@@ -661,7 +695,7 @@ export async function startGame() {
     try { dayRestore(); } catch (e) { console.error(e); }
     state.updateProgressUI();
     try { viewport.focus(); } catch { /* ignore */ }
-    if (state.day >= 4 && !state.hasFlag("scoreSubmitted")) showArcade();
+    if (state.day > LAST_DAY && !state.hasFlag("scoreSubmitted")) showArcade();
   }
   // shown right after the character is locked in: orientation (once) -> Day 1 morning
   function orientationThenPlay() {
@@ -693,7 +727,7 @@ export async function startGame() {
     const returning = !!state.playerName;
     menuItems = returning
       ? [ { label: "CONTINUE", action: continueGame },
-          { label: "NEW WEEK", action: newCharacter },
+          { label: "NEW CAREER", action: newCharacter },
           { label: "RESET PROGRESS", action: () => openResetMenu() } ]
       : [ { label: "START GAME", action: newCharacter } ];
     menuIdx = 0;
@@ -717,7 +751,7 @@ export async function startGame() {
     const hs = document.getElementById("title-hs");
     if (hs) hs.innerHTML = `<div class="hs"><h3>HIGH SCORES</h3>${hsTable(null, 10)}</div>`;
     if (state.playerName && state.day > 1) {
-      cont.textContent = `Welcome back, ${state.playerName} \u2014 Cutover Week, ${state.day >= 4 ? "wrapped" : "Day " + state.day}.`;
+      cont.textContent = state.day > LAST_DAY ? `Welcome back, ${state.playerName} \u2014 career wrapped. Security Analyst.` : `Welcome back, ${state.playerName} \u2014 ${WEEKS[weekOf(state.day)].title}, Day ${state.day}.`;
     } else if (state.playerName) {
       cont.textContent = `Welcome back, ${state.playerName}.`;
     } else {

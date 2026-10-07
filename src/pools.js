@@ -524,3 +524,592 @@ export const VENDOR_LINES = [
   "I've been doing this twenty years, I know my way around a server closet.",
   "Is it cool if I take a picture of your rack for my portfolio? No? Okay."
 ];
+
+// =============================================================================
+// v3 CAREER LADDER CONTENT · Week 2 (Network Technician) + Week 3 (Security
+// Analyst). Same shapes as above; `d` is the career day (4-6, 7-9) and `w` the
+// week. Every entry keeps EXACTLY ONE score-2 option.
+// =============================================================================
+ISSUES.push(
+  // ===================== DAY 4 · network onboarding =====================
+  { id: "n4_minisw", d: 4, tag: "\"Can I put a little switch under my desk?\"", cert: "Network+ N10-009 · 2.1 Switching / 4.3 Port security",
+    lines: ["The intern sits with me now and there's only one jack.", "I saw a five-port switch at Byte Bodega for twenty bucks."],
+    ask: "Can I just plug that in under my desk?",
+    opts: [
+      ["No unmanaged switches on the floor: they bypass port security and one stray cable can loop the whole VLAN. I'll ask Sam for a second drop; the intern can use Wi-Fi until then.", 2,
+       "Sam adds a drop to Thursday's list. And you just prevented the exact loop the NOC would've spent tomorrow hunting."],
+      ["Okay, but only a small one, and tell me if anything acts weird.", 1, "It works, until someone plugs both ends of a cable into it. Unmanaged switches are how loops happen."],
+      ["Sure, and plug a second cable back into the wall for redundancy.", 0, "That's a switching loop. Broadcasts multiply until the whole floor drops."]
+    ] },
+  { id: "n4_byod", d: 4, tag: "Personal laptop on CORP Wi-Fi", cert: "Network+ N10-009 · 4.3 Network access control (802.1X)",
+    lines: ["My personal laptop won't join CORP.", "It keeps asking for a certificate or something."],
+    ask: "What's the Wi-Fi password? I just need my own laptop on the real network.",
+    opts: [
+      ["CORP uses 802.1X: only company devices with a certificate get on. Personal devices go on CORP-GUEST; here's how to get today's guest pass.", 2,
+       "He's on guest in a minute. CORP stays company-devices-only, which is the whole point of network access control."],
+      ["Read him the guest password without explaining anything.", 1, "He's online, but he'll keep trying CORP and filing tickets about it. Explain the why."],
+      ["Let him sign in to CORP with your credentials just this once.", 0, "Now his personal laptop is on the corporate network as you. Never share credentials."]
+    ] },
+  { id: "n4_scope", d: 4, tag: "\"Is the network down?\"", cert: "Network+ N10-009 · 5.1 Troubleshooting methodology",
+    lines: ["The payroll provider's site won't load.", "Is the network down? We pay people today."],
+    ask: "Can you fix it, like, now?",
+    opts: [
+      ["Scope it first: do other sites load? Then look up the payroll site's name. It's the provider's outage (their status page says so), so we tell Accounting and watch for the all-clear.", 2,
+       "Everything else loads, the provider posts an outage, and Frank stops panicking. Scope before you touch anything."],
+      ["Reboot his PC and hope.", 1, "It won't help, and you'd still not know the cause."],
+      ["Reboot the Floor 3 switch to be safe.", 0, "You just knocked forty people offline for a problem on someone else's website."]
+    ] },
+  { id: "n4_corner", d: 4, tag: "Slow Wi-Fi by the window", cert: "Network+ N10-009 · 2.3 Wireless (coverage)",
+    lines: ["Wi-Fi is fine at my desk.", "But in the corner by the window it crawls."],
+    ask: "Can you make it faster over there?",
+    opts: [
+      ["Check which AP and band she's on and the signal strength there, then log the spot for Wade's AP survey: it's probably a coverage gap the new APs will fix.", 2,
+       "-78 dBm on 2.4 GHz from an AP two rooms away. Logged for the new AP plan. Good data beats a guess."],
+      ["Tell her to sit closer to the AP.", 1, "True, but you didn't record anything, so nobody fixes it."],
+      ["Reboot the core switch.", 0, "Everybody's Wi-Fi drops, and the corner's still slow."]
+    ] },
+  // ===================== DAY 5 · switch cutover (6) =====================
+  { id: "n5_notone", d: 5, tag: "No dial tone after the swap", cert: "Network+ N10-009 · 2.1 VLANs / PoE",
+    lines: ["My phone was fine at 7.", "Now it's just dark. No dial tone. Nothing."],
+    ask: "Did you break my phone?",
+    opts: [
+      ["Check her patch against the port map: it went into an unlabeled port with no PoE or voice VLAN. Move it to her labeled port, wait for registration, and log it if it doesn't come back.", 2,
+       "Wrong port. Re-patched to B-07, the phone powers, gets voice VLAN 120 and registers in thirty seconds."],
+      ["Tell her to use her cell for the day.", 1, "She can, but her phone is still broken and nobody knows why."],
+      ["Plug her cable into any free port that lights up.", 0, "Unknown port, unknown VLAN, undocumented. Tomorrow nobody can find her phone."]
+    ] },
+  { id: "n5_911", d: 5, tag: "\"Can we even call 911?\"", cert: "Network+ N10-009 · 3.x Voice services (E911)",
+    lines: ["The phones are going down during the swap, right?", "What if someone collapses?"],
+    ask: "Can we even call 911?",
+    opts: [
+      ["Yes. The notice asked for a charged cell phone at Reception for the window, and any cell can call 911. Phones are only down about fifteen minutes per closet. Let me check the cell is actually there.", 2,
+       "The cell's in the drawer, charged. You tape a note to the desk. That's how you plan for the worst case."],
+      ["Probably. Don't worry about it.", 1, "'Probably' isn't a plan for an emergency call."],
+      ["Don't call 911 during the window, it'll mess up the change.", 0, "Absolutely not. Life safety beats every change window."]
+    ] },
+  { id: "n5_vpn", d: 5, tag: "VPN dropped mid-upload", cert: "Network+ N10-009 · 4.x Remote access",
+    lines: ["I'm working from home today.", "The VPN dropped right in the middle of uploading the AR report."],
+    ask: "Is it me?",
+    opts: [
+      ["It's the change window (it was in the notice). Save locally, reconnect in fifteen minutes; if it doesn't come back, I'll raise it on the bridge.", 2,
+       "He reconnects at 8:50 and the upload finishes. Clear, honest, and he knew what to expect."],
+      ["Keep retrying every minute until it works.", 1, "He'll get there, frustrated and confused."],
+      ["Email the report to your personal Gmail so it's not lost.", 0, "Company financial data in a personal mailbox is a data-handling violation."]
+    ] },
+  { id: "n5_printer", d: 5, tag: "\"The printer says offline\"", cert: "Network+ N10-009 · 5.3 Network services",
+    lines: ["The Accounting printer has said 'offline' since 7:40.", "Checks print today."],
+    ask: "Can you fix it?",
+    opts: [
+      ["Printers kept static IPs from the old network. Check its port's VLAN against the port map, give it a DHCP reservation in the new scope, and log it on the known-issues board.", 2,
+       "Its port landed in the right VLAN but its static IP was from the old range. Reservation set, checks print, and it's logged so every printer gets checked."],
+      ["Reinstall the printer driver on Brenda's PC.", 1, "The driver's fine; the printer can't be reached."],
+      ["Factory-reset the printer.", 0, "Now it's offline AND it forgot its trays, its scan-to-email and its admin password."]
+    ] },
+  { id: "n5_adminpw", d: 5, tag: "\"Can I have the switch password?\"", cert: "Security+ SY0-701 · 4.6 Privileged access",
+    lines: ["Hiro said I could help with the cutover.", "I just need the admin password for the new switches."],
+    ask: "You have it, right?",
+    opts: [
+      ["Admin credentials aren't shared. If Hiro wants him helping, Hiro grants it through the change account. Let me confirm with Hiro on the bridge.", 2,
+       "Hiro: 'I said he could carry boxes.' Good catch."],
+      ["Ask Rosa about it later.", 1, "Later is after the window. Verify now, on the bridge."],
+      ["Read it to him. Hiro said it's fine.", 0, "'Somebody said it's fine' is how social engineering works. Never share admin creds."]
+    ] },
+  { id: "n5_twin", d: 5, tag: "\"CORP-Guest-5G-FREE?\"", cert: "Security+ SY0-701 · 2.4 Indicators (evil twin)",
+    lines: ["My laptop is on something called CORP-Guest-5G-FREE.", "It asked me to sign in again. Is that the new Wi-Fi?"],
+    ask: "Should I type my password in?",
+    opts: [
+      ["No. That's not ours (ours are CORP and CORP-GUEST). Disconnect, forget that network, and report it to Security: someone's imitating our Wi-Fi.", 2,
+       "Security finds a little travel router in a bag in the lobby. Nobody typed a password into it today, thanks to you."],
+      ["Ignore it, the internet works.", 1, "It works because someone else's router is in the middle of her traffic."],
+      ["Sure, sign in, it's probably the new APs.", 0, "She just gave her password to whoever's running that fake network."]
+    ] },
+  // ===================== DAY 6 · verify & document (3) =====================
+  { id: "n6_e911", d: 6, tag: "Old floor in the phone directory", cert: "Network+ N10-009 · Voice services (E911 location)",
+    lines: ["The phones are great!", "But my extension still says 'Floor 2, East' in the directory, and we're on 3."],
+    ask: "Can you just fix the text?",
+    opts: [
+      ["Log it for Voice/UC and check her phone's registered emergency location too: if 911 gets the wrong floor, responders go to the wrong place.", 2,
+       "Voice/UC finds six phones with the old location. Fixed before anyone needed it."],
+      ["Edit the directory entry yourself.", 1, "The name's right now, but the emergency location under it is still wrong."],
+      ["It's just a label, ignore it.", 0, "That 'label' is what a 911 dispatcher sees."]
+    ] },
+  { id: "n6_10g", d: 6, tag: "\"Why not 10 gig?\"", cert: "Network+ N10-009 · 1.x Ethernet standards",
+    lines: ["My friend has 10 gig at home.", "We just got new switches and I only get 1 gig?"],
+    ask: "Can you bump me to 10?",
+    opts: [
+      ["1 Gbps to the desk is the standard; the uplinks are 10 Gbps. Let me check he's really getting a gig: if his dock shows 100 Mbps, that's a cable to replace.", 2,
+       "His dock shows 100 Mbps. Bad patch cable. Swapped: 940 Mbps. He's thrilled, and it wasn't the port."],
+      ["Promise him 10 gig next quarter.", 1, "That's a promise nobody signed up for."],
+      ["Hard-set his port to 10G.", 0, "The access ports don't do 10G, and now his link is down."]
+    ] },
+  { id: "n6_label", d: 6, tag: "\"Can I peel this label off?\"", cert: "Network+ N10-009 · 3.x Documentation (labeling)",
+    lines: ["Somebody stuck 'C-14' on my wall plate.", "It ruins the aesthetic."],
+    ask: "Can I peel it off?",
+    opts: [
+      ["Please leave it: it maps the jack to the patch panel and the switch port, so when something breaks we fix it in minutes instead of tracing cables for an hour.", 2,
+       "She leaves it. Sam would hug you if he were here."],
+      ["Sure, it's written down somewhere.", 1, "Maybe. The label on the wall is the one that's always there."],
+      ["Peel them all off, they're ugly.", 0, "Forty-eight labels, gone. The next outage just got very long."]
+    ] },
+  // ===================== DAY 7 · SOC onboarding (4) =====================
+  { id: "s7_push", d: 7, always: true, tag: "\"I approved one to make them stop\"", cert: "Security+ SY0-701 · 2.4 Indicators (MFA fatigue)",
+    lines: ["My phone buzzed with like five sign-in prompts at six this morning.", "I hit Approve on one just to make them stop. Is that bad?"],
+    ask: "It's fine, right?",
+    opts: [
+      ["That approval may have let someone in. Report it to the SOC right now; they'll revoke his sessions and reset his password. Never approve a prompt you didn't start.", 2,
+       "Sofia opens a case and starts pulling his sign-in logs. You'll hear about this one again."],
+      ["Tell him not to do that again.", 1, "Good advice, but someone may be in his account RIGHT NOW. Report it."],
+      ["If it stopped the prompts, problem solved.", 0, "It stopped because the attacker got in. That's MFA fatigue."]
+    ] },
+  { id: "s7_usb", d: 7, tag: "\"Q3 BONUSES\" USB stick", cert: "Security+ SY0-701 · 2.2 Threat vectors (removable media)",
+    lines: ["Found this in the parking garage.", "It's labeled 'Q3 BONUSES'. I'm dying to know."],
+    ask: "Can we just see what's on it?",
+    opts: [
+      ["Don't plug it in anywhere. Bag it and hand it to the SOC: they'll open it in an isolated sandbox.", 2,
+       "Sofia's sandbox shows it drops a remote-access tool the second it's opened. Nobody's curiosity won today."],
+      ["Throw it in the trash.", 1, "Safer than plugging it in, but the SOC wants to know someone's dropping these."],
+      ["Plug it into a spare PC to find the owner.", 0, "That 'spare PC' is still on the network. Now so is the malware."]
+    ] },
+  { id: "s7_mailbox", d: 7, tag: "\"Your mailbox is full\"", cert: "Security+ SY0-701 · 2.2 Phishing",
+    lines: ["I got an email from 'Microsoft 365' saying my mailbox is full.", "It says click here or lose my email in 24 hours."],
+    ask: "Is it real?",
+    opts: [
+      ["Don't click it. Hover the link (it's not microsoft.com) and hit 'Report phishing' so the SOC can pull every copy from every mailbox.", 2,
+       "Twelve people got the same email. The SOC purges all twelve. Her report did that."],
+      ["Just delete it.", 1, "She's safe, but the other eleven copies are still sitting in inboxes."],
+      ["Click it to see if it's real.", 0, "That's how a credential-harvesting page gets a password."]
+    ] },
+  { id: "s7_travel", d: 7, tag: "\"I'm in Lisbon next week\"", cert: "Security+ SY0-701 · 4.6 Identity (risk-based sign-in)",
+    lines: ["I'm at a conference in Lisbon next week.", "Last time my login got blocked from abroad."],
+    ask: "Can you make sure that doesn't happen?",
+    opts: [
+      ["Tell the service desk ahead of time so the SOC has context for the 'new country' alert, use the VPN, and keep company MFA on. Don't use hotel Wi-Fi without the VPN.", 2,
+       "Logged with his travel dates. When the alert fires, the analyst knows it's him in two seconds."],
+      ["Just log in and we'll see what happens.", 1, "Then it's a 2 AM alert and a locked account in Lisbon."],
+      ["Have a coworker check his email for him with his password.", 0, "Shared credentials make every log line a lie."]
+    ] },
+  // ===================== DAY 8 · incident day (6) =====================
+  { id: "s8_fan", d: 8, tag: "\"My PC is screaming\"", cert: "Security+ SY0-701 · 4.8 Incident response (preserve evidence)",
+    lines: ["My PC has been super slow since this morning.", "The fan sounds like a jet engine."],
+    ask: "Should I just reboot it?",
+    opts: [
+      ["Don't reboot or log off. Step away from it; I'm getting the SOC to look at it through EDR right now, because today it might be part of the incident.", 2,
+       "EDR shows a miner and a beacon. Because it wasn't rebooted, the memory evidence is still there."],
+      ["Run a disk cleanup.", 1, "Cleanup won't hurt much, but it changes the machine while the SOC still needs to look."],
+      ["Reboot and reinstall Chrome.", 0, "You just wiped the running processes the SOC needed to see."]
+    ] },
+  { id: "s8_wipe", d: 8, tag: "\"Just wipe everything!\"", cert: "Security+ SY0-701 · 4.8 IR (scope before eradication)",
+    lines: ["I heard Accounting got hacked.", "Just wipe every laptop on the floor and be done with it!"],
+    ask: "Why haven't you wiped them yet?",
+    opts: [
+      ["Because we scope first: find exactly which machines and accounts are involved, contain those, and keep the evidence. Wiping everything now destroys the evidence and can miss whatever let them in.", 2,
+       "Frank grumbles, but he gets it when you mention the cyber insurance needs the evidence."],
+      ["Okay, just Luis's then.", 1, "Maybe later. Today his laptop is evidence."],
+      ["You're right, wipe them all now.", 0, "Evidence gone, persistence missed, and twelve people can't work."]
+    ] },
+  { id: "s8_social", d: 8, tag: "\"Should I post about it?\"", cert: "Security+ SY0-701 · 4.8 IR (communication plan)",
+    lines: ["People on social are asking if we got hacked.", "Marketing wants to get ahead of it."],
+    ask: "Should I post something?",
+    opts: [
+      ["No. External communication goes through Legal and Comms per the incident response plan. Point people to the official statement when there is one.", 2,
+       "Legal thanks you twice. Once for not posting, once for writing down who asked."],
+      ["Post 'we're looking into it'.", 1, "Even that confirms an incident before Legal decides what to say."],
+      ["Post the details to be transparent.", 0, "Now the attacker knows exactly what we've found."]
+    ] },
+  { id: "s8_status", d: 8, tag: "\"Is payroll going to be late?\"", cert: "Security+ SY0-701 · 4.8 IR (stakeholder updates)",
+    lines: ["Is my data safe?", "Is payroll going to be late this week?"],
+    ask: "Just tell me straight.",
+    opts: [
+      ["Tell her what's confirmed and what isn't, that the response team is on it, and when the next update is coming. No guessing.", 2,
+       "She doesn't love the uncertainty, but she trusts the 2 PM update. Facts, not vibes."],
+      ["Say everything's fine.", 1, "If it turns out it isn't, she'll never believe an update again."],
+      ["Tell her the attacker probably took everything.", 0, "That's a guess, and now it's a rumor on three floors."]
+    ] },
+  { id: "s8_reset", d: 8, tag: "\"Should I change my password?\"", cert: "Security+ SY0-701 · 4.6 Identity / 2.2 Phishing",
+    lines: ["I got an email saying reset your password because of the incident.", "There's a link."],
+    ask: "Should I click it?",
+    opts: [
+      ["Don't use the link. If we need you to reset, we'll tell you directly; go to the password portal by typing its address yourself. Forward that email to the SOC.", 2,
+       "That email wasn't from us. The SOC blocks the domain within minutes."],
+      ["Change every password you have, everywhere.", 1, "Not wrong, but it misses the real danger: that link."],
+      ["Reply with your password so we can check it.", 0, "Nobody in IT ever needs your password."]
+    ] },
+  { id: "s8_unplug", d: 8, tag: "\"Should I pull the plug?\"", cert: "Security+ SY0-701 · 4.8 IR (order of volatility)",
+    lines: ["On TV they always yank the power cord.", "Should I unplug mine?"],
+    ask: "Power, network, or both?",
+    opts: [
+      ["Neither, unless the SOC asks. We isolate machines remotely through EDR; pulling power wipes memory evidence. If something looks odd, call us.", 2,
+       "Oskar's machine is clean. And the next person who asks, he answers for you."],
+      ["Unplug the network cable only.", 1, "It contains, but it's clumsy and the SOC loses visibility. EDR isolation keeps both."],
+      ["Pull the power plug right now.", 0, "Whatever was in memory is gone for good."]
+    ] },
+  // ===================== DAY 9 · recover & lessons (3) =====================
+  { id: "s9_push", d: 9, tag: "\"Number matching is annoying\"", cert: "Security+ SY0-701 · 4.6 MFA (number matching)",
+    lines: ["I'm back in, thanks!", "But now I have to type a number from my screen into the app. Can I go back to just tapping Approve?"],
+    ask: "Please?",
+    opts: [
+      ["Number matching is exactly what stops push-bombing: you can't approve a sign-in you didn't start. It stays. Here, it takes two seconds.", 2,
+       "Luis times it. 2.4 seconds. He's fine with it."],
+      ["Okay, for a week.", 1, "A week is plenty of time to get push-bombed again."],
+      ["Turn MFA off for him.", 0, "He was the way in. Now he's an open door."]
+    ] },
+  { id: "s9_training", d: 9, tag: "\"Do I have to do the phishing training?\"", cert: "Security+ SY0-701 · 5.6 Security awareness",
+    lines: ["I got assigned phishing training.", "I didn't even click anything!"],
+    ask: "Do I really have to?",
+    opts: [
+      ["Yes, it's short, and it's built from this week's real attack, not a punishment. It's how the next one gets reported in a minute instead of an hour.", 2,
+       "She finishes it at lunch and reports a test phish that afternoon."],
+      ["You can skip it, you didn't click.", 1, "Then the people who need it most see you skip it."],
+      ["Click the test phishes on purpose to finish faster.", 0, "That's... not how any of this works."]
+    ] },
+  { id: "s9_counsel", d: 9, tag: "Legal wants the paperwork", cert: "Security+ SY0-701 · 4.8 IR (documentation, legal hold)",
+    lines: ["Outside counsel is asking for the timeline and the evidence chain.", "Do we even have that?"],
+    ask: "What can you send?",
+    opts: [
+      ["Yes: the incident report with the timeline, and the evidence log with hashes and custody signatures, shared through the approved channel.", 2,
+       "Dolores: 'This is the most organized incident I've seen.' High praise from Legal."],
+      ["I'll email the disk image.", 1, "Wrong channel and it breaks the chain of custody. Use the process."],
+      ["We just fixed it, there's no paperwork.", 0, "Then nobody can prove what happened, to anyone."]
+    ] }
+);
+
+PAGES.push(
+  // ---- Day 4 ----
+  { id: "pg4_mac", d: 4, who: "Benny", ask: "A user wants to know the difference between an IP address and a MAC address. Want to take it?",
+    opts: [
+      ["IP is the logical address the network assigns (layer 3, it changes when you move networks); MAC is the hardware address burned into the network card, used on the local segment (layer 2).", 2, "\"Perfect. I'm stealing that for the FAQ.\""],
+      ["They're basically the same thing.", 1, "\"They really aren't.\""],
+      ["MAC addresses are for Apple computers.", 0, "\"Oh no.\""]
+    ] },
+  { id: "pg4_reserve", d: 4, who: "Rosa", ask: "Accounting wants their new label printer on 'a static IP from the DHCP range.' Your call?",
+    opts: [
+      ["Give it a DHCP reservation (or a static outside the pool) and record it in IPAM.", 2, "\"Correct. No surprises in the pool, and IPAM knows where it lives.\""],
+      ["Let them type in any free-looking address.", 1, "\"'Free-looking' is how two devices end up fighting over one IP.\""],
+      ["Static address inside the DHCP pool, no record.", 0, "\"That's a guaranteed IP conflict next week.\""]
+    ] },
+  // ---- Day 5 ----
+  { id: "pg5_go_ed", d: 5, who: "Karen", go: true, where: "in Accounting",
+    ask: "Frank in Accounting says his PC shows 'Unidentified network' since the swap. He's at the Accounting desks. Can you go?",
+    spawn: { map: "floor3", spot: { x: 22, y: 18 }, persona: 5, issue: {
+      id: "g_unident", tag: "\"Unidentified network\"", cert: "Network+ N10-009 · 5.2 Wired troubleshooting",
+      lines: ["It says 'Unidentified network, no internet.'", "Everybody else is fine. What did you DO?"],
+      ask: "Can you fix it before my 10:30?",
+      opts: [
+        ["Check the link light and his patch against the port map: it's in the wrong port (old data VLAN). Re-patch to his labeled port, then release/renew.", 2, "Wrong port, wrong VLAN. Re-patched, new address in five seconds, and he makes his 10:30."],
+        ["Reboot his PC.", 1, "He comes back to the same unidentified network. The cable's in the wrong port."],
+        ["Give him a static IP.", 0, "Now he's a manual exception on the new network forever."]
+      ] } } },
+  { id: "pg5_backout", d: 5, who: "Hiro", ask: "The Accounting closet's new uplink won't come up and we're past the go/no-go time for that closet. What do we do?",
+    opts: [
+      ["Execute the backout for that closet per the plan (re-patch to the old switch), then troubleshoot the uplink outside the window.", 2, "\"Rolling back Accounting. Users are back in four minutes. That's why we kept the old switch racked.\""],
+      ["Keep trying until it works.", 1, "\"And Accounting stays dark past the window we promised them.\""],
+      ["Leave it down until tomorrow.", 0, "\"Payroll runs today. No.\""]
+    ] },
+  { id: "pg5_storm", d: 5, who: "Abby", ask: "NOC sees a broadcast spike on VLAN 30. What should have caught a loop on an access port?",
+    opts: [
+      ["Spanning tree with BPDU guard on access ports, plus storm control: the port shuts down the moment someone loops it.", 2, "\"Yep. Hiro's adding BPDU guard to the template right now.\""],
+      ["Reboot the switch when it happens.", 1, "\"That clears it for five minutes, until the loop starts again.\""],
+      ["Turn off spanning tree so the ports come up faster.", 0, "\"That's how you get the loop in the first place.\""]
+    ] },
+  { id: "pg5_dns", d: 5, who: "Benny", ask: "Users say the new wiki name doesn't work, but its IP address does. What's missing?",
+    opts: [
+      ["A DNS record: add the A record (and the PTR) for the new host.", 2, "\"Added. Name works. Benny's telling everyone you're a wizard.\""],
+      ["Tell users to bookmark the IP.", 1, "\"Until the IP changes.\""],
+      ["Edit everyone's hosts file.", 0, "\"Forty hosts files that nobody remembers. No.\""]
+    ] },
+  // ---- Day 6 ----
+  { id: "pg6_record", d: 6, who: "Rosa", ask: "Hiro asks what goes in the change record now that we're done. What do you tell him?",
+    opts: [
+      ["What changed (devices, ports, VLANs), the test results, the issues and where they're routed, and links to the updated diagram and IPAM.", 2, "\"That's a change record someone can actually use in six months.\""],
+      ["Just 'Done. Worked.'", 1, "\"Future-us will hate present-us.\""],
+      ["The admin passwords, for reference.", 0, "\"Never in a ticket. Ever.\""]
+    ] },
+  { id: "pg6_monitor", d: 6, who: "Abby", ask: "The old switches still show red on my dashboard. Can I just mute them?",
+    opts: [
+      ["Remove the decommissioned switches from monitoring properly (and from IPAM and DNS), instead of muting them.", 2, "\"Gone. My dashboard is green and honest.\""],
+      ["Mute them for a week.", 1, "\"And in a week they're red again and nobody remembers why.\""],
+      ["Ignore everything red on that dashboard.", 0, "\"Including the next real outage.\""]
+    ] },
+  // ---- Day 7 ----
+  { id: "pg7_wes", d: 7, who: "Sofia", ask: "Alert: 'Admin sign-in from a new country' for Wes. He's red team and says he's testing from a cloud VM. Close it?",
+    opts: [
+      ["Verify it against the signed test authorization (scope and window), then close it as expected activity with notes, and tune the rule for approved test infrastructure.", 2, "\"Authorization checks out. Closed with notes. Nadia's tuning the rule.\""],
+      ["Close it, Wes is always doing weird stuff.", 1, "\"That's exactly what an attacker using Wes's account would count on.\""],
+      ["Disable Wes's account and page the CEO.", 0, "\"Wes is mid-engagement and the CEO is confused. Verify first.\""]
+    ] },
+  { id: "pg7_kev", d: 7, who: "Nadia", ask: "Quick one: besides the CVSS score, what makes a vulnerability urgent?",
+    opts: [
+      ["Whether it's being exploited in the wild (CISA's KEV list), whether the vulnerable system is exposed or critical, and whether a fix exists.", 2, "\"Exactly. A 7.5 on the internet beats a 9.8 in a closet.\""],
+      ["Just the CVSS score.", 1, "\"CVSS is severity, not risk. Context matters.\""],
+      ["Patch them alphabetically.", 0, "\"I'm going to pretend you didn't say that.\""]
+    ] },
+  // ---- Day 8 ----
+  { id: "pg8_go_gabe", d: 8, who: "Karen", go: true, where: "at Reception",
+    ask: "Gabe at Reception got a call from 'IT' telling him to install a remote-support app. He's at the front desk. Can you go?",
+    spawn: { map: "floor3", spot: { x: 16, y: 5 }, persona: 7, issue: {
+      id: "g_remote", tag: "\"IT told me to install this\"", cert: "Security+ SY0-701 · 2.2 Social engineering (vishing)",
+      lines: ["Somebody from IT called and said my PC was part of the incident.", "He wants me to install a remote-support app so he can 'clean it'."],
+      ask: "You're IT. Was that you?",
+      opts: [
+        ["That wasn't us. Don't install anything. I'll check whether anything got installed, and report the caller's number to the SOC: someone's using our incident as a lure.", 2, "Nothing installed. The SOC blocks the tool's download domain and warns the floor."],
+        ["Tell him to install it but watch what they do.", 0, "Now an attacker has remote control of a Reception PC."],
+        ["Tell him to ignore the call.", 1, "He's safe, but the SOC never hears that attackers are calling the floor."]
+      ] } } },
+  { id: "pg8_legal", d: 8, who: "Omar", ask: "Legal wants to look at Luis's disk image right now. What do we give them?",
+    opts: [
+      ["A verified working copy through the evidence process (hash matches, custody logged). The original stays sealed in the locker.", 2, "\"Copy's hash matches the original. Legal has what they need and the evidence stays clean.\""],
+      ["Tell them to wait until the incident is over.", 1, "\"They have notification deadlines. Give them a verified copy.\""],
+      ["Hand them the original drive.", 0, "\"The original never leaves the locker. That's the whole chain of custody.\""]
+    ] },
+  { id: "pg8_payroll", d: 8, who: "Frank", ask: "Payroll runs at 3 PM. Can Luis use his laptop to approve it?",
+    opts: [
+      ["Not the isolated one. The backup approver runs payroll today, or Luis uses a clean loaner once IR has reset his identity.", 2, "\"Backup approver it is. Payroll goes out on time.\""],
+      ["Yes, if he's careful.", 1, "\"Careful doesn't help on a compromised machine.\""],
+      ["Remove the isolation so he can run payroll.", 0, "\"And let the attacker back onto the network. Absolutely not.\""]
+    ] },
+  { id: "pg8_board", d: 8, who: "Director Chen", ask: "The board is asking: did they get in? I need two sentences.",
+    opts: [
+      ["One account was compromised through MFA fatigue and the affected machines were isolated within the hour. Scope is still being confirmed; next update at 2 PM.", 2, "\"That I can send. Thank you.\""],
+      ["No comment yet.", 1, "\"The board doesn't accept 'no comment' from its own IT department.\""],
+      ["It's nothing, don't worry about it.", 0, "\"If it turns out to be something, I'm the one who said it was nothing.\""]
+    ] },
+  // ---- Day 9 ----
+  { id: "pg9_close", d: 9, who: "Omar", ask: "Can we close the incident?",
+    opts: [
+      ["When eradication and recovery are verified, monitoring shows no sign of them for the agreed period, and the report and lessons-learned meeting are done.", 2, "\"Right. We close it at 5 PM, after the review.\""],
+      ["Yes, it's been quiet for an hour.", 1, "\"An hour of quiet is how attackers like it.\""],
+      ["Close it and delete the logs to save space.", 0, "\"We are keeping every log. Legal hold.\""]
+    ] },
+  { id: "pg9_retain", d: 9, who: "Nadia", ask: "How long do we keep the incident evidence?",
+    opts: [
+      ["Per the retention policy and any legal hold: nothing gets destroyed until Legal releases it.", 2, "\"Correct. It's already tagged for legal hold.\""],
+      ["Thirty days, then delete.", 1, "\"Not if Legal has a hold on it.\""],
+      ["Delete it today, the incident's over.", 0, "\"Not even close.\""]
+    ] }
+);
+
+// Known issues: logged on each week's clock day, routed on the last day.
+for (const k of KNOWN_ISSUES) k.w = 1;
+export const RESOLVER_BY_WEEK = {
+  1: RESOLVER_GROUPS,
+  2: ["Network", "Voice/UC", "Desktop", "Facilities", "Security"],
+  3: ["Identity", "Email/M365", "Desktop", "Network", "Legal", "Awareness"]
+};
+KNOWN_ISSUES.push(
+  { id: "ki2_e911", w: 2, area: "Reception", who: "Wendy", report: "My phone still says I'm on Floor 2 East.", log: "Phones moved floors: emergency (E911) location not updated", group: "Voice/UC",
+    why: "Phone directory entries and emergency locations live in the voice platform: Voice/UC." },
+  { id: "ki2_ap", w: 2, area: "Conf. room", who: "Harold", report: "The new AP is hanging from the ceiling grid by one clip.", log: "Conf-room AP mount loose (ceiling grid)", group: "Facilities",
+    why: "Ceiling grid, mounts and tiles are Facilities' work; Network re-tests the AP afterward." },
+  { id: "ki2_trunk", w: 2, area: "Print room", who: "Dana", report: "The print-room printers can't reach the print server.", log: "Printer VLAN missing from the Floor 3 uplink's allowed list", group: "Network",
+    why: "Which VLANs a trunk carries is switch configuration: Network." },
+  { id: "ki2_dock", w: 2, area: "Accounting", who: "Oskar", report: "My dock keeps dropping to 100 megabit since this morning.", log: "Dock NIC renegotiates to 100 Mbps (driver)", group: "Desktop",
+    why: "Port and cable test clean; a dock NIC driver is an endpoint fix: Desktop." },
+  { id: "ki2_labels", w: 2, area: "Floor 3 closet", who: "Sam", report: "Three patch cables went in unlabeled during the rush.", log: "3 unlabeled patch cables in the Floor 3 closet", group: "Network",
+    why: "Patch cables and the port map are Network's documentation to fix." },
+  { id: "ki2_router", w: 2, area: "Open desks", who: "Tom", report: "Someone plugged a home Wi-Fi router in at a desk to 'boost the signal'.", log: "Personal Wi-Fi router plugged in on Floor 3 (rogue AP)", group: "Security",
+    why: "An unauthorized access point on the corporate network is a security incident first: Security." },
+  { id: "ki3_mfa", w: 3, area: "Accounting", who: "Luis", report: "My MFA still lets me just tap Approve.", log: "Push-approve MFA still allowed for Accounting (no number matching)", group: "Identity",
+    why: "MFA methods and sign-in policy belong to the Identity team." },
+  { id: "ki3_forward", w: 3, area: "Tenant-wide", who: "Sofia", report: "Anyone can auto-forward mail outside the company.", log: "External auto-forwarding allowed tenant-wide", group: "Email/M365",
+    why: "Mail-flow rules and outbound forwarding are an Exchange/M365 setting." },
+  { id: "ki3_edr", w: 3, area: "Accounting", who: "Nadia", report: "Three Accounting laptops never got the EDR agent.", log: "EDR agent missing on 3 Accounting laptops", group: "Desktop",
+    why: "Agent deployment on endpoints is Desktop's lane (the SOC verifies the coverage after)." },
+  { id: "ki3_egress", w: 3, area: "Payroll subnet", who: "Tomas", report: "The payroll subnet can reach any internet host on any port.", log: "No egress filtering on the payroll subnet", group: "Network",
+    why: "Firewall egress rules for a subnet are Network's change to make." },
+  { id: "ki3_notify", w: 3, area: "Payroll data", who: "Omar", report: "The attacker may have viewed payroll records.", log: "Possible exposure of payroll records: notification decision", group: "Legal",
+    why: "Whether and whom to notify is a legal determination: Legal (with the IR facts)." },
+  { id: "ki3_clicks", w: 3, area: "Floor 3", who: "Sofia", report: "Three people clicked the same phishing link this month.", log: "Repeat phishing clicks in one department", group: "Awareness",
+    why: "Targeted training for the people and teams involved: the security awareness program." }
+);
+
+// Social engineers by week (Week 1's keep w: 1).
+for (const s of SOCENG) s.w = 1;
+SOCENG.push(
+  { id: "se2_tac", w: 2, map: "any", phone: true, name: "Unknown caller", sub: "+1 (888) 555-0142 · 'switch vendor support'",
+    lines: ["Hi, this is your switch vendor's support center.", "We detected a firmware bug on your new core switch. I can push a hotfix right now if you read me the enable password."],
+    ask: "We're on a clock here, what's the password?",
+    opts: [
+      ["Hang up. Vendors don't cold-call for passwords. If it might be real, open a case through the vendor portal or the number in our contract, and tell Hiro and Security.", 2,
+       "There's no case and no bug. Security adds the number to the block list. Same caller hit two other companies this month."],
+      ["Ask for a case number first.", 1, "He'll invent one. Call the vendor back on a number you already trust."],
+      ["Read him the password. He knew we have new switches.", 0, "Everyone who walked past the loading dock knew. You just gave a stranger the keys to the core."]
+    ] },
+  { id: "se2_cable", w: 2, map: "floor3", name: "\"Kevin\"", sub: "cabling-company polo · no badge · at Reception",
+    lines: ["(At Reception.) 'Hey, Kevin, from the cabling crew. Sam sent me to finish the closet.'", "'I just need someone to let me into the server room. Quick job.'"],
+    ask: "He turns to you: 'You're with network, right? Let me in?'",
+    opts: [
+      ["Not without checking: call Sam on the number you already have, and check the work order. Until it checks out he waits at Reception with a visitor badge, escorted.", 2,
+       "Sam has never heard of Kevin. Kevin remembers an appointment somewhere else. Lou has his picture now."],
+      ["Ask to see a work order.", 1, "Paper is easy to fake. Verify with the person who supposedly sent him."],
+      ["Let him in, he's wearing the polo.", 0, "A polo shirt is a twenty-dollar costume. That's a stranger alone with your network."]
+    ] },
+  { id: "se3_luis", w: 3, map: "any", phone: true, name: "Caller: \"Luis from payroll\"", sub: "internal line? no: +1 (646) 555-0131",
+    lines: ["Hey, it's Luis from payroll. I lost my phone on the subway.", "Can you reset my MFA and give me a temporary password? Payroll's due."],
+    ask: "Come on, you know me. Please?",
+    opts: [
+      ["Don't reset anything on this call. Verify identity the documented way (callback to the number on file, or his manager in person), and tell the SOC: Luis is today's compromised account, so this is likely the attacker.", 2,
+       "The number on file reaches the real Luis, who is sitting in Accounting with his phone. The SOC adds the caller to the case."],
+      ["Ask him a security question from his profile.", 1, "Better than nothing, but those answers are often public or already stolen. Callback to a known number."],
+      ["Reset it. Payroll is due and he sounds stressed.", 0, "You just handed the attacker a fresh password and a new MFA device for the account you're investigating."]
+    ] },
+  { id: "se3_legal", w: 3, map: "floor7", name: "\"Mr. Pratt, Legal\"", sub: "visitor sticker · at the SOC door",
+    lines: ["(At the SOC door.) 'Pratt, from Legal. I need the forensic image of the payroll laptop.'", "'I'll review it at home tonight. Just put it on this USB drive.'"],
+    ask: "He holds out a thumb drive: 'Quickly, please.'",
+    opts: [
+      ["No. Evidence only moves through the evidence process: verified copies, hashes, custody signatures. Confirm who he is with Legal directly, and tell Omar.", 2,
+       "Legal has no Mr. Pratt. The visitor sticker came from the lobby, and Lou is already on his way up."],
+      ["Ask to see his company badge.", 1, "A good start. But even a real lawyer doesn't get evidence on a thumb drive."],
+      ["Copy it onto his USB. He's from Legal.", 0, "Evidence on a stranger's thumb drive, out the door, with no custody record."]
+    ] }
+);
+
+// Clock-day hotspots: something breaks somewhere and you go fix it.
+// at: { map, id } is the entity you interact with while it's live.
+export const HOTSPOTS = [
+  { id: "loop", d: 5, at: { map: "floor3", id: "hs-loop" }, who: "Abby", where: "Open desks 2, Floor 3",
+    alert: "Broadcast storm on VLAN 30! Every port on the Floor 3 data switch is lit up. Something on Floor 3 is looping.",
+    title: "A switching loop", sprite: null,
+    lines: ["Under a desk in Open desks 2: a five-port switch from Byte Bodega.", "One patch cable runs from it into wall jack O-03... and a second cable runs from it into O-04."],
+    ask: "Broadcasts are multiplying every second. What do you do?",
+    opts: [
+      ["Pull one of the two cables now to break the loop, remove the unmanaged switch, and tell the bridge so Hiro enables BPDU guard and storm control on the access ports.", 2,
+       "The storm stops the instant the cable comes out. Hiro pushes BPDU guard to every access port. It can't happen twice."],
+      ["Reboot the Floor 3 switch.", 1, "The storm stops for ninety seconds, then starts again. The loop is still plugged in."],
+      ["Plug a third cable in for more bandwidth.", 0, "Now it's a bigger loop. The whole floor drops."]
+    ] },
+  { id: "ap", d: 5, at: { map: "floor3", id: "hs-ap" }, who: "Wade", where: "the conference room, Floor 3",
+    alert: "The new conference-room AP never came up after the swap. Harold's 10 AM is in that room.",
+    title: "A dark access point",
+    lines: ["The AP's status light is off.", "The switch says: 'Gi1/0/40: power denied, device requires 25.5 W (802.3at), port configured for 802.3af.'"],
+    ask: "What's the fix?",
+    opts: [
+      ["The port is limited to 802.3af (15.4 W). Set it to PoE+ (802.3at) per the AP's datasheet, confirm the switch's budget has room, and watch it boot.", 2,
+       "Thirty seconds later the light goes blue and the AP joins the controller. Harold's meeting has Wi-Fi."],
+      ["Plug the AP into a power brick on the ceiling.", 1, "It might work, but now there's a power brick in the ceiling no one knows about."],
+      ["Swap the AP for a new one.", 0, "The AP was fine. The new one does exactly the same thing."]
+    ] },
+  { id: "printer", d: 5, at: { map: "floor3", id: "hs-printer" }, who: "Dana", where: "the print room, Floor 3",
+    alert: "The print-room printers just went dark on the network. Dana has payroll stubs to print.",
+    title: "Printers can't reach the print server",
+    lines: ["The printers have link and their usual addresses.", "But they can't ping the print server. On the new uplink: 'switchport trunk allowed vlan 30,120'. The printers live on VLAN 40."],
+    ask: "What do you tell the bridge?",
+    opts: [
+      ["VLAN 40 isn't allowed on the new uplink trunk. Ask Hiro to add it to the allowed list (a planned, logged change on the bridge), then test a print.", 2,
+       "Hiro adds VLAN 40 to the trunk. The first payroll stub prints before you're back at the door."],
+      ["Move the printers onto VLAN 30 with everyone else.", 1, "It'd work, and undo the separation the printer VLAN was there for."],
+      ["Reboot every printer.", 0, "They come back exactly as stuck. The trunk is still missing their VLAN."]
+    ] },
+  { id: "beacon", d: 8, at: { map: "floor3", id: "tag-a3" }, who: "Nadia", where: "Brenda's PC, Accounting",
+    alert: "A second host is beaconing to the attacker's server: Brenda's PC in Accounting. Same domain, every 60 seconds.",
+    title: "A second infected host",
+    lines: ["EDR on Brenda's PC: a scheduled task runs a PowerShell one-liner every minute.", "It calls out to the same domain we saw from Luis's laptop."],
+    ask: "What do you do?",
+    opts: [
+      ["Isolate it with EDR (network-contained but still powered on), capture memory, add the host and the task to the case as IOCs, and tell Brenda to use a loaner.", 2,
+       "Contained in under a minute, memory captured, and Nadia's hunt finds no third host. Containment without losing evidence."],
+      ["Power it off right away.", 1, "Contained, but the memory evidence (and maybe the keys to what it did) is gone."],
+      ["Delete the scheduled task and let her keep working.", 0, "You tipped off the attacker and left the machine on the network."]
+    ] },
+  { id: "purge", d: 8, at: { map: "floor7", id: "socpc" }, who: "Sofia", where: "your SOC workstation",
+    alert: "Three users just reported the same 'payroll update' email. It's from the attacker, sent from Luis's account.",
+    title: "Internal phishing from a compromised account",
+    lines: ["The email went to 41 people from Luis's real mailbox.", "Two have clicked so far."],
+    ask: "What's your next move?",
+    opts: [
+      ["Search and purge every copy from every mailbox, block the link's domain, and pull the click list so those two users get their sessions revoked and passwords reset.", 2,
+       "41 copies purged in a minute. The two clickers are reset before the attacker can use them."],
+      ["Email everyone telling them not to click.", 1, "Some will read it after they've clicked. Purge first, warn second."],
+      ["Wait for more reports to see how big it is.", 0, "Every minute you wait is another click."]
+    ] },
+  { id: "spray", d: 8, at: { map: "floor7", id: "tomas" }, who: "Tomas", where: "the network closet, Floor 7",
+    alert: "Password spraying against the VPN from an internal address on the Accounting subnet. Tomas wants a call.",
+    title: "Password spraying in progress",
+    lines: ["'Two hundred accounts, one password each: Spring2026!. From an internal address.'", "'Three accounts succeeded before lockout kicked in.'"],
+    ask: "What do we do first?",
+    opts: [
+      ["Block the source at the firewall, force resets and revoke sessions for the three accounts that succeeded, and check what they touched. Then ban that password pattern.", 2,
+       "The three accounts are locked down within five minutes, and their sign-ins show nothing touched. The banned-password list gets 'Spring2026!' and its cousins."],
+      ["Lock every account in the company.", 1, "It stops the spray, and also the whole company."],
+      ["It's just failed logins, ignore it.", 0, "Three of them weren't failures."]
+    ] }
+];
+
+// Clock-day scripts for Day 5 (Hiro's switch cutover) and Day 8 (Omar's incident).
+export const CLOCK_DAYS = {
+  5: { lead: "Hiro", map: "floor3",
+       open: "Bridge is live. Window is OPEN: 6:00 to 9:00. Network owns the change; tell me before you touch anything.",
+       last: "Last closet cutting over: Accounting. Keep the users calm.",
+       final: "All closets cut over. Final verification sweep. Anything weird goes on the known-issues board NOW.",
+       close: "Window CLOSED. Switch cutover successful. Verification and docs tomorrow.",
+       closeNote: "Change window closed: Floor 3 switch cutover successful." },
+  8: { lead: "Omar", map: "floor7",
+       open: "Incident bridge is live. Severity HIGH. I'm incident commander. Contain first; everything goes in the case log.",
+       last: "Containment holding. Nadia is still hunting. Keep feeding the case log.",
+       final: "No new activity for 30 minutes. We move to eradication planning. Log every open item NOW.",
+       close: "Incident CONTAINED. Bridge closing. Eradication and recovery tomorrow.",
+       closeNote: "Incident contained; bridge closed. Eradication and recovery tomorrow." }
+};
+
+export const BRIDGE_BY_DAY = {
+  5: [
+    { t: "Hiro: Config backups confirmed on the config server. Go/no-go: Network GO, Voice GO, Help Desk GO.", lingo: "gonogo" },
+    { t: "Hiro: Reception closet cutting over. Phones down about fifteen minutes.", lingo: "vlan" },
+    { t: "Hiro: Uplink to the core is up: 10 gig, trunk carrying 30 and 120.", lingo: "trunk" },
+    { t: "Hiro: Phones registering on the voice VLAN. LLDP-MED handing out VLAN 120.", lingo: "lldp" },
+    { t: "Hiro: PoE budget at 41% on stack 1. Plenty of headroom.", lingo: "poe" },
+    { t: "Hiro: DHCP leases flowing in the new scope. Old scope set to expire.", lingo: "dhcp" },
+    { t: "Hiro: Spanning tree stable. Root bridge is the core, as designed.", lingo: "stp" },
+    { t: "Hiro: Accounting closet is GO. Old switches stay racked as the backout until sign-off.", lingo: "backout" }
+  ],
+  8: [
+    { t: "Omar: Timeline so far: 06:02 push-bomb, 06:09 approval, 06:11 sign-in from a hosting provider.", lingo: "ioc" },
+    { t: "Omar: Luis's sessions revoked and password reset. Containment step one.", lingo: "contain" },
+    { t: "Omar: EDR isolating the payroll laptop. Memory capture in progress.", lingo: "edr" },
+    { t: "Omar: Nadia's hunting in the SIEM for the attacker's IP across every log source.", lingo: "siem" },
+    { t: "Omar: Mailbox rule found: forward everything with 'invoice' to an outside address. Preserved, not deleted yet.", lingo: "volatility" },
+    { t: "Omar: Legal and Comms are on the bridge. All outside communication goes through them.", lingo: "irplan" },
+    { t: "Omar: No lateral movement beyond Accounting so far. Scope is holding.", lingo: "scope" },
+    { t: "Omar: Containment holding. Eradication planning starts at 4.", lingo: "eradicate" }
+  ]
+};
+
+Object.assign(LINGO, {
+  vlan:      { term: "VLAN", def: "A virtual LAN: one physical switch split into separate broadcast domains (data, voice, printers, guests)." },
+  trunk:     { term: "Trunk (802.1Q)", def: "A link that carries many VLANs at once, each frame tagged with its VLAN ID. The allowed list decides which VLANs may cross." },
+  lldp:      { term: "LLDP-MED / CDP", def: "Discovery protocols a switch uses to tell an IP phone which voice VLAN to use (and how much power it'll get)." },
+  poe:       { term: "PoE / PoE+", def: "Power over Ethernet. 802.3af: up to 15.4 W per port; 802.3at (PoE+): 30 W; 802.3bt: 60–90 W. The switch has a total budget." },
+  dhcp:      { term: "DHCP (DORA)", def: "Discover, Offer, Request, Acknowledge: how a device gets its IP, mask, gateway and DNS from a server." },
+  apipa:     { term: "APIPA (169.254.x.x)", def: "The address Windows gives itself when no DHCP server answers. It means 'I never got an address'." },
+  cidr:      { term: "CIDR / subnet", def: "/24 = 256 addresses (254 usable hosts), /25 = 126 hosts, /26 = 62 hosts. Each bit you add halves the subnet." },
+  gateway:   { term: "Default gateway", def: "The router address a device sends everything to that isn't on its own subnet." },
+  duplex:    { term: "Duplex mismatch", def: "One end full duplex, the other half. Shows as CRC errors on one side and late collisions on the other." },
+  stp:       { term: "Spanning tree (STP)", def: "Blocks redundant switch paths so frames can't loop forever. BPDU guard shuts an access port the moment someone plugs a switch loop into it." },
+  mdfidf:    { term: "MDF / IDF", def: "Main distribution frame (the core of the building's network) and intermediate distribution frames (the closets on each floor)." },
+  ipam:      { term: "IPAM", def: "IP address management: the source of truth for every subnet, reservation and static address." },
+  e911:      { term: "E911 location", def: "The dispatchable location tied to a phone, so a 911 call reaches the right floor and room." },
+  siem:      { term: "SIEM", def: "Security information and event management: collects logs from everything, correlates them, and raises alerts." },
+  tpfp:      { term: "True / false positive", def: "A true positive is a real threat the alert caught; a false positive is an alert on harmless activity. Triage decides which." },
+  ioc:       { term: "IOC", def: "Indicator of compromise: an IP, domain, file hash or behavior that shows an attacker was here." },
+  edr:       { term: "EDR", def: "Endpoint detection and response: an agent that records what happens on a machine and can isolate it remotely." },
+  contain:   { term: "Containment", def: "Stopping the spread (isolate hosts, revoke sessions, block IPs) before you clean anything up." },
+  eradicate: { term: "Eradication", def: "Removing the attacker's foothold: malware, persistence, rogue rules, stolen credentials." },
+  cvss:      { term: "CVSS", def: "Common Vulnerability Scoring System: a 0–10 severity score. Severity, not risk: context decides priority." },
+  kev:       { term: "CISA KEV", def: "CISA's Known Exploited Vulnerabilities catalog: flaws attackers are using right now. Patch these first." },
+  volatility:{ term: "Order of volatility", def: "Collect the most fragile evidence first: memory before disk, disk before backups." },
+  lessons:   { term: "Lessons learned", def: "The blameless review after an incident: what happened, what helped, what we'll change, and who owns each action." },
+  irplan:    { term: "Incident response plan", def: "Who does what during an incident: commander, comms, legal, technical leads, and how updates flow." },
+  scope:     { term: "Scoping", def: "Working out exactly which accounts, hosts and data an incident touched before you eradicate." },
+  numbermatch:{ term: "Number matching", def: "An MFA prompt that makes you type the number shown on the sign-in screen, so a push you didn't start can't be approved by accident." }
+});
+
+Object.assign(BADGES, {
+  student:   { icon: "\u{1F393}", name: "Star Student", desc: "Aced a training quiz on the first try." },
+  tracer:    { icon: "\u{1F4E1}", name: "Toner & Probe", desc: "Traced every Floor 3 wall jack to its switch port." },
+  subnetter: { icon: "\u{1F9EE}", name: "Subnetter", desc: "Sized the voice VLAN right the first time." },
+  loop:      { icon: "\u{1F504}", name: "Loop Breaker", desc: "Broke a switching loop the right way." },
+  decom:     { icon: "\u{1F9F9}", name: "Clean Decom", desc: "Wiped and logged the old switches before they left." },
+  triage:    { icon: "\u{1F6A6}", name: "Triage Ace", desc: "Called every SIEM alert right on the first try." },
+  isolate:   { icon: "\u{1F9CA}", name: "Cold Containment", desc: "Isolated a host without pulling the plug." },
+  evidence:  { icon: "\u{1F9FE}", name: "Hash Verified", desc: "Kept the evidence chain of custody perfect." },
+  blameless: { icon: "\u{1F54A}️", name: "Blameless", desc: "Ran a lessons-learned review with real actions and no blame." }
+});

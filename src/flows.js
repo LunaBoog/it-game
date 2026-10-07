@@ -3,8 +3,8 @@
 // Director's email, happy hour) and the evening ritual (EOD email →
 // Marching Orders → alarm → sleep → morning card).
 
-import { CORE, DD, ddSave, curDay, esc, shuffleArr, addNote, addRep, bump, recordAnswer, notesFor, dayName, DAY_SHORT } from "./core.js";
-import { SUPPLY_LIST, SUPPLY, DISTRACT, KNOWN_ISSUES, RESOLVER_GROUPS } from "./pools.js";
+import { CORE, DD, ddSave, curDay, esc, shuffleArr, addNote, addRep, bump, recordAnswer, notesFor, dayName, DAY_SHORT, WEEKS, weekOf, dayIn, isWeekEnd, isClockDay, LAST_DAY, ddFresh } from "./core.js";
+import { SUPPLY_LIST, SUPPLY, DISTRACT, KNOWN_ISSUES, RESOLVER_GROUPS, RESOLVER_BY_WEEK } from "./pools.js";
 import { mapDef, F3_SPOTS, LOBBY_SPOTS } from "./world.js";
 import { panel, pAdd, pBtn, pClear, closePanel, openShop } from "./ui.js";
 import { award, ping, blip, hearLingo, chatPost } from "./comms.js";
@@ -12,7 +12,10 @@ import { openAudit, docStats, spentOn, hasCard } from "./ledger.js";
 import { tasksFor, dayTasksDone, currentTask, SIGNOFFS, judgment } from "./days.js";
 import { visAdd, visFind, visLeave, visClearAll } from "./visitors.js";
 import { clockReset } from "./clock.js";
-import { rollCredits } from "./score.js";
+import { rollCredits, showWeekReport, archiveWeek } from "./score.js";
+import { openTraining } from "./training.js";
+import { netWelcome } from "./net.js";
+import { socWelcome } from "./soc.js";
 
 const SF = () => CORE.S;
 const HF = (f) => CORE.S.hasFlag(f);
@@ -21,7 +24,7 @@ const spr = (id) => CORE.S.npcSprite(id);
 
 // A task judgment that must end on the best answer: wrong picks give feedback,
 // cost a little rep, and let you try again. cb() runs once the best is picked.
-function mustGetRight(opts, cb, badgeIfFirst) {
+export function mustGetRight(opts, cb, badgeIfFirst) {
   const wrap = pAdd("", "btn-column");
   let tries = 0;
   const sh = shuffleArr(opts);
@@ -44,7 +47,7 @@ function mustGetRight(opts, cb, badgeIfFirst) {
 }
 
 // Tick-the-real-details composer (EOD email, user notice, PIR). Returns via cb.
-function tickComposer(items, sendLabel, cb) {
+export function tickComposer(items, sendLabel, cb) {
   const sel = new Set();
   const w = pAdd("", "btn-column");
   items.forEach((it, k) => {
@@ -60,7 +63,7 @@ function tickComposer(items, sendLabel, cb) {
   });
 }
 
-function email(from, to, subject, bodyHtml) {
+export function email(from, to, subject, bodyHtml) {
   return `<div class="email"><div class="em-h"><div><span>From</span><b>${from}</b></div><div><span>To</span>${to}</div>
     <div class="em-s"><span>Subject</span><b>${subject}</b></div></div><div class="em-b">${bodyHtml}</div></div>`;
 }
@@ -76,6 +79,7 @@ export function npcTask(n) {
   }
   if (id === "tasha") {
     if (day === 1 && !HF("kit")) { if (!HF("badge")) return false; openKit(); return true; }
+    if (day === 1 && !HF("trained_1")) { openTraining(1, afterTraining1); return true; }
     if (day === 2 && !HF("standup")) { standup(); return true; }
     if (day === 3 && !HF("kitReturned")) { returnKit(); return true; }
     return false;
@@ -99,9 +103,9 @@ export function npcTask(n) {
     signOff(n); return true;
   }
   if (id === "gloria" && day === 3 && !HF("audited")) { openAudit(() => S.updateProgressUI()); return true; }
-  if (id === "nico" && day === 3 && HF("chenEmail") && !HF("partyDone")) { partyFinale(); return true; }
+  if (id === "nico" && day === 3 && HF("chenEmail") && !HF("partyDone")) { partyFinale(1); return true; }
   if (id === "recycler") { recyclerHandoff(n); return true; }
-  if (n.party && day >= 3) { partyChat(n); return true; }
+  if (n.party) { partyChat(n); return true; }
   return false;
 }
 
@@ -120,8 +124,10 @@ export function propTask(p) {
       }
       return false;
     case "fixture": fixture(p); return true;
-    case "workpc": workPc(); return true;
-    case "kiboard": knownBoard(); return true;
+    case "workpc":
+      if (p.id === "workpc") { workPc(); return true; }
+      panel(p.label, p.room || "", "\u{1F4BB}"); pAdd(`<p>Locked. Your badge and login don't work on this desk yet.</p>`); pBtn("Close", closePanel, "act ghost"); return true;
+    case "kiboard": knownBoard(p); return true;
     case "backup": backupConsole(); return true;
     case "assettag": assetTag(p); return true;
     case "station": station(p); return true;
@@ -150,10 +156,16 @@ const GOSSIP = {
       "“There's an auditor on the floor with a clipboard the size of a door.”", "“If a guy from 'the ISP' asks for the network closet, he's not from the ISP.”",
       "“The coffee machine is the only thing on this floor nobody's migrating.”"],
   3: ["“Gloria's been reading tickets since six this morning.”", "“Happy hour at The Stack tonight. First round's on Chen!”",
-      "“The old laptops are going to the shredder. All of them. Even the one with the stickers.”", "“I heard SOC Week is next. Floor 7 people are weird. Cool, but weird.”"]
+      "“The old laptops are going to the shredder. All of them. Even the one with the stickers.”", "“I heard SOC Week is next. Floor 7 people are weird. Cool, but weird.”"],
+  4: ["“The new kid's on the network team now? That was fast.”", "“Sam labeled the coffee machine. Both ends.”", "“Rosa has a blue console cable she calls 'old faithful'.”", "“New switches Wednesday. Phones go down for fifteen minutes. I've already written my complaint.”"],
+  5: ["“My phone came back and now it has a little 'VLAN 120' on the screen. Is that good?”", "“Someone had a tiny switch under their desk. Hiro made a face I've never seen.”", "“The NOC dashboard is all green. Abby looks suspicious about it.”"],
+  6: ["“The old switches are going to Mo's cage. Wiped first, apparently. Everything gets wiped now.”", "“Wi-Fi in the conference room actually works. Harold smiled. In public.”", "“Happy hour again tonight? This department is fun now.”"],
+  7: ["“You're on Floor 7 now? Do they make you wear a hoodie?”", "“Luis said he got a bunch of weird sign-in prompts this morning.”", "“The SOC has a wall of screens and one plant. The plant is fake.”"],
+  8: ["“Something happened in Accounting. Nobody's allowed to say what.”", "“Don't approve any MFA prompts you didn't start. That's the rumor, and also apparently the rule.”", "“Omar walked past with a headset on and the whole floor went quiet.”"],
+  9: ["“Accounting's back to normal. Mostly. Luis is very polite now.”", "“Everyone has to do a ten-minute phishing training. Honestly? Fair.”", "“Big happy hour tonight. All three floors. Lou's bringing the badge photo.”"]
 };
 function fixture(p) {
-  const d = DD(), day = Math.min(curDay(), 3);
+  const d = DD(), day = Math.max(1, Math.min(curDay(), 9));
   const close = () => pBtn("Close", closePanel, "act ghost");
   switch (p.art) {
     case "cooler": {
@@ -235,10 +247,20 @@ function openKit() {
     pBtn("\u{1F392} Take the kit", () => {
       SET("kit"); SET("supplyList"); SF().addFind("dongle"); DD().hasCard = true; ddSave();
       addNote("kit", "\u{1F392}", "Kit issued by Tasha: laptop, MFA, daily + separate admin account, company card, team chat.");
-      closePanel(); SF().updateProgressUI();
-      chatPost("Tasha", "Supply list: asset labels + custody logbook, USB-C adapters, Cat6 patch cables, anti-static bags, cable ties. Byte Bodega, on the card. RECEIPTS.");
+      SF().updateProgressUI();
+      pClear();
+      pAdd(`<p>“One more thing before you touch a single ticket: <b>Day One training</b>. My slides, about ten minutes, then a quiz. Networking basics, how we troubleshoot, the security stuff. Everything on this floor comes back to it.”</p>
+        <div class="set-hint">\u{1F393} Pass the quiz and the tickets you take later will show <b>\u{1F4D8} From your training</b> where the lesson applies.</div>`);
+      const b = pBtn("▶ Start the training", () => openTraining(1, afterTraining1));
+      setTimeout(() => { try { b.focus(); } catch { /* ignore */ } }, 30);
     });
   });
+}
+
+function afterTraining1() {
+  chatPost("Tasha", "Supply list: asset labels + custody logbook, USB-C adapters, Cat6 patch cables, anti-static bags, cable ties. Byte Bodega, on the card. RECEIPTS.");
+  chatPost("Tasha", "And take Karen's ticket when you're back. I'll watch. Use what you just learned.", false);
+  SF().updateProgressUI();
 }
 
 function deliverSupplies() {
@@ -501,24 +523,33 @@ function noticeSign(p) {
   } else pBtn("Close", closePanel, "act ghost");
 }
 
-function knownBoard() {
+// The known-issues board: one per week (Floor 3 whiteboard, Floor 5 board,
+// Floor 7 case board). Logged on the clock day, routed on the last day.
+const KB_WEEK = { kiboard: 1, "kiboard-5": 2, "kiboard-7": 3 };
+export function knownFlag(w) { return w === 1 ? "knownDone" : "known" + w + "Done"; }
+export function knownBoard(p) {
   const d = DD(), day = curDay();
-  panel("Known-issues whiteboard", "IT room", "\u{1F4CB}");
-  if (day < 3) {
-    const k = d.known;
-    pAdd(k.length ? `<ul class="principle-list">${k.map((x) => { const ki = KNOWN_ISSUES.find((z) => z.id === x.id); return `<li>${esc(ki.log)}</li>`; }).join("")}</ul>`
-      : `<p class="set-hint">Nothing logged yet. During the change, anything weird goes up here.</p>`);
+  const w = KB_WEEK[p && p.id] || 1;
+  const title = { 1: "Known-issues whiteboard", 2: "Network known-issues board", 3: "INC-2611 case board" }[w];
+  panel(title, p ? p.room : "IT room", "\u{1F4CB}");
+  const routingDay = WEEKS[w].days[2];
+  if (day !== routingDay) {
+    const k = d.known.filter((x) => (KNOWN_ISSUES.find((z) => z.id === x.id) || {}).w === w);
+    pAdd(k.length ? `<ul class="principle-list">${k.map((x) => { const ki = KNOWN_ISSUES.find((z) => z.id === x.id); return `<li>${esc(ki.log)}${x.routed ? ` <b>→ ${esc(x.group)}</b>` : ""}</li>`; }).join("")}</ul>`
+      : `<p class="set-hint">${day < WEEKS[w].days[0] ? "Blank. A sticky note says: 'for later'." : day > routingDay ? "Wiped clean. Every item went to an owner." : "Nothing logged yet. During the change, anything weird goes up here."}</p>`);
     pBtn("Close", closePanel, "act ghost"); return;
   }
-  ensureDay3Known();
-  const open = d.known.filter((x) => !x.routed);
-  if (!open.length) { pAdd(`<div class="banner ok">Every known issue is routed. The owners can sign off now.</div>`); pBtn("Close", closePanel, "act ghost"); return; }
+  ensureEndKnown(w);
+  const mine = d.known.filter((x) => (KNOWN_ISSUES.find((z) => z.id === x.id) || {}).w === w);
+  const open = mine.filter((x) => !x.routed);
+  if (!open.length) { pAdd(`<div class="banner ok">Every item is routed to its owner.</div>`); pBtn("Close", closePanel, "act ghost"); return; }
   const it = open[0], ki = KNOWN_ISSUES.find((z) => z.id === it.id);
-  pAdd(`<p style="margin:0 0 4px;"><b>${d.known.length - open.length + 1}/${d.known.length}</b> · ${esc(ki.area)} · reported by ${esc(ki.who)}</p>
-    <div class="worknote"><div class="wn-h">\u{1F4CB} ${esc(ki.log)}</div><div><span>User said</span>“${esc(ki.report)}”</div></div>
-    <p style="margin:8px 0 4px;"><b>Which resolver group owns it?</b></p>`);
+  const groups = RESOLVER_BY_WEEK[w] || RESOLVER_GROUPS;
+  pAdd(`<p style="margin:0 0 4px;"><b>${mine.length - open.length + 1}/${mine.length}</b> · ${esc(ki.area)} · reported by ${esc(ki.who)}</p>
+    <div class="worknote"><div class="wn-h">\u{1F4CB} ${esc(ki.log)}</div><div><span>Reported</span>“${esc(ki.report)}”</div></div>
+    <p style="margin:8px 0 4px;"><b>Which team owns it?</b></p>`);
   const row = pAdd("", "group-row"); const fb = pAdd("");
-  RESOLVER_GROUPS.forEach((g) => {
+  groups.forEach((g) => {
     const b = document.createElement("button"); b.className = "group-btn"; b.textContent = g;
     b.addEventListener("click", () => {
       it.tries = (it.tries || 0) + 1;
@@ -529,13 +560,13 @@ function knownBoard() {
         addNote("known", "\u{1F4CB}", `Routed "${ki.log}" to ${g}.`);
         row.querySelectorAll("button").forEach((x) => { x.disabled = true; }); b.classList.add("correct");
         fb.innerHTML = `<div class="banner ok">${esc(ki.why)}</div>`;
-        const left = d.known.filter((x) => !x.routed).length;
+        const left = mine.filter((x) => !x.routed).length;
         if (!left) {
-          SET("knownDone"); hearLingo("known");
-          if (d.known.every((x) => x.tries === 1)) award("router");
-          chatPost("Benny", "Every known issue routed. Owners can sign off now.");
+          SET(knownFlag(w)); hearLingo("known");
+          if (mine.every((x) => x.tries === 1)) award("router");
+          chatPost({ 1: "Benny", 2: "Rosa", 3: "Omar" }[w], w === 3 ? "Every follow-up has an owner. Good." : "Every known issue routed. Owners can sign off now.");
         }
-        pBtn(left ? "Next issue →" : "Done", left ? knownBoard : closePanel);
+        pBtn(left ? "Next item →" : "Done", left ? () => knownBoard(p) : closePanel);
         blip(true);
       } else {
         recordAnswer(0, false); b.disabled = true; b.classList.add("wrong");
@@ -546,15 +577,20 @@ function knownBoard() {
     row.appendChild(b);
   });
 }
-// Day 3's list: everything logged on Day 2, plus two that surfaced overnight.
-export function ensureDay3Known() {
-  const d = DD();
-  if (d.known3) return;
+// The last day's list: everything logged on the clock day, plus some that
+// surfaced overnight (at least four in total).
+export function ensureEndKnown(w) {
+  const d = DD(); const key = "knownX" + w;
+  if (w === 1 && d.known3) d[key] = true;   // pre-v3 saves
+  if (d[key]) return;
   const logged = new Set(d.known.map((x) => x.id));
-  const extra = shuffleArr(KNOWN_ISSUES.filter((k) => !logged.has(k.id))).slice(0, Math.max(2, 4 - d.known.length));
-  for (const k of extra) d.known.push({ id: k.id, d: 3, routed: false, tries: 0, overnight: true });
-  d.known3 = true; ddSave();
+  const mine = d.known.filter((x) => (KNOWN_ISSUES.find((z) => z.id === x.id) || {}).w === w).length;
+  const pool = KNOWN_ISSUES.filter((k) => k.w === w && !logged.has(k.id));
+  const extra = shuffleArr(pool).slice(0, Math.max(2, 4 - mine));
+  for (const k of extra) d.known.push({ id: k.id, d: curDay(), routed: false, tries: 0, overnight: true });
+  d[key] = true; ddSave();
 }
+export function ensureDay3Known() { ensureEndKnown(1); }
 
 function signOff(n) {
   const S = SF();
@@ -758,10 +794,10 @@ function chenEmail() {
   pAdd(email("<b>Director Chen</b> · IT Director", me() + " · cc the whole department", "Cutover Week: thank you",
     `<p>Team, the Accounting and Reception refresh is closed. Twelve laptops, one rollback that worked exactly as planned, and zero surprises on the bridge.</p>
      <p>${me()}, three days in and you've already closed ${st.total} pieces of work${st.total ? `, ${st.documented} with proper notes` : ""}. Tasha says you listen, and Gloria says you're honest. Those are the two things I can't teach.</p>
-     <p class="em-sec">NEXT UP</p><p>Security has asked for Help Desk on <b>Floor 7</b> next month. They're calling it <b>SOC Week</b>: detect, contain, recover. Start reading.</p>
+     <p class="em-sec">NEXT UP</p><p>Rosa's network team on <b>Floor 5</b> is replacing Floor 3's switches next week, and she asked for you. They're calling it <b>Network Week</b>. After that, Omar wants you in the SOC.</p>
      <p>Happy hour's at <b>The Stack</b>, 6 PM, next door. First round is on the department.</p><p>— Chen</p>`));
   pBtn("\u{1F37B} Head to The Stack", () => {
-    SET("chenEmail"); SET("partyOpen"); SF().addFind("nextGig"); SF().setFlag("f7Unlocked");
+    SET("chenEmail"); SET("partyOpen"); SET("barOpen"); SF().addFind("nextGig");
     closePanel(); ping("\u{1F37B}", "Happy hour", "The Stack, street level. Everyone's there.");
   });
 }
@@ -772,47 +808,68 @@ function partyChat(n) {
   pBtn("\u{1F942} Cheers", closePanel);
 }
 
-function partyFinale() {
+// The week's last beat. Weeks 1-2: a week report + your promotion, then home.
+// Week 3: the credits roll and the career score.
+const TOASTS = {
+  1: ["“You're the new one! Tasha's been bragging. What'll it be?”", "Across the bar Tasha raises a glass: “To Cutover Week! And to the new kid, who wrote better notes than I do!” Gloria: “That's true, actually.”"],
+  2: ["“Back again! Network people this time? You lot tip in cable ties.”", "Rosa raises a glass: “To forty-eight drops, zero dropped calls, and the tech who found the loop before the NOC did!” Hiro: “I'd like it noted I found it second.”"],
+  3: ["“Three weeks, three crowds. You're my best customer.”", "Omar raises a glass, then Tasha, then Rosa, then Chen: “Help desk. Network. Security. To the fastest ladder this building has ever seen.” Lou, from the doorway: “I still have the badge photo!”"]
+};
+const PARTY_FLAG = { 1: "partyDone", 2: "partyDone2", 3: "partyDone3" };
+export function partyFlag(w) { return PARTY_FLAG[w]; }
+export function partyFinale(w = weekOf()) {
   panel("Nico", "Bartender · The Stack", spr("nico"));
-  pAdd(`<p>“You're the new one! Tasha's been bragging. What'll it be?”</p>
-    <p>Across the bar Tasha raises a glass: “To Cutover Week! And to the new kid, who wrote better notes than I do!” Gloria: “That's true, actually.”</p>`);
+  pAdd(`<p>${TOASTS[w][0]}</p><p>${TOASTS[w][1]}</p>`);
   pBtn("\u{1F942} Raise a glass", () => {
-    SET("partyDone"); addNote("party", "\u{1F37B}", "Team happy hour at The Stack.");
+    SET(PARTY_FLAG[w]); addNote("party", "\u{1F37B}", `Team happy hour at The Stack (${WEEKS[w].title}).`);
     closePanel();
-    setTimeout(() => rollCredits(), 400);
+    archiveWeek(w);
+    if (w === 3) { SF().addFind("socBadge"); setTimeout(() => rollCredits(), 400); }
+    else setTimeout(() => showWeekReport(w, () => {
+      chatPost(WEEKS[w + 1].bossName, `See you Monday on ${WEEKS[w + 1].base === "floor5" ? "Floor 5" : "Floor 7"}. Check your email tonight.`);
+    }), 400);
   });
 }
 
 // ============================= evening + nights =============================
 function homeLaptop() {
-  const day = curDay();
+  const day = curDay(), w = weekOf(day);
   if (day === 1 && !HF("d1Email")) { welcomeEmail(); return; }
-  if (day <= 2 && dayTasksDone(day)) {
-    if (!HF("eod_" + day)) { openEodCompose(); return; }
-    if (!HF("alarm_" + day)) { openMarchingOrders(); return; }
+  if (day === 4 && !HF("wkMail_4")) { netWelcome(); return; }
+  if (day === 7 && !HF("wkMail_7")) { socWelcome(); return; }
+  if (day <= LAST_DAY && dayTasksDone(day)) {
+    if (isWeekEnd(day)) {
+      if (day === LAST_DAY) { panel("Your laptop", "Home", "\u{1F4BB}"); pAdd(`<p>Your inbox is full of congratulations. You close the lid and smile.</p>`); pBtn("Close", closePanel, "act ghost"); return; }
+      if (!HF("alarm_" + day)) { openPromotionEmail(w); return; }
+    } else {
+      if (!HF("eod_" + day)) { openEodCompose(); return; }
+      if (!HF("alarm_" + day)) { openMarchingOrders(); return; }
+    }
     panel("Your laptop", "Home", "\u{1F4BB}"); pAdd(`<p>Alarm's set. Bed's in the bedroom.</p>`); pBtn("Close", closePanel, "act ghost"); return;
   }
   panel("Your laptop", "Home", "\u{1F4BB}");
   const left = tasksFor(day).filter((t) => !t.done());
-  if (day <= 2) pAdd(`<p>You open a draft of your end-of-day email, then close it. You've still got <b>${left.length}</b> task${left.length === 1 ? "" : "s"} today:</p><ul>${left.map((t) => `<li>${esc(t.label)}</li>`).join("")}</ul>`);
+  if (day <= LAST_DAY && left.length) pAdd(`<p>You open a draft of your end-of-day email, then close it. You've still got <b>${left.length}</b> task${left.length === 1 ? "" : "s"} today:</p><ul>${left.map((t) => `<li>${esc(t.label)}</li>`).join("")}</ul>`);
   else pAdd(`<p>Nothing new. Your phone buzzes with the team chat.</p>`);
   pBtn("Close", closePanel, "act ghost");
 }
 
+function bossOf(day) { const W = WEEKS[weekOf(day)]; return { name: W.bossName, role: W.bossRole, id: W.boss }; }
+
 function openEodCompose() {
-  const day = curDay(), nm = me();
-  const real = notesFor(day).filter((n) => !["coffee", "receipt"].includes(n.cat));
+  const day = curDay(), nm = me(), boss = bossOf(day), W = WEEKS[weekOf(day)];
+  const real = notesFor(day).filter((n) => !["coffee", "receipt", "training"].includes(n.cat));
   const items = shuffleArr(real.map((n) => ({ t: n.icon + " " + n.text, real: true }))
     .concat(shuffleArr(DISTRACT).slice(0, 3).map((t) => ({ t, real: false }))));
   const jobs = tasksFor(day).map((t) => t.label);
   const st = docStats(day);
-  panel("✉️ End-of-day email", "To Tasha · cc Benny", "✉️");
-  pAdd(email(`<b>${nm}</b> · Tier 1`, "Tasha (Help Desk Lead) · cc Benny", `Shift handoff: ${esc(dayName(day))}`,
-    `<p>Hi Tasha, here's today's handoff.</p><p class="em-sec">DONE TODAY</p><ul>${jobs.map((j) => `<li>${esc(j)}</li>`).join("")}</ul>
+  panel("✉️ End-of-day email", `To ${boss.name}`, "✉️");
+  pAdd(email(`<b>${nm}</b> · ${esc(W.short)}`, `${boss.name} (${boss.role})`, `Shift handoff: ${esc(dayName(day))}`,
+    `<p>Hi ${boss.name}, here's today's handoff.</p><p class="em-sec">DONE TODAY</p><ul>${jobs.map((j) => `<li>${esc(j)}</li>`).join("")}</ul>
      <p class="em-sec">QUEUE</p><p>${st.total} closed today · ${st.documented} with work notes.</p>
      <p class="em-sec">DETAILS FROM THE DAY</p><p class="set-hint">Tick every detail that belongs in a shift handoff, and nothing that doesn't.</p>`));
-  if (!items.some((x) => x.real)) pAdd(`<p class="set-hint">(Quiet day. Send it anyway; Tasha wants to hear it was quiet.)</p>`);
-  tickComposer(items, `\u{1F4E8} Send to Tasha, from ${nm}`, (missed, extra) => {
+  if (!items.some((x) => x.real)) pAdd(`<p class="set-hint">(Quiet day. Send it anyway; ${boss.name} wants to hear it was quiet.)</p>`);
+  tickComposer(items, `\u{1F4E8} Send to ${boss.name}, from ${nm}`, (missed, extra) => {
     pClear(); SET("eod_" + day);
     let reply;
     if (!missed.length && !extra.length) { reply = "Perfect handoff. Every ticket, every walk-up, every weird thing. If you're out sick tomorrow, anyone could pick this up. Thank you!"; addRep(2); award("paper"); }
@@ -822,7 +879,7 @@ function openEodCompose() {
       if (missed.length) addRep(-1);
     }
     pAdd(`<div class="banner ok">\u{1F4E8} <b>Sent.</b> A reply lands two minutes later…</div>`);
-    pAdd(email("<b>Tasha</b>", nm, "RE: Shift handoff", `<p>${reply}</p><p>— T</p>`));
+    pAdd(email(`<b>${boss.name}</b>`, nm, "RE: Shift handoff", `<p>${reply}</p><p>— ${boss.name[0]}</p>`));
     pBtn("\u{1F4EC} Check your inbox", () => { closePanel(); openMarchingOrders(); });
   });
 }
@@ -837,37 +894,65 @@ function dayStats(day) {
     logged: d.known.filter((k) => k.d === day).length };
 }
 
+const MORNING_START = {
+  2: "<b>7:30 AM, Floor 3.</b> Stand-up at 7:45. The window opens when Harold says so.",
+  3: "<b>8:00 AM, Floor 3.</b> Hypercare: we clean up, sign off, and close it out.",
+  5: "<b>5:45 AM, Floor 5.</b> Yes, 5:45. Huddle in my office, then Hiro opens the window at 6.",
+  6: "<b>8:00 AM.</b> Verify Floor 3, route the known issues, get sign-offs, then the paperwork.",
+  8: "<b>7:00 AM, Floor 7.</b> Sofia's on nights; she'll hand over to you. Keep your phone loud.",
+  9: "<b>8:00 AM, Floor 7.</b> Eradicate, recover, prove it, learn from it."
+};
+const MORNING_SIGNOFF = {
+  2: "Eat something. Charge your phone. It's going to be loud.", 3: "Last push. Bring your receipt envelope.",
+  5: "Set two alarms. Cutovers wait for no one.", 6: "Last day of Network Week. Bring the port map.",
+  8: "If anything weird happens overnight, it's already in the SIEM. Sleep.", 9: "Last day. Let's finish it properly."
+};
 function openMarchingOrders() {
-  const day = curDay(), next = day + 1, st = dayStats(day), nm = me();
+  const day = curDay(), next = day + 1, st = dayStats(day), nm = me(), boss = bossOf(day);
   DD().days[day] = st; ddSave();
-  panel("\u{1F4E7} Marching Orders", "Inbox · 9:41 PM", spr("tasha"));
-  const start = next === 2 ? "<b>7:30 AM, Floor 3.</b> Stand-up at 7:45. The window opens when Harold says so." : "<b>8:00 AM, Floor 3.</b> Hypercare: we clean up, sign off, and close it out.";
-  pAdd(email("<b>Tasha</b> · Help Desk Lead", nm + " · cc Benny", `Marching orders: ${esc(dayName(next))}`,
+  panel("\u{1F4E7} Marching Orders", "Inbox · 9:41 PM", spr(boss.id));
+  pAdd(email(`<b>${boss.name}</b> · ${boss.role}`, nm, `Marching orders: ${esc(dayName(next))}`,
     `<p>Hi ${nm}, good work today. Here's how ${esc(dayName(day).split(" · ")[0])} shook out, and tomorrow's plan.</p>
      <p class="em-sec">TODAY · BY THE NUMBERS</p><ul>
      <li>✅ <b>Tasks:</b> all ${tasksFor(day).length} done.</li>
      <li>\u{1F39F}️ <b>Tickets closed:</b> ${st.tickets}. \u{1F64B} <b>Walk-ups heard:</b> ${st.walk}. \u{1F4DF} <b>Pages:</b> ${st.pages}.</li>
-     <li>\u{1F4DD} <b>Documented:</b> ${st.docs.documented} of ${st.docs.total} closed items have work notes.${st.docs.undocumented ? ` <b>${st.docs.undocumented} don't.</b> Gloria reads everything on Thursday.` : " Every one. Gloria will be thrilled."}</li>
-     ${day === 2 ? `<li>\u{1F4CB} <b>Known issues logged:</b> ${st.logged}. We route them tomorrow.</li>` : ""}
+     <li>\u{1F4DD} <b>Documented:</b> ${st.docs.documented} of ${st.docs.total} closed items have work notes.${st.docs.undocumented ? ` <b>${st.docs.undocumented} don't.</b> Gloria reads everything at the end of the week.` : " Every one. Gloria will be thrilled."}</li>
+     ${isClockDay(day) ? `<li>\u{1F4CB} <b>Known issues logged:</b> ${st.logged}. We route them tomorrow.</li>` : ""}
      <li>⭐ <b>Reputation today:</b> ${st.rep >= 0 ? "+" : ""}${st.rep} (now ${DD().rep}).</li>
-     <li>\u{1F4B3} <b>Spending:</b> $${st.spent} on ${st.buys} purchase${st.buys === 1 ? "" : "s"}. Keep the receipts together.</li></ul>
-     <p class="em-sec">TOMORROW · ${esc(DAY_SHORT[next].toUpperCase())}</p><p>${start}</p><ol>${tasksFor(next).map((t) => `<li>${esc(t.label)}</li>`).join("")}</ol>
-     <p>${next === 2 ? "Eat something. Charge your phone. It's going to be loud." : "Last push. Bring your receipt envelope."}</p><p>— Tasha</p>`));
-  pBtn("⏰ Set alarm for 6:30 AM", () => {
+     ${st.buys ? `<li>\u{1F4B3} <b>Spending:</b> $${st.spent} on ${st.buys} purchase${st.buys === 1 ? "" : "s"}. Keep the receipts together.</li>` : ""}</ul>
+     <p class="em-sec">TOMORROW · ${esc((DAY_SHORT[next] || "").toUpperCase())}</p><p>${MORNING_START[next] || ""}</p><ol>${tasksFor(next).map((t) => `<li>${esc(t.label)}</li>`).join("")}</ol>
+     <p>${MORNING_SIGNOFF[next] || ""}</p><p>— ${boss.name}</p>`));
+  setAlarmBtn(day);
+}
+function setAlarmBtn(day) {
+  pBtn(`⏰ Set alarm for ${isClockDay(day + 1) && day + 1 === 5 ? "5:00" : "6:30"} AM`, () => {
     SET("alarm_" + day); closePanel();
-    ping("⏰", "Alarm set: 6:30 AM", "Go get some sleep. The bed's in the bedroom.");
+    ping("⏰", "Alarm set", "Go get some sleep. The bed's in the bedroom.");
     CORE.sfx && CORE.sfx("alarmset");
   });
 }
 
+// Weeks 1-2 end at the party; the email that night makes the promotion official.
+function openPromotionEmail(w) {
+  const day = curDay(), nw = WEEKS[w + 1], rep = DD().weeks[w] || {};
+  panel("\u{1F4E7} Inbox", "Inbox · 10:02 PM", spr("chen"));
+  pAdd(email("<b>Director Chen</b> · IT Director", me() + ` · cc ${WEEKS[w].bossName}, ${nw.bossName}`, `It's official: ${esc(nw.role)}`,
+    `<p>${me()}, congratulations. Starting Monday you're our <b>${esc(nw.role)}</b>, on ${esc(nw.bossName)}'s team (${esc(nw.bossRole)}).</p>
+     <p>${esc(WEEKS[w].title)} final: <b>${(rep.total || 0).toLocaleString()} points, grade ${esc(rep.grade || "?")}</b>.</p>
+     <p class="em-sec">MONDAY · ${esc(dayName(day + 1).toUpperCase())}</p><ol>${tasksFor(day + 1).map((t) => `<li>${esc(t.label)}</li>`).join("")}</ol>
+     <p>${esc(nw.bossName)} will email you a proper welcome in the morning. Get some sleep.</p><p>— Chen</p>`));
+  setAlarmBtn(day);
+}
+
 function bed() {
   const day = curDay();
-  if (day <= 2 && HF("alarm_" + day)) { goToSleep(); return; }
+  if (day <= LAST_DAY && HF("alarm_" + day)) { goToSleep(); return; }
   panel("Your bed", "Bedroom", "\u{1F6CF}️");
-  if (day > 2) pAdd(`<p>Not tonight. There's a happy hour.</p>`);
+  if (day > LAST_DAY || (day === LAST_DAY && HF("partyDone3"))) pAdd(`<p>Three weeks. You've earned a long sleep. (Start a new career from the title screen whenever you like.)</p>`);
   else if (!dayTasksDone(day)) pAdd(`<p>Tempting. But you've still got work today. NEXT UP knows what.</p>`);
+  else if (isWeekEnd(day)) pAdd(`<p>Check your email first (your laptop).</p>`);
   else if (!HF("eod_" + day)) pAdd(`<p>Send your end-of-day email first (your laptop).</p>`);
-  else pAdd(`<p>Read Tasha's Marching Orders and set your alarm first (your laptop).</p>`);
+  else pAdd(`<p>Read your Marching Orders and set your alarm first (your laptop).</p>`);
   pBtn("Close", closePanel, "act ghost");
 }
 
@@ -885,27 +970,49 @@ function goToSleep() {
   }, 3600);
 }
 
+// Week rollover: everything that belongs to one week's scoring starts fresh.
+// The archived week score (dd.weeks[w]) and the career-long things (rep,
+// badges, lingo, keepsakes, docs, notes) carry on.
+export function rolloverWeek(w) {
+  const S = SF(), d = DD(), f = ddFresh();
+  if (!d.weeks[w]) archiveWeek(w);
+  d.st = f.st; d.known = []; d.act = null; d.sched = null; d.fired = {}; d.clockT = 0; d.cool = 0;
+  d.windowOpen = false; d.windowClosed = false; d.hot = {}; d.carry = []; d.officeT = 0; d.pendingGo = null;
+  d.weekStart = { rep: d.rep, badges: d.badges.length, finds: S.finds.size, day: WEEKS[w + 1] ? WEEKS[w + 1].days[0] : 10 };
+  for (const fl of ["partyOpen", "barOpen", "party2", "party3"]) S.clearFlag && S.clearFlag(fl);
+  SET("wk" + w + "over");
+  ddSave();
+}
+
 export function advanceDay() {
-  const S = SF(), d = DD();
+  const S = SF(), d = DD(), day = S.day;
   visClearAll();
   clockReset();
   d.officeT = 0; d.pendingGo = null; d.carry = d.carry || [];
-  S.setDay(S.day + 1);
+  if (isWeekEnd(day) && day < LAST_DAY) rolloverWeek(weekOf(day));
+  S.setDay(day + 1);
   S.goToFloor("home", "start");
   ddSave(); S.updateProgressUI();
 }
 
+const MORNING_FLAVOR = {
+  1: "Your first day. The alarm goes off, you're already awake. Coffee, badge, subway. <b>It's onboarding day.</b>",
+  2: "6:30 AM. Somewhere in Midtown, twelve laptops are waiting in boxes. Harold is already on the bridge. <b>It's go-live.</b>",
+  3: "Last alarm of Cutover Week. The change is in; today you prove it stuck and give back everything you borrowed. <b>It's hypercare.</b>",
+  4: "New week, new floor, new title. Your badge still says Help Desk. By lunch it won't. <b>Network Week starts today.</b>",
+  5: "5:00 AM. It's dark out. Two new switches are waiting in a closet on Floor 3, and Hiro has been awake since 4. <b>It's cutover day.</b>",
+  6: "The switches are in. Today you prove it: test it, route it, sign it, wipe the old ones, write it down. <b>It's verification day.</b>",
+  7: "Floor 7. The SOC. The coffee is worse and the screens are better. <b>SOC Week starts today.</b>",
+  8: "6:30 AM. Your phone is already buzzing: the SIEM doesn't sleep. Something on Floor 3 lit up overnight. <b>It's incident day.</b>",
+  9: "The attacker is contained. Today you get them out for good, bring everything back, and make sure it never works twice. <b>Last day.</b>"
+};
 export function openMorning() {
-  const day = curDay();
-  const flavor = {
-    1: "Your first day. The alarm goes off, you're already awake. Coffee, badge, subway. <b>It's onboarding day.</b>",
-    2: "6:30 AM. Somewhere in Midtown, twelve laptops are waiting in boxes. Harold is already on the bridge. <b>It's go-live.</b>",
-    3: "Last alarm of Cutover Week. The change is in; today you prove it stuck and give back everything you borrowed. <b>It's hypercare.</b>"
-  }[day] || "";
-  panel(`⏰ 6:30 AM · ${dayName(day)}`, "Cutover Week", SF().playerSprite);
-  pAdd(`<p>${flavor}</p>`);
+  const day = curDay(), w = weekOf(day);
+  if (day > LAST_DAY) return;
+  panel(`⏰ ${day === 5 ? "5:00" : "6:30"} AM · ${dayName(day)}`, `${WEEKS[w].title} · ${WEEKS[w].role}`, SF().playerSprite);
+  pAdd(`<p>${MORNING_FLAVOR[day] || ""}</p>`);
   pAdd(`<div class="banner kit"><b>Today's list</b><br>${tasksFor(day).map((t, i) => `${i + 1}. ${esc(t.label)}`).join("<br>")}</div>`);
-  pAdd(`<p class="set-hint">The NEXT UP card (top-left) walks you through it. ${day === 1 ? "Your laptop's in the living room." : "The subway's on the corner."}</p>`);
+  pAdd(`<p class="set-hint">The NEXT UP card (top-left) walks you through it. ${[1, 4, 7].includes(day) ? "Your laptop's in the living room." : "The subway's on the corner."}</p>`);
   const b = pBtn("☀️ Let's go", closePanel);
   setTimeout(() => { try { b.focus(); } catch { /* ignore */ } }, 30);
 }

@@ -1,3 +1,18 @@
+# The Ticket Queue: The Ladder (v3.0)
+
+Nine workdays, three jobs. **Week 1 · Cutover Week:** Tier 1 Help Desk Technician during a laptop refresh (Floor 3).
+**Week 2 · Network Week:** Network Technician replacing Floor 3's switches (Floor 5). **Week 3 · SOC Week:** Security Analyst
+working a real incident (Floor 7). Each week opens with your new boss's training slides and a quiz; tickets and tasks later point
+back to what you learned (📘). Day 2 of every week runs on a clock; day 3 ends at The Stack with a week report and a promotion.
+After day 9: credits, a career score and a top-10 board. Follow the **NEXT UP** card. Space interacts.
+
+- Play: `npm run dev`, or double-click `standalone.html`
+- Rebuild the standalone: `npm run build:standalone`
+- Validate: `npm run validate` · Headless bot: `npm i --no-save playwright && npx playwright install chromium && npm run bot -- thorough`
+- Full design + code map: `CUTOVER_WEEK_HANDOFF.md`
+
+---
+
 # IT Support Game
 
 A top-down RPG that teaches IT help-desk principles. Walk the office, find tickets at NPCs, solve them. Side quests hidden in the world reward attention.

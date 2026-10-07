@@ -2,7 +2,7 @@
 
 import { SCENARIOS, scenarioIdsForFloor, scenarioCountForFloor } from "./scenarios.js";
 import { SIDE_QUESTS, sideQuestIdsForFloor } from "./sideQuests.js";
-import { NPCS, PROPS, FLOOR_META, FLOOR_ORDER, LOC_LABEL } from "./world.js";
+import { NPCS, PROPS, FLOOR_META, FLOOR_ORDER, LOC_LABEL, mapDef, MAP_IDS } from "./world.js";
 import { FINDS, FINDTOTAL } from "./collectables.js";
 import { saveSet, loadNum, saveNum } from "./storage.js";
 import { sampleQuiz, quizPoolSize } from "./quiz.js";
@@ -15,6 +15,7 @@ import { rank, ACHIEVEMENTS, ACHTOTAL, XP } from "./progression.js";
 import { ticketOpen, afterTicketSolved, orientationPagesV2 } from "./days.js";
 import { BADGES, LINGO } from "./pools.js";
 import { DD } from "./core.js";
+import { taughtChip, trainingLibraryHtml, openTraining } from "./training.js";
 import {
   THEMES, currentTheme, applyTheme, prefs,
   setReducedMotion, setColorblind, setBigText
@@ -34,10 +35,8 @@ export function initUI(globalState, onCloseCb) {
   els.avatar = document.getElementById("modal-avatar");
   els.close = document.getElementById("modal-close");
   els.close.addEventListener("click", closeModal);
-  els.bg.addEventListener("click", (e) => {
-    // click on the dimmed backdrop (not the modal itself) closes — unless intro
-    if (e.target === els.bg && !state.inIntro) closeModal();
-  });
+  // v2.2: the popup sits over the map; clicking the dimmed map does NOT close it
+  // (that used to lose half-finished conversations). Use the buttons, × or Esc.
 }
 
 function openModal(title, subtitle, avatarLetter, bodyHtml, opts = {}) {
@@ -47,11 +46,8 @@ function openModal(title, subtitle, avatarLetter, bodyHtml, opts = {}) {
   els.body.innerHTML = bodyHtml;
   els.bg.hidden = false;
   els.close.hidden = !!opts.hideClose;
-  // The modal is an inline panel beneath the game, so bring it into view —
-  // otherwise on a tall screen it can open below the fold, unseen.
-  requestAnimationFrame(() => {
-    try { els.bg.scrollIntoView({ behavior: "smooth", block: "center" }); } catch { els.bg.scrollIntoView(); }
-  });
+  // v2.2: the panel is a popup over the map; start it scrolled to the top
+  try { els.bg.querySelector(".modal").scrollTop = 0; } catch { /* ignore */ }
 }
 
 // v2: the avatar can be a letter/emoji OR a little pixel portrait.
@@ -140,7 +136,7 @@ export function openIntro() {
        <label style="display:block;font-size:12px;color:var(--text-muted);margin-bottom:4px;">Your name</label>
        <input id="intro-name" type="text" maxlength="20" value="${escapeAttr(nameVal)}" placeholder="What should they call you?" autocomplete="off" />
        <div class="intro-foot">
-         <div class="intro-controls">Arrow keys / WASD to move \u00b7 E or space to interact</div>
+         <div class="intro-controls">Arrow keys / WASD to move \u00b7 Space to interact</div>
          <button id="intro-start" class="primary-btn">Start the day \u2192</button>
        </div>
      </div>`,
@@ -181,7 +177,8 @@ export function openTicketBoard() {
     const s = SCENARIOS[id];
     if (!s) return "";
     const isSolved = state.solved.has(id);
-    const npc = NPCS.find((n) => n.ticket === id);
+    let npc = NPCS.find((n) => n.ticket === id), where = "";
+    if (!npc) for (const m of MAP_IDS) { const f = mapDef(m).npcs.find((n) => n.ticket === id); if (f) { npc = f; where = " (" + FLOOR_META[m].name + ")"; break; } }
     const cert = s.cert ? `<span class="ticket-cert">${escapeHtml(s.cert)}</span>` : "";
     return `
       <div class="ticket-row ${isSolved ? "solved" : ""}">
@@ -190,7 +187,7 @@ export function openTicketBoard() {
           <div class="ticket-row-title">${escapeHtml(s.title)} ${cert}</div>
           <div class="ticket-row-meta">${escapeHtml(s.ticketMeta)}</div>
         </div>
-        <span class="ticket-row-status">${isSolved ? "solved" : `find ${npc ? escapeHtml(npc.name) : ""}`}</span>
+        <span class="ticket-row-status">${isSolved ? "solved" : `find ${npc ? escapeHtml(npc.name) + escapeHtml(where) : ""}`}</span>
       </div>`;
   }).join("");
 
@@ -215,7 +212,7 @@ export function openSideQuest(id) {
   ).join("");
 
   openModal(sq.title, sq.where, "?",
-    `<div style="margin-bottom:10px;">${escapeHtml(sq.body)}</div>
+    `<div style="margin-bottom:10px;">${escapeHtml(sq.body)}</div>${taughtChip(id)}
      <div style="font-size:11px;color:var(--text-faint);margin-bottom:6px;">Side quest \u2014 one shot, quick call.</div>
      <div id="sq-opts" class="btn-column">${optsHtml}</div>
      <div id="sq-feedback"></div>`);
@@ -278,7 +275,7 @@ function renderScenario() {
   ).join("");
 
   openModal(s.title, `${s.ticketMeta} \u00b7 ${state.actionsLeft} actions left`, "i",
-    `<div class="scenario-grid">
+    `${taughtChip(state.currentScenario)}<div class="scenario-grid">
       <div>
         <div class="scenario-section-label">Investigate</div>
         <div class="btn-column" id="poi-col">${poiBtns}</div>
@@ -523,14 +520,17 @@ export function openChest(p) {
 function currentObjectives() {
   const o = [];
   const here = state.floor;
-  if (here !== "floor7") {
+  if (here === "floor5") {
+    o.push("The NOC queue board (by the elevator) lists Network Week's tickets. Most of them are people you know on Floor 3.");
+    o.push("Rosa's slides are on the Training room projector. Rewatch them any time from the Training library below.");
+  } else if (here !== "floor7") {
     if (!state.hasFlag("catMet")) o.push("Find the office cat (she's in the conf. room).");
     else if (!state.hasFlag("hasCatFood")) o.push("Mittens is hungry \u2014 find cat food in the print room supply cabinet.");
     else if (!state.hasFlag("catFed")) o.push("Bring the cat food back to Mittens.");
     else if (state.hasFlag("catRevealed") && !state.hasFlag("stashTaken")) o.push("Check the loose ceiling tile Mittens pawed open.");
     if (!state.sqSolved.has("usbDrop")) o.push("Deal with the mystery USB stick on the open-desk floor.");
-    if (!state.floor7Open()) o.push("Floor 7 opens when Security calls you up, or once you clear every Floor 3 ticket.");
-    else o.push("Floor 7 (Security Operations) is open \u2014 take the elevator up.");
+    if (!state.floor5Open()) o.push("Floor 5 (Network Ops) opens in Network Week. Floor 7 (the SOC) opens in SOC Week.");
+    else if (!state.floor7Open()) o.push("Floor 7 (the SOC) opens in SOC Week.");
   } else {
     // Floor 7 side quests live on devices around the SOC.
     const sqLabels = {
@@ -571,7 +571,9 @@ export function openDiscoveries() {
      <ul class="principle-list">${objs}</ul>
      <div class="scenario-section-label" style="margin-top:12px;">Discoveries</div>
      <div class="find-grid">${cards}</div>
+     ${trainingLibraryHtml()}
      ${v2CompanionExtras()}`);
+  document.querySelectorAll(".tr-rewatch").forEach((b) => b.addEventListener("click", () => openTraining(+b.dataset.w, null, { rewatch: true })));
 }
 
 function v2CompanionExtras() {
@@ -600,14 +602,14 @@ export function openElevator(p) {
     const m = FLOOR_META[id];
     const isHere = id === here;
     // Floor 7 stays locked until Floor 3's queue is cleared or the SOC calls you up.
-    const locked = id === "floor7" && !state.floor7Open();
+    const locked = (id === "floor7" && !state.floor7Open()) || (id === "floor5" && !state.floor5Open());
     let statusChip, btn;
     if (isHere) {
       statusChip = `<span class="floor-chip here">you are here</span>`;
       btn = `<button class="floor-btn" disabled>Current floor</button>`;
     } else if (locked) {
       statusChip = `<span class="floor-chip locked">\u{1F512} locked</span>`;
-      btn = `<button class="floor-btn" disabled>Badge access pending</button>`;
+      btn = `<button class="floor-btn" disabled>${id === "floor5" ? "Network Week (Day 4)" : "SOC Week (Day 7)"}</button>`;
     } else {
       statusChip = `<span class="floor-chip open">ready</span>`;
       btn = `<button class="floor-btn primary-btn" data-floor="${escapeAttr(id)}">Go to ${escapeHtml(m.name)} \u2192</button>`;
@@ -623,8 +625,8 @@ export function openElevator(p) {
       </div>`;
   }).join("");
 
-  const lockHint = !state.floor7Open()
-    ? `<div style="font-size:11px;color:var(--text-faint);margin-top:10px;">Your badge opens Floor 7 (Security Ops) once Security calls you up, or once you've cleared every Floor 3 ticket. The <strong>Exam</strong> button practice-tests any floor anytime.</div>`
+  const lockHint = !state.floor7Open() || !state.floor5Open()
+    ? `<div style="font-size:11px;color:var(--text-faint);margin-top:10px;">Your badge opens floors as you climb: Floor 5 when you join the network team, Floor 7 when you join the SOC (or if Security calls Help Desk up early). The <strong>Exam</strong> button practice-tests any floor anytime.</div>`
     : `<div style="font-size:11px;color:var(--text-faint);margin-top:10px;">Your badge opens every floor.</div>`;
 
   openModal("The elevator", "Choose a floor", "\u{1F6D7}",
@@ -643,7 +645,7 @@ export function openElevator(p) {
 export function openQuiz() {
   state.inDialog = true;
   // home + lobby study the Help Desk pool
-  const here = state.floor === "floor7" ? "floor7" : "floor3";
+  const here = state.floor === "floor7" ? "floor7" : state.floor === "floor5" ? "floor5" : "floor3";
   const meta = FLOOR_META[here] || { name: here, tag: "" };
   const bestKey = "quiz-best-" + here;
 
@@ -1111,7 +1113,7 @@ export function openOrientation(onDone) {
       h: `<p style="margin:0 0 8px;">Morning, ${name}. Welcome to your first day in IT support. I'm your onboarding buddy \u2014 quick orientation, then you're on the floor.</p>
           <p style="margin:0;color:var(--text-muted);">This whole job is one loop: a problem comes in, you investigate, you find the real cause, you fix it. Do that well and you'll be ready for the CompTIA exams without even trying.</p>` },
     { t: "Your ticket monitor", a: "\u{1F5A5}\uFE0F",
-      h: `<p style="margin:0 0 8px;">That glowing screen in your office (the <strong>IT room</strong>) is your <strong>ticket monitor</strong>. Walk up to it and press <strong>E</strong> or <strong>Space</strong> to see what's open.</p>
+      h: `<p style="margin:0 0 8px;">That glowing screen in your office (the <strong>IT room</strong>) is your <strong>ticket monitor</strong>. Walk up to it and press <strong>Space</strong> to see what's open.</p>
           <p style="margin:0;color:var(--text-muted);">People who filed a ticket have an orange <strong style="color:#EF9F27;">!</strong> over their head. Go find them, hear them out, and dig into the clues before you commit to a diagnosis. Guessing burns your action budget.</p>` },
     { t: "Look around, not just up", a: "\u{1F50D}",
       h: `<p style="margin:0 0 8px;">Not everything is on the board. A blue <strong style="color:#378ADD;">?</strong> marks a <strong>side quest</strong> \u2014 something you only notice by wandering. There's a cat somewhere, too. Be curious.</p>

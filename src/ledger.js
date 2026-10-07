@@ -153,9 +153,12 @@ export function docStats(day) {
 }
 
 // ---- Gloria's Day 3 audit: receipts + ticket hygiene ------------------------
-export function openAudit(onDone) {
+export function openAudit(onDone, opts = {}) {
   const S = CORE.S, d = DD();
   const sprite = S.npcSprite("gloria");
+  const inWeek = (x) => !opts.days || opts.days.includes(x.d);
+  const docsW = d.docs.filter(inWeek);
+  if (opts.days) { step2(); return; }   // weeks 2-3: no company card, straight to the queue
   step1();
 
   function step1() {
@@ -202,10 +205,10 @@ export function openAudit(onDone) {
   }
 
   function step2() {
-    const undoc = d.docs.filter((x) => !x.documented);
-    const total = d.docs.length;
-    panel("Gloria · the audit", "Ticket hygiene", sprite);
-    pAdd(`<p style="margin:0 0 8px;">"Now. You closed <b>${total}</b> pieces of work this week: tickets, walk-ups, pages. I read every one. So I already know the answer. I just want to hear you say it."</p>
+    const undoc = docsW.filter((x) => !x.documented);
+    const total = docsW.length;
+    panel("Gloria · the audit", opts.label ? opts.label + " · ticket hygiene" : "Ticket hygiene", sprite);
+    pAdd(`<p style="margin:0 0 8px;">"${opts.days ? "Every week, same deal. " : "Now. "}You closed <b>${total}</b> pieces of work this week: tickets, walk-ups, pages${opts.days ? ", hotspots" : ""}. I read every one. So I already know the answer. I just want to hear you say it."</p>
       <p style="margin:0 0 8px;"><b>"How many did you close without work notes?"</b></p>`);
     const row = pAdd("", "count-row");
     const max = Math.min(12, Math.max(total, 4));
@@ -229,7 +232,7 @@ export function openAudit(onDone) {
     }
     addNote("audit", "\u{1F9FE}", `Ticket audit with Gloria: ${truth} closed without notes (said ${n}).`);
     if (!truth) {
-      award("clean"); if (S_addFind("cleanQueue")) ping("\u{1F5BC}️", "Keepsake", "A framed 'Clean Queue' printout.");
+      if (!opts.days) award("clean"); if (S_addFind("cleanQueue")) ping("\u{1F5BC}️", "Keepsake", "A framed 'Clean Queue' printout.");
       pAdd(`<p>"Every closed item has notes. The next tech who touches these will know exactly what you did. That's the job."</p>`);
       finish();
       return;
@@ -245,7 +248,7 @@ export function openAudit(onDone) {
   }
 
   function finish() {
-    S.setFlag("audited"); ddSave(); S.updateProgressUI();
+    S.setFlag(opts.flag || "audited"); ddSave(); S.updateProgressUI();
     pBtn("Thanks, Gloria", () => { closePanel(); if (onDone) onDone(); }, "primary-btn act");
   }
 }

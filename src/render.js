@@ -279,7 +279,8 @@ function drawPersonProc(ctx, px, py, sp, facing, stepping, tick = 0, seed = 0) {
   const co = sp || PLAYER_SPRITE;
   ctx.fillStyle = PAL.shadow;
   ctx.beginPath(); ctx.ellipse(px + TILE / 2, py + TILE - 3, 9, 3, 0, 0, Math.PI * 2); ctx.fill();
-  const yo = stepping ? -1 : bobFor(false, tick, seed);
+  const yo = stepping ? (stepping === 2 ? -1 : 0) : bobFor(false, tick, seed);
+  const legB = stepping === 2;
   // head
   ctx.fillStyle = co.skin; ctx.fillRect(px + 10, py + 4 + yo, 12, 10);
   ctx.fillStyle = "#D4A57E"; ctx.fillRect(px + 10, py + 12 + yo, 12, 2);
@@ -321,11 +322,13 @@ function drawPersonProc(ctx, px, py, sp, facing, stepping, tick = 0, seed = 0) {
   // arms
   ctx.fillStyle = co.skin;
   if (!stepping) { ctx.fillRect(px + 7, py + 18 + yo, 3, 6); ctx.fillRect(px + 22, py + 18 + yo, 3, 6); }
-  else { ctx.fillRect(px + 7, py + 17 + yo, 3, 5); ctx.fillRect(px + 22, py + 19 + yo, 3, 5); }
+  else if (!legB) { ctx.fillRect(px + 7, py + 17 + yo, 3, 5); ctx.fillRect(px + 22, py + 19 + yo, 3, 5); }
+  else { ctx.fillRect(px + 7, py + 19 + yo, 3, 5); ctx.fillRect(px + 22, py + 17 + yo, 3, 5); }
   // legs / shoes
   ctx.fillStyle = "#2C2C2A";
   if (!stepping) { ctx.fillRect(px + 11, py + 26 + yo, 4, 4); ctx.fillRect(px + 17, py + 26 + yo, 4, 4); }
-  else { ctx.fillRect(px + 10, py + 26 + yo, 4, 4); ctx.fillRect(px + 18, py + 25 + yo, 4, 5); }
+  else if (!legB) { ctx.fillRect(px + 10, py + 26 + yo, 4, 4); ctx.fillRect(px + 18, py + 25 + yo, 4, 5); }
+  else { ctx.fillRect(px + 10, py + 25 + yo, 4, 5); ctx.fillRect(px + 18, py + 26 + yo, 4, 4); }
 }
 
 // Pick the best available sprite image for an id given facing + walk state.
@@ -334,7 +337,7 @@ function drawPersonProc(ctx, px, py, sp, facing, stepping, tick = 0, seed = 0) {
 // Walk frames let a generated 2-frame cycle animate while moving; absent that,
 // the single directional (or down) frame is used and we lean on the hop offset.
 function pickSprite(set, id, facing, stepping, tick) {
-  const frame = stepping ? (Math.floor(tick / 7) % 2) : 0; // 0/1 cadence while walking
+  const frame = stepping ? (stepping - 1) : 0; // alternate frame each step
   const tries = [
     `${id}_${facing}_${frame}`,
     `${id}_${facing}`,
@@ -351,7 +354,7 @@ function drawPerson(ctx, px, py, id, sp, facing, stepping, tick = 0, seed = 0) {
   ctx.fillStyle = PAL.shadow;
   ctx.beginPath(); ctx.ellipse(px + TILE / 2, py + TILE - 3, 9, 3, 0, 0, Math.PI * 2); ctx.fill();
   if (img) {
-    const yo = stepping ? -1 : bobFor(false, tick, seed);
+    const yo = stepping ? (stepping === 2 ? -1 : 0) : bobFor(false, tick, seed);
     ctx.drawImage(img, px, py + yo, TILE, TILE);
   } else {
     drawPersonProc(ctx, px, py, sp, facing, stepping, tick, seed);
@@ -574,7 +577,7 @@ function drawBubble(ctx, px, py, kind, tick) {
 function drawPrompt(ctx, px, py, tick) {
   const bob = Math.sin(tick / 14) * 2;
   ctx.font = "bold 9px ui-monospace, monospace";
-  const text = "E";
+  const text = "SPACE";
   const w = ctx.measureText(text).width + 8;
   const bx = px + TILE / 2 - w / 2;
   const by = py - 16 + bob;
@@ -605,8 +608,9 @@ function cameraFor(state, cw, ch) {
   const rx = state.renderX, ry = state.renderY;
   const shakeX = state.shake ? (Math.random() - 0.5) * state.shake * 4 : 0;
   const shakeY = state.shake ? (Math.random() - 0.5) * state.shake * 4 : 0;
-  const camX = clampCam(rx - cw / 2 + TILE / 2, MAP_W * TILE, cw) + shakeX;
-  const camY = clampCam(ry - ch / 2 + TILE / 2, MAP_H * TILE, ch) + shakeY;
+  // whole pixels only: fractional offsets make pixel art shimmer while walking
+  const camX = Math.round(clampCam(rx - cw / 2 + TILE / 2, MAP_W * TILE, cw) + shakeX);
+  const camY = Math.round(clampCam(ry - ch / 2 + TILE / 2, MAP_H * TILE, ch) + shakeY);
   return { camX, camY };
 }
 
@@ -664,8 +668,8 @@ export function draw(ctx, state, facedTarget) {
   // NPCs
   for (const n of NPCS) {
     if (state.npcVisible && !state.npcVisible(n)) continue;
-    const sx = (n.rx != null ? n.rx : n.x * TILE) - camX, sy = (n.ry != null ? n.ry : n.y * TILE) - camY;
-    drawPerson(ctx, sx, sy, `npc_${n.id}`, n.sprite, n.facing || "down", !!(n._vis && n._vis.moving), state.tick, seedFor(n.id));
+    const sx = Math.round(n.rx != null ? n.rx : n.x * TILE) - camX, sy = Math.round(n.ry != null ? n.ry : n.y * TILE) - camY;
+    drawPerson(ctx, sx, sy, `npc_${n.id}`, n.sprite, n.facing || "down", n._vis && n._vis.moving ? 1 + ((n.x + n.y) % 2) : 0, state.tick, seedFor(n.id));
     const kind = npcBubbleKind(n, state);
     if (kind) drawBubble(ctx, sx, sy, kind, state.tick);
     // prompt over the faced target
@@ -680,8 +684,19 @@ export function draw(ctx, state, facedTarget) {
     drawPrompt(ctx, p.x * TILE - camX, p.y * TILE - camY, state.tick);
   }
 
+  // live hotspots: a red pulse on whatever needs you right now
+  if (state.dd && state.dd.hot && state.hotTargets) {
+    for (const h of state.hotTargets()) {
+      if (h.at.map !== state.map) continue;
+      const e = NPCS.find((n) => n.id === h.at.id) || PROPS.find((p) => p.id === h.at.id); if (!e) continue;
+      const a = 0.35 + 0.3 * Math.sin(state.tick / 6);
+      ctx.strokeStyle = `rgba(226,75,74,${a})`; ctx.lineWidth = 2;
+      ctx.strokeRect(e.x * TILE - camX + 1, e.y * TILE - camY + 1, TILE - 2, TILE - 2);
+    }
+  }
+
   // player
-  drawPerson(ctx, state.renderX - camX, state.renderY - camY, "player", state.playerSprite || PLAYER_SPRITE, state.facing, state.moving, state.tick, 0);
+  drawPerson(ctx, Math.round(state.renderX) - camX, Math.round(state.renderY) - camY, "player", state.playerSprite || PLAYER_SPRITE, state.facing, state.moving ? 1 + ((state.walkPhase || 0) % 2) : 0, state.tick, 0);
 
   // v2: the NEXT UP arrow over the target tile
   if (state.nuTarget && !state.moving) drawTargetArrow(ctx, state.nuTarget.x * TILE - camX, state.nuTarget.y * TILE - camY, state.tick);
@@ -782,6 +797,38 @@ function drawPropV2(ctx, x, y, p, state) {
     }
   } else if (k === "fixture") {
     paintFixture(ctx, x, y, p.art, REDUCE_MOTION ? 0 : t);
+  } else if (k === "ipam" || k === "siem") {
+    ctx.fillStyle = "#14181f"; ctx.fillRect(x + 5, y + 6, 22, 15);
+    ctx.fillStyle = k === "siem" ? "#0b1d2c" : "#0c1f14"; ctx.fillRect(x + 7, y + 8, 18, 11);
+    if (k === "siem") { for (let i = 0; i < 6; i++) { const h = 2 + Math.floor((Math.sin(t / 15 + i * 1.7) + 1) * 3); ctx.fillStyle = i === 3 && Math.sin(t / 9) > 0.6 ? "#E24B4A" : "#4fd1c5"; ctx.fillRect(x + 8 + i * 3, y + 18 - h, 2, h); } }
+    else { ctx.fillStyle = "#63B370"; for (let i = 0; i < 4; i++) ctx.fillRect(x + 9, y + 10 + i * 2, 6 + ((i * 5) % 9), 1); }
+    ctx.fillStyle = "#3A3F47"; ctx.fillRect(x + 13, y + 21, 6, 3); ctx.fillRect(x + 9, y + 24, 14, 2);
+  } else if (k === "console") {
+    ctx.fillStyle = "#3d7bd6"; ctx.fillRect(x + 6, y + 18, 20, 2); ctx.fillRect(x + 24, y + 18, 2, 10);
+    ctx.fillStyle = "#1a1d24"; ctx.fillRect(x + 4, y + 22, 12, 7); ctx.fillStyle = "#63B370"; ctx.fillRect(x + 6, y + 24, 6, 1); ctx.fillRect(x + 6, y + 26, 4, 1);
+  } else if (k === "projector") {
+    ctx.fillStyle = "#3A3A38"; ctx.fillRect(x + 9, y + 8, 14, 8); ctx.fillStyle = "#85B7EB"; ctx.beginPath(); ctx.arc(x + 13, y + 12, 2.5, 0, 7); ctx.fill();
+    ctx.fillStyle = `rgba(133,183,235,${0.18 + 0.1 * Math.sin(t / 14)})`; ctx.beginPath(); ctx.moveTo(x + 11, y + 12); ctx.lineTo(x + 2, y + 2); ctx.lineTo(x + 2, y + 22); ctx.fill();
+  } else if (k === "bench") {
+    for (let i = 0; i < 2; i++) { ctx.fillStyle = "#2a2f38"; ctx.fillRect(x + 4, y + 8 + i * 8, 24, 6); for (let j = 0; j < 8; j++) { ctx.fillStyle = (j + i + Math.floor(t / 12)) % 3 ? "#63B370" : "#1d3a24"; ctx.fillRect(x + 6 + j * 3, y + 10 + i * 8, 2, 2); } }
+  } else if (k === "jack") {
+    ctx.fillStyle = "#F4F1EA"; ctx.fillRect(x + 11, y + 13, 10, 12); ctx.strokeStyle = "#9AA0A6"; ctx.lineWidth = 1; ctx.strokeRect(x + 11.5, y + 13.5, 9, 11);
+    ctx.fillStyle = "#2C2C2A"; ctx.fillRect(x + 13, y + 16, 6, 3); ctx.fillRect(x + 13, y + 21, 6, 3);
+    ctx.fillStyle = state.flags.has("done_" + p.id) ? "#63B370" : "#FCDE5A"; ctx.fillRect(x + 11, y + 10, 10, 3);
+    if (state.day === 4 && state.flags.has("kit2") && !state.flags.has("done_" + p.id)) { const b = Math.sin(t / 12) > 0; ctx.strokeStyle = b ? "#FCDE5A" : "rgba(252,222,90,0.35)"; ctx.lineWidth = 1.5; ctx.strokeRect(x + 8, y + 8, 16, 20); }
+  } else if (k === "verify") {
+    const ok = state.flags.has("done_" + p.id);
+    ctx.fillStyle = ok ? "#63B370" : "#FCDE5A"; ctx.beginPath(); ctx.arc(x + 25, y + 7, 5, 0, 7); ctx.fill();
+    ctx.fillStyle = "#1a1a18"; ctx.font = "bold 7px ui-monospace, monospace"; ctx.fillText(ok ? "\u2713" : "?", x + 23, y + 10);
+  } else if (k === "locker") {
+    ctx.fillStyle = "#5F6670"; ctx.fillRect(x + 6, y + 3, 20, 26); ctx.fillStyle = "#4A5059"; ctx.fillRect(x + 8, y + 5, 16, 10); ctx.fillRect(x + 8, y + 17, 16, 10);
+    ctx.fillStyle = "#F2C94C"; ctx.fillRect(x + 21, y + 9, 2, 3); ctx.fillRect(x + 21, y + 21, 2, 3);
+  } else if (k === "hotprop") {
+    const b = Math.sin(t / 7) > 0;
+    if (p.art === "loop") { ctx.strokeStyle = "#2D7DD2"; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x + 16, y + 18, 10, 6, 0, 0, 7); ctx.stroke(); ctx.fillStyle = "#3A3A38"; ctx.fillRect(x + 11, y + 20, 10, 5); }
+    else if (p.art === "ap") { ctx.fillStyle = "#F4F1EA"; ctx.beginPath(); ctx.arc(x + 16, y + 16, 8, 0, 7); ctx.fill(); ctx.fillStyle = "#3A3A38"; ctx.beginPath(); ctx.arc(x + 16, y + 16, 2, 0, 7); ctx.fill(); }
+    else { ctx.fillStyle = "#F4F1EA"; ctx.fillRect(x + 11, y + 13, 10, 12); ctx.fillStyle = "#EF9F27"; ctx.fillRect(x + 13, y + 16, 6, 3); }
+    ctx.strokeStyle = b ? "#E24B4A" : "rgba(226,75,74,0.35)"; ctx.lineWidth = 2; ctx.strokeRect(x + 2, y + 2, TILE - 4, TILE - 4);
   } else if (k === "bardoor") {
     ctx.fillStyle = "#2C1B10"; ctx.fillRect(x + 2, y, TILE - 4, TILE);
     ctx.fillStyle = "#1a1a18"; ctx.fillRect(x + 5, y + 3, TILE - 10, 12);
@@ -805,7 +852,7 @@ function drawTargetArrow(ctx, x, y, tick) {
 function drawTimeTint(ctx, cw, ch, state) {
   let c = null;
   if (state.map === "home" && state.dayOver && state.dayOver()) c = "rgba(14,22,60,0.42)";
-  else if (state.map === "lobby" && state.flags.has("partyOpen")) c = "rgba(90,40,10,0.18)";
+  else if (state.map === "lobby" && state.flags.has("barOpen")) c = "rgba(90,40,10,0.18)";
   if (!c) return;
   ctx.fillStyle = c; ctx.fillRect(0, 0, cw, ch);
 }

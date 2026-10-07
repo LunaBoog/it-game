@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>The Ticket Queue: Cutover Week &mdash; a free CompTIA / IT help-desk study game</title>
+    <title>The Ticket Queue: The Ladder &mdash; a free CompTIA / IT help-desk study game</title>
     <link rel="stylesheet" href="./src/styles.css" />
   </head>
   <body>
@@ -11,11 +11,12 @@
       <div>
         <div class="topbar-label" id="loc-label">IT SUPPORT &middot; FLOOR 3</div>
         <div class="topbar-title" id="game-title">
-          Cutover Week: three days as the new Tier 1 tech. Arrow keys / WASD to move, E or space to interact, N notes, P chat.
+          The Ladder: three weeks, three jobs. Help desk, then network, then security. Arrow keys / WASD to move, Space to interact, N notes, P chat.
         </div>
       </div>
       <div class="progress">
         <div class="pill pill-accent" id="day-pill">Day 1</div>
+        <div class="pill pill-role" id="role-pill">Help Desk</div>
         <div class="pill pill-today" id="today-pill">Today 0/10</div>
         <div class="pill pill-money" id="money-pill" title="Your cash &middot; company card left">&#128181; $50</div>
         <div class="pill pill-rep" id="rep-pill" title="Reputation">&#11088; 5</div>
@@ -40,7 +41,7 @@
 
     <div class="legend">
       <span>[WASD/arrows] walk</span>
-      <span>[space/E] interact</span>
+      <span>[space] interact</span>
       <span><span class="dot dot-ticket"></span> ticket</span>
       <span><span class="dot dot-sq"></span> side quest</span>
       <span><span class="dot dot-done"></span> done</span>
@@ -58,8 +59,8 @@
             <div class="title-card arcade">
               <div class="arcade-sub">&#9733; IT SUPPORT SIMULATOR &#9733;</div>
               <div class="arcade-title" data-text="THE TICKET QUEUE">THE TICKET QUEUE</div>
-              <div class="arcade-cutover">CUTOVER WEEK</div>
-              <div class="arcade-tag">THREE DAYS &middot; ONE BIG CHANGE &middot; A FREE COMPTIA STUDY GAME</div>
+              <div class="arcade-cutover">THE LADDER</div>
+              <div class="arcade-tag">HELP DESK &rsaquo; NETWORK &rsaquo; SECURITY &middot; NINE DAYS &middot; A FREE COMPTIA STUDY GAME</div>
               <div id="title-menu" class="arcade-menu"></div>
               <div class="arcade-hint" id="title-hint">&#9650;&#9660; SELECT &nbsp;&middot;&nbsp; ENTER / SPACE: CONFIRM</div>
               <div id="continue-line" class="title-continue"></div>
@@ -69,7 +70,7 @@
           </div>
 
           <div id="interact-hint" class="interact-hint">
-            <span id="interact-hint-text">Press E to interact</span>
+            <span id="interact-hint-text">Space to interact</span>
           </div>
 
           <div id="eod-hint" class="eod-hint" hidden></div>
@@ -95,11 +96,9 @@
               <button class="dpad-btn dpad-right" id="touch-right" aria-label="Move right">&#9654;</button>
               <button class="dpad-btn dpad-down" id="touch-down" aria-label="Move down">&#9660;</button>
             </div>
-            <button class="action-btn" id="touch-action" aria-label="Interact">E</button>
+            <button class="action-btn" id="touch-action" aria-label="Interact">&#9251;</button>
           </div>
         </div>
-      </div>
-
       <div id="modal-bg" class="modal-bg" hidden>
         <div class="modal" role="dialog" aria-modal="true">
           <div class="modal-head">
@@ -113,6 +112,9 @@
           <div id="modal-body" class="modal-body"></div>
         </div>
       </div>
+
+      </div>
+
     </div>
 
     <div id="toast-host" class="toast-host"></div>

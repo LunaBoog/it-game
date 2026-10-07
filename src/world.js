@@ -198,7 +198,30 @@ function buildFloor7() {
   for (const [x, y] of [[20, 16], [25, 16], [20, 19], [25, 19]]) m[y][x] = "D";
   return m.map((r) => r.join(""));
 }
+// v3 Floor 5 · Network Operations (Week 2). Same proven office skeleton.
+function buildFloor5() {
+  const m = OFFICE.map((r) => r.split(""));
+  const re = (x0, y0, w, h, t) => refloor(m, x0, y0, w, h, t);
+  re(1, 1, 5, 6, "."); re(7, 1, 12, 6, "z"); re(20, 1, 8, 6, "q");
+  re(1, 8, 5, 6, "x"); re(7, 8, 12, 6, "o"); re(20, 8, 8, 6, "f");
+  re(1, 15, 5, 6, "x"); re(7, 15, 9, 6, "g"); re(17, 15, 11, 6, "e");
+  // MDF: two rows of racks
+  m[9][2] = "x";
+  for (const [x, y] of [[1, 9], [2, 9], [4, 9], [5, 9], [1, 12], [2, 12], [4, 12], [5, 12]]) m[y][x] = "S";
+  // telecom room: one more pair of racks
+  m[20][2] = "S"; m[20][4] = "S";
+  // IPAM: a pod
+  m[2][23] = "D";
+  // team desks: three pods of four
+  for (const [x, y] of [[8, 9], [9, 9], [11, 9], [12, 9], [15, 9], [16, 9], [8, 12], [9, 12], [11, 12], [12, 12], [15, 12], [16, 12]]) m[y][x] = "D";
+  // Rosa's office: one long desk
+  m[9][23] = "D"; m[9][24] = "D"; m[12][25] = "f";
+  // staging lab: benches in pairs
+  for (const [x, y] of [[20, 16], [25, 16], [20, 19], [25, 19]]) m[y][x] = "D";
+  return m.map((r) => r.join(""));
+}
 const FLOOR3MAP = buildFloor3();
+const NETMAP = buildFloor5();
 const SOC = buildFloor7();
 const HOME = buildHomeMap();
 const LOBBYMAP = buildLobbyMap();
@@ -210,7 +233,7 @@ const BLOCKING = new Set(["W", "D", "S", "R", "K", "H", "B", "C", "P"]);
 //   wall: drawn on a wall tile's visible face (windows, art, screens)
 //   item: drawn on top of a desk/counter (monitors, mugs, plants)
 //   solid: blocks movement (plants, cabinets, shelves, couches)
-const DECOR = { home: [], lobby: [], floor3: [], floor7: [] };
+const DECOR = { home: [], lobby: [], floor3: [], floor5: [], floor7: [] };
 function dz(map, k, list, opts = {}) { for (const [x, y] of list) DECOR[map].push({ x, y, k, ...opts }); }
 // Floor 3
 dz("floor3", "window", [[1, 0], [2, 0], [3, 0], [4, 0], [7, 0], [8, 0], [9, 0], [10, 0], [15, 0], [16, 0], [17, 0], [18, 0], [20, 0], [21, 0], [22, 0], [23, 0], [24, 0], [25, 0], [26, 0], [27, 0]], { wall: true });
@@ -267,10 +290,32 @@ dz("floor7", "rgbkb", [[20, 16], [25, 19]], { item: true }); dz("floor7", "mon2"
 dz("floor7", "boxes", [[17, 20]], { solid: true }); dz("floor7", "plant", [[27, 17]], { solid: true }); dz("floor7", "fcab", [[20, 6]], { solid: true });
 dz("floor7", "chairO", [[9, 3], [11, 3], [13, 3], [15, 3], [8, 10], [11, 10], [16, 10], [22, 1], [26, 1], [19, 15], [26, 15], [19, 20], [26, 20]]);
 dz("floor7", "chairC", [[9, 16], [11, 16], [13, 16], [9, 18], [11, 18], [13, 18]]);
-dz("floor7", "mon2", [[9, 2], [10, 2], [11, 2], [12, 2], [13, 2], [14, 2], [15, 2], [8, 9], [9, 9], [11, 9], [12, 9], [15, 9], [16, 9], [22, 2], [26, 2], [19, 16], [26, 16]], { item: true });
+dz("floor7", "mon2", [[9, 2], [11, 2], [12, 2], [13, 2], [14, 2], [15, 2], [8, 9], [9, 9], [11, 9], [12, 9], [15, 9], [16, 9], [22, 2], [26, 2], [19, 16], [26, 16]], { item: true });
 dz("floor7", "rgbkb", [[19, 19], [26, 19], [8, 12], [9, 12], [15, 12], [16, 12]], { item: true });
-dz("floor7", "mon", [[2, 2], [22, 5], [26, 5], [22, 9], [25, 9]], { item: true });
-dz("floor7", "papers", [[3, 2], [2, 9], [10, 17], [12, 17]], { item: true });
+dz("floor7", "mon", [[2, 2], [22, 5], [22, 9], [25, 9]], { item: true });
+dz("floor7", "papers", [[2, 9], [10, 17], [12, 17]], { item: true });
+// Floor 5 (Network Operations)
+dz("floor5", "window", [[1, 0], [4, 0], [20, 0], [21, 0], [22, 0], [23, 0], [26, 0], [27, 0]], { wall: true });
+dz("floor5", "logo", [[2, 0]], { wall: true }); dz("floor5", "logo2", [[3, 0]], { wall: true });
+dz("floor5", "vwall", [[7, 0], [8, 0], [9, 0], [10, 0], [11, 0], [12, 0], [13, 0], [14, 0], [15, 0], [16, 0], [17, 0], [18, 0]], { wall: true });
+dz("floor5", "wbL", [[24, 0], [15, 7], [13, 14], [21, 14]], { wall: true }); dz("floor5", "wbR", [[25, 0], [16, 7], [14, 14], [22, 14]], { wall: true });
+dz("floor5", "patch", [[1, 7], [2, 7], [1, 14], [2, 14], [20, 14]], { wall: true });
+dz("floor5", "clock", [[5, 7], [27, 7], [26, 14]], { wall: true });
+dz("floor5", "cork", [[8, 7], [18, 14]], { wall: true }); dz("floor5", "art", [[10, 7], [21, 7]], { wall: true });
+dz("floor5", "wmap", [[17, 7], [18, 7]], { wall: true });
+dz("floor5", "tvL", [[8, 14]], { wall: true }); dz("floor5", "tvR", [[9, 14]], { wall: true });
+dz("floor5", "calendar", [[27, 14]], { wall: true }); dz("floor5", "exit", [[5, 14]], { wall: true });
+dz("floor5", "plant", [[7, 1], [18, 6], [27, 6], [1, 6], [7, 13], [18, 13], [20, 8], [15, 15], [7, 20]], { solid: true });
+dz("floor5", "books", [[27, 10], [27, 11]], { solid: true }); dz("floor5", "fcab", [[20, 13], [20, 6]], { solid: true });
+dz("floor5", "ups", [[5, 13], [5, 15]], { solid: true }); dz("floor5", "crac", [[1, 15]], { solid: true });
+dz("floor5", "boxes", [[17, 20], [27, 20]], { solid: true }); dz("floor5", "spectrum", [[27, 17]], { solid: true }); dz("floor5", "antenna", [[17, 15]], { solid: true });
+dz("floor5", "chairO", [[10, 3], [12, 3], [13, 3], [14, 3], [8, 10], [12, 10], [16, 10], [9, 13], [11, 13], [15, 13], [22, 1], [26, 1], [22, 6], [26, 6], [23, 8], [19, 15], [26, 15], [19, 20], [26, 20], [2, 3]]);
+dz("floor5", "chairC", [[9, 16], [11, 16], [13, 16], [9, 18], [11, 18], [13, 18]]);
+dz("floor5", "rugR", [[21, 11], [22, 11], [23, 11], [24, 11], [25, 11], [21, 12], [22, 12], [23, 12], [24, 12], [25, 12]]);
+dz("floor5", "mon2", [[9, 2], [10, 2], [11, 2], [12, 2], [13, 2], [14, 2], [8, 9], [12, 9], [15, 9], [8, 12], [11, 12], [16, 12], [23, 2], [26, 2], [22, 5], [26, 5], [23, 9]], { item: true });
+dz("floor5", "mon", [[2, 2], [11, 9], [16, 9], [9, 12], [12, 12], [15, 12], [24, 9], [19, 16], [26, 16], [19, 19], [26, 19]], { item: true });
+dz("floor5", "phone", [[3, 2], [15, 2]], { item: true }); dz("floor5", "papers", [[22, 9], [25, 9], [10, 17], [12, 17]], { item: true });
+dz("floor5", "notepad", [[9, 17], [13, 17]], { item: true });
 // Lobby
 dz("lobby", "window", [[1, 0], [3, 0], [4, 0], [5, 0], [6, 0], [10, 0], [11, 0], [12, 0], [13, 0], [14, 0], [15, 0], [16, 0]], { wall: true });
 dz("lobby", "directory", [[7, 0]], { wall: true }); dz("lobby", "logo", [[8, 0]], { wall: true }); dz("lobby", "logo2", [[9, 0]], { wall: true });
@@ -573,7 +618,7 @@ const PROPSL = [
   { id: "cage", x: 27, y: 2, label: "the e-waste cage", room: "IT storeroom", kind: "cage" },
   { id: "cart-l", x: 3, y: 11, label: "Lupe's coffee cart", room: "W 49th St", kind: "decor", art: "cart" },
   { id: "loaner", x: 20, y: 7, label: "the loaner cart", room: "IT storeroom", kind: "decor", art: "loaner", hideFlag: "cartOut" },
-  { id: "bar-door", x: 23, y: 13, label: "The Stack's door", room: "W 49th St", kind: "bardoor", hideFlag: "partyOpen" },
+  { id: "bar-door", x: 23, y: 13, label: "The Stack's door", room: "W 49th St", kind: "bardoor", hideFlag: "barOpen" },
   { id: "bb-shelf", x: 7, y: 19, label: "the cable wall", room: "Byte Bodega", kind: "decor", art: "shelf" }
 ];
 export const LOBBY_SPOTS = {
@@ -583,9 +628,119 @@ export const LOBBY_SPOTS = {
   socEntry: { x: 8, y: 11 }
 };
 
+// ---- FLOOR 5 · Network Operations (Week 2) ---------------------------------
+// Chain of command: Director Chen -> Rosa (Network Lead, your boss in Week 2)
+// -> Hiro (senior network engineer, runs the change bridge) / YOU (network tech).
+const ROOMS5 = [
+  { name: "Elevator lobby", x: 1,  y: 1,  w: 5,  h: 6 },
+  { name: "NOC",            x: 7,  y: 1,  w: 12, h: 6 },
+  { name: "IPAM & planning",x: 20, y: 1,  w: 8,  h: 6 },
+  { name: "MDF",            x: 1,  y: 8,  w: 5,  h: 6 },
+  { name: "Network team",   x: 7,  y: 8,  w: 12, h: 6 },
+  { name: "Network Lead",   x: 20, y: 8,  w: 8,  h: 6 },
+  { name: "Telecom room",   x: 1,  y: 15, w: 5,  h: 6 },
+  { name: "Training room",  x: 7,  y: 15, w: 9,  h: 6 },
+  { name: "Staging lab",    x: 17, y: 15, w: 11, h: 6 }
+];
+const NPCS5 = [
+  { id: "rosa", name: "Rosa", role: "Network Lead · your boss", x: 23, y: 11, cast: true,
+    sprite: { body:"#0E7C86", body2:"#095A61", accent:"#FFD27A", hair:"#2C2C2A", skin:"#B07A50", glasses:true },
+    chat: ["Bottom of the stack first. Every time.","If it isn't in IPAM, it doesn't exist.","Label both ends. Future you is a person too."] },
+  { id: "hiro", name: "Hiro", role: "Senior Network Engineer · runs the bridge", x: 16, y: 4, cast: true,
+    sprite: { body:"#34495E", body2:"#22303D", accent:"#7FDBFF", hair:"#1a1a18", skin:"#E0B080" },
+    chat: ["Show run, then show it again.","A trunk is a promise about which VLANs may pass.","I never trust a link light I didn't check from both ends."] },
+  { id: "abby", name: "Abby", role: "NOC analyst", x: 11, y: 3, ticket: "duplex",
+    sprite: { body:"#E85D75", body2:"#B0405A", accent:"#FFE0E7", hair:"#6B4A2A", skin:"#E0B080" },
+    chat: ["Green dashboards are my love language.","CRC errors climbing? Check the cable, then the duplex.","I've got alerts for my alerts."] },
+  { id: "wade", name: "Wade", role: "Wireless engineer", x: 22, y: 18, ticket: "poe-budget",
+    sprite: { body:"#5B8C2A", body2:"#3F631C", accent:"#E8F7D0", hair:"#BA7517", skin:"#F2D2B6" },
+    chat: ["2.4 GHz has three channels that don't overlap: 1, 6, 11.","An AP is only as good as its mounting spot.","Every wall is a little bit of attenuation."] },
+  { id: "sam", name: "Sam", role: "Cabling contractor · badge on a lanyard", x: 3, y: 18, cast: true,
+    sprite: { body:"#F39C12", body2:"#B9770E", accent:"#2C2C2A", hair:"#888780", skin:"#C9926B", hat:"#F39C12" },
+    chat: ["Cat6 to the desk, 100 meters max, no exceptions.","I label both ends. Every cable. It's a lifestyle.","Never untwist more than half an inch at the jack."] }
+];
+const PROPS5 = [
+  { id: "ticket-monitor-5", x: 4, y: 4, label: "NOC queue board", room: "Elevator lobby", kind: "monitor", isMonitor: true },
+  { id: "elevator-5", x: 5, y: 1, label: "the elevator", room: "Elevator lobby", kind: "elevator" },
+  { id: "kiboard-5", x: 1, y: 1, label: "the network known-issues board", room: "Elevator lobby", kind: "kiboard" },
+  { id: "netpc", x: 9, y: 9, label: "your network team desk", room: "Network team", kind: "workpc" },
+  { id: "ipam", x: 22, y: 2, label: "the IPAM workstation", room: "IPAM & planning", kind: "ipam" },
+  { id: "core-console", x: 4, y: 9, label: "the core switch console", room: "MDF", kind: "console" },
+  { id: "projector", x: 11, y: 17, label: "the training projector", room: "Training room", kind: "projector" },
+  { id: "stage-bench", x: 20, y: 16, label: "the staging bench", room: "Staging lab", kind: "bench" }
+];
+// Week 2 + 3 additions on Floor 3: wall jacks, the network closet, hotspots,
+// post-change verification points.
+PROPS3.push(
+  { id: "jack-r", x: 14, y: 0, label: "wall jack R-07 (Karen's desk)", room: "Reception", kind: "jack", port: "R-07 → panel B-07 → Gi1/0/7" },
+  { id: "jack-a1", x: 20, y: 14, label: "wall jack A-12 (Ed's desk)", room: "Accounting", kind: "jack", port: "A-12 → panel C-12 → Gi2/0/12" },
+  { id: "jack-a2", x: 22, y: 14, label: "wall jack A-14 (AP clerk)", room: "Accounting", kind: "jack", port: "A-14 → panel C-14 → Gi2/0/14" },
+  { id: "jack-o", x: 11, y: 7, label: "wall jack O-03 (Open desks 2)", room: "Open desks 2", kind: "jack", port: "O-03 → panel B-23 → Gi1/0/23" },
+  { id: "idf-3", x: 2, y: 16, label: "the Floor 3 network closet (IDF)", room: "Server closet", kind: "console" },
+  { id: "hs-loop", x: 10, y: 12, label: "a patch cable plugged in at both ends", room: "Open desks 2", kind: "hotprop", art: "loop", needFlag: "hot_loop", hideFlag: "hotdone_loop", walkable: true },
+  { id: "hs-ap", x: 11, y: 20, label: "the new conference-room AP", room: "Conf. room", kind: "hotprop", art: "ap", needFlag: "hot_ap", hideFlag: "hotdone_ap", walkable: true },
+  { id: "hs-printer", x: 3, y: 12, label: "the print-room network drop", room: "Print room", kind: "hotprop", art: "printer", needFlag: "hot_printer", hideFlag: "hotdone_printer", walkable: true },
+  { id: "vfy-phone", x: 11, y: 2, label: "the Reception desk phone", room: "Reception", kind: "verify", needFlag: "winClosed_5", hideFlag: "wk2over" },
+  { id: "vfy-wired", x: 25, y: 16, label: "an Accounting wired desk", room: "Accounting", kind: "verify", needFlag: "winClosed_5", hideFlag: "wk2over" },
+  { id: "vfy-wifi", x: 13, y: 17, label: "the conference-room Wi-Fi", room: "Conf. room", kind: "verify", needFlag: "winClosed_5", hideFlag: "wk2over" }
+);
+// Week 3 additions on Floor 7 (the SOC).
+PROPS7.push(
+  { id: "socpc", x: 3, y: 2, label: "your SOC workstation", room: "Elevator lobby", kind: "workpc" },
+  { id: "kiboard-7", x: 1, y: 1, label: "the case board", room: "Elevator lobby", kind: "kiboard" },
+  { id: "soc-siem", x: 10, y: 2, label: "the SIEM console", room: "SOC bullpen", kind: "siem" },
+  { id: "vuln", x: 26, y: 5, label: "the vulnerability scanner", room: "Threat intel", kind: "siem" },
+  { id: "ir-screen", x: 11, y: 17, label: "the war-room screen", room: "IR war room", kind: "projector" },
+  { id: "ev-locker", x: 3, y: 20, label: "the evidence locker", room: "Data center", kind: "locker" }
+);
+// Week tickets: the network queue (Floor 5 board) lands on people you know.
+for (const [map, id, t] of [[NPCS3, "kai", "dhcp-exhaust"], [NPCS3, "benny", "voice-vlan"], [NPCS3, "lisa", "gateway"], [NPCS3, "harold", "wifi-channel"]]) {
+  const n = map.find((x) => x.id === id); if (n) n.ticket = t;
+}
+// Week 3: Omar runs IR and is your boss.
+{ const o = NPCS7.find((n) => n.id === "omar"); if (o) { o.role = "Incident Response Lead · your boss"; o.cast = true; o.ticket = "ransomware"; } }
+export const F5_SPOTS = { arrive: { x: 5, y: 2 } };
+
+// The Stack: the week-2 and week-3 crowds (their own flags, their own tiles).
+NPCSL.push(
+  { id: "p2-rosa", name: "Rosa", role: "Network Lead", x: 19, y: 17, needFlag: "party2", party: true, sprite: NPCS5[0].sprite,
+    chat: ["Zero dropped calls during the cutover. ZERO. I'm getting it tattooed."] },
+  { id: "p2-hiro", name: "Hiro", role: "Senior Network Engineer", x: 23, y: 17, needFlag: "party2", party: true, sprite: NPCS5[1].sprite,
+    chat: ["I said 'show run' in my sleep last night. My partner wants answers."] },
+  { id: "p2-abby", name: "Abby", role: "NOC analyst", x: 28, y: 17, needFlag: "party2", party: true, sprite: NPCS5[2].sprite,
+    chat: ["The dashboard's been green for six hours. I don't trust it. I love it."] },
+  { id: "p2-wade", name: "Wade", role: "Wireless engineer", x: 21, y: 19, needFlag: "party2", party: true, sprite: NPCS5[3].sprite,
+    chat: ["The bar's Wi-Fi is on channel 3. I'm choosing peace tonight."] },
+  { id: "p2-sam", name: "Sam", role: "Cabling contractor", x: 26, y: 20, needFlag: "party2", party: true, sprite: NPCS5[4].sprite,
+    chat: ["Forty-eight drops, all labeled both ends. Best week of my year."] },
+  { id: "p2-tasha", name: "Tasha", role: "Help Desk Lead", x: 28, y: 19, needFlag: "party2", party: true,
+    sprite: { body:"#6C3FA0", body2:"#4A2A70", accent:"#FCDE5A", hair:"#1a1a18", skin:"#8A5A3A", glasses:true },
+    chat: ["I knew you'd outgrow the help desk. I didn't think it'd take one week."] },
+  { id: "p3-omar", name: "Omar", role: "Incident Response Lead", x: 18, y: 17, needFlag: "party3", party: true,
+    sprite: { body:"#E67E22", body2:"#A85B12", accent:"#FFE3C2", hair:"#2C2C2A", skin:"#8A5A3A" },
+    chat: ["Contained in under an hour. Eradicated by lunch. I'm buying."] },
+  { id: "p3-sofia", name: "Sofia", role: "SOC analyst", x: 20, y: 16, needFlag: "party3", party: true,
+    sprite: { body:"#2BB3A3", body2:"#178277", accent:"#D6FFF8", hair:"#2C2C2A", skin:"#C9926B" },
+    chat: ["My alert queue is empty. I keep refreshing it like a slot machine."] },
+  { id: "p3-nadia", name: "Nadia", role: "Detection engineer", x: 24, y: 16, needFlag: "party3", party: true,
+    sprite: { body:"#6C5CE7", body2:"#4A3FB0", accent:"#E6E1FF", hair:"#2C2C2A", skin:"#E0B080" },
+    chat: ["I wrote a detection for the exact thing that happened. It's beautiful. It's three lines."] },
+  { id: "p3-rosa", name: "Rosa", role: "Network Lead", x: 27, y: 16, needFlag: "party3", party: true, sprite: NPCS5[0].sprite,
+    chat: ["You isolated a host without pulling a cable. I'm so proud I could cry."] },
+  { id: "p3-tasha", name: "Tasha", role: "Help Desk Lead", x: 23, y: 19, needFlag: "party3", party: true,
+    sprite: { body:"#6C3FA0", body2:"#4A2A70", accent:"#FCDE5A", hair:"#1a1a18", skin:"#8A5A3A", glasses:true },
+    chat: ["Help desk, network, security. Three weeks. Who ARE you?"] },
+  { id: "p3-chen", name: "Director Chen", role: "IT Director", x: 20, y: 20, needFlag: "party3", party: true,
+    sprite: { body:"#378ADD", body2:"#185FA5", accent:"#F1EFE8", hair:"#2C2C2A", skin:"#B08050", glasses:true },
+    chat: ["Three weeks ago you couldn't find the elevator. Now you run incident calls."] },
+  { id: "p3-gloria", name: "Gloria", role: "Service Desk Manager", x: 25, y: 20, needFlag: "party3", party: true,
+    sprite: { body:"#A33A5A", body2:"#72283F", accent:"#F7D6E0", hair:"#888780", skin:"#C9926B", glasses:true },
+    chat: ["Your incident report had a timeline, evidence hashes AND a glossary. I'm framing it next to the other one."] }
+);
+
 // ---- map registry + live-binding switch -----------------------------------
 // FLOOR_ORDER is what the elevator offers (home is reached by subway only).
-export const FLOOR_ORDER = ["lobby", "floor3", "floor7"];
+export const FLOOR_ORDER = ["lobby", "floor3", "floor5", "floor7"];
 export const FLOOR_META = {
   home:   { id: "home", name: "Home", short: "HM", label: "HOME · ASTORIA, QUEENS",
             tag: "Your apartment", blurb: "Bed, laptop, coffee. The subway's on the corner.", locked: false },
@@ -593,8 +748,10 @@ export const FLOOR_META = {
             tag: "Lobby · storeroom · the block", blurb: "Security desk, IT storeroom, Byte Bodega, The Stack.", locked: false },
   floor3: { id: "floor3", name: "Floor 3", short: "F3", label: "IT SUPPORT · FLOOR 3",
             tag: "Help Desk", blurb: "Your desk, the queue, Accounting and Reception.", locked: false },
+  floor5: { id: "floor5", name: "Floor 5", short: "F5", label: "NETWORK OPS · FLOOR 5",
+            tag: "Network Operations", blurb: "NOC, MDF, IPAM, the staging lab. Week 2's home.", locked: true },
   floor7: { id: "floor7", name: "Floor 7", short: "F7", label: "SECURITY OPS · FLOOR 7",
-            tag: "Security Operations", blurb: "Advanced: Security+, PenTest+, Network+.", locked: true }
+            tag: "Security Operations", blurb: "SOC, IR war room, threat intel. Week 3's home.", locked: true }
 };
 
 const FLOORS = {
@@ -603,6 +760,8 @@ const FLOORS = {
   lobby:  { map: LOBBYMAP, rooms: ROOMSL, npcs: NPCSL, props: PROPSL, start: { x: 2, y: 2, dir: "down" }, label: FLOOR_META.lobby.label,
             arrive: { elevator: { x: 2, y: 2, dir: "down" }, subway: { x: 13, y: 11, dir: "right" } } },
   floor3: { map: FLOOR3MAP, rooms: ROOMS3, npcs: NPCS3, props: PROPS3, start: { x: 2, y: 5, dir: "down" }, label: FLOOR_META.floor3.label,
+            arrive: { elevator: { x: 5, y: 2, dir: "down" } } },
+  floor5: { map: NETMAP, rooms: ROOMS5, npcs: NPCS5, props: PROPS5, start: { x: 2, y: 5, dir: "down" }, label: FLOOR_META.floor5.label,
             arrive: { elevator: { x: 5, y: 2, dir: "down" } } },
   floor7: { map: SOC,    rooms: ROOMS7, npcs: NPCS7, props: PROPS7, start: { x: 2, y: 5, dir: "down" }, label: FLOOR_META.floor7.label,
             arrive: { elevator: { x: 5, y: 2, dir: "down" } } }

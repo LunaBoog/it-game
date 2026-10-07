@@ -59,7 +59,21 @@ export const FINDS = {
   cleanQueue: { icon: "\u{1F5BC}\uFE0F", name: "The 'Clean Queue' printout",
     note: "Gloria printed your audit, framed it, and hung it in the IT room. Zero closed without notes." },
   nextGig: { icon: "\u{1F4E7}", name: "Director Chen's email",
-    note: "'Security has asked for Help Desk on Floor 7 next month. They're calling it SOC Week.'" }
+    note: "'Security has asked for Help Desk on Floor 7 next month. They're calling it SOC Week.'" },
+
+  // ---- v3 career ladder: Network Week + SOC Week ----
+  consoleCable: { icon: "\u{1F535}", name: "Rosa's blue console cable",
+    note: "'Every network engineer has one. This was mine. Don't lose it.' It's older than the switches it talks to." },
+  portMap: { icon: "\u{1F5FA}\uFE0F", name: "The hand-drawn port map",
+    note: "Four Floor 3 jacks, traced with a toner and a probe, in your handwriting. Sam made you sign it." },
+  netCards: { icon: "\u{1F4C7}", name: "Network Technician business cards",
+    note: "Rosa ordered them before the week was even over. Your name, spelled right, on the first try." },
+  fidoKey: { icon: "\u{1F511}", name: "Your FIDO2 security key",
+    note: "Omar's welcome gift. Phishing-resistant: it simply won't sign in to the wrong website, no matter how real it looks." },
+  irCoin: { icon: "\u{1FA99}", name: "Omar's IR challenge coin",
+    note: "Given to everyone who's worked a real incident bridge. 'Contain first.' is stamped on the back." },
+  socBadge: { icon: "\u{1F6E1}\uFE0F", name: "Security Analyst badge",
+    note: "Three weeks: help desk, network, security. Director Chen pinned it on you at The Stack." }
 };
 
 export const FINDTOTAL = Object.keys(FINDS).length;

@@ -2,7 +2,8 @@
 //
 // Schema:
 //   title, principle, principleText, ticket, ticketMeta, actions
-//   floor:  "floor3" | "floor7"   (which floor the ticket lives on)
+//   floor:  "floor3" | "floor5" | "floor7"   (which floor's board lists it)
+//   day:    the career day it opens (1-3 Help Desk, 4-6 Network, 7-9 SOC)
 //   cert:   short exam-objective tag, e.g. "Network+ \u00b7 1.4 Switching"
 //   pois[]:      { id, label, body, evidence, followups?[] }
 //   followups[]: { label, result, addEvidence? }
@@ -317,8 +318,255 @@ export const SCENARIOS = {
   // ===================================================================
   // FLOOR 7 — SECURITY OPERATIONS / RED-TEAM LAB (advanced)
   // ===================================================================
+  // ===================================================================
+  // FLOOR 5 — NETWORK OPERATIONS (Week 2 · Network Technician)
+  // Tickets land on the NOC queue board; most of the people are on Floor 3.
+  // ===================================================================
+  "dhcp-exhaust": {
+    floor: "floor5", day: 4, cert: "Network+ N10-009 · 3.4 DHCP / 5.3 Network services",
+    title: "\"No internet\" and a 169.254 address",
+    principle: "169.254 means DHCP never answered",
+    principleText:
+      "An APIPA address (169.254.x.x, mask 255.255.0.0, no gateway) means the client asked for an address and nobody gave one. Check the DHCP scope and the path to the server before you blame the laptop.",
+    ticket: "\"My laptop says No Internet. The IP starts with 169? Is that bad?\"",
+    ticketMeta: "Network queue · IT room, Floor 3 · Kai",
+    actions: 6,
+    pois: [
+      { id: "kai", label: "Talk to Kai",
+        body: "'It worked yesterday! And the two visitor laptops in the conf room can't get on either.'",
+        evidence: "Kai + two visitor laptops all failing since this morning." },
+      { id: "ipconfig", label: "ipconfig /all",
+        body: "IPv4 169.254.31.7, mask 255.255.0.0, default gateway (blank). DHCP enabled: Yes. DHCP server: (none).",
+        evidence: "APIPA address, no gateway, no DHCP server recorded." },
+      { id: "dhcp", label: "DHCP server console",
+        body: "Scope 10.30.3.0/24 (Floor 3 data): 253 addresses in the pool, 253 leased, 0 free. Lease duration: 8 days.",
+        evidence: "Floor 3 data scope: 0 free leases.",
+        followups: [
+          { label: "Who holds the leases?",
+            result: "61 leases belong to visitor phones from last week's all-hands, still holding 8-day leases.",
+            addEvidence: "61 leases held by last week's visitor phones (8-day leases)." }
+        ] },
+      { id: "port", label: "His switch port",
+        body: "Gi1/0/9: link up, 1 Gbps full, VLAN 30, zero errors.",
+        evidence: "Switch port healthy, right VLAN." },
+      { id: "dns", label: "DNS server",
+        body: "Resolving fine for everyone who already has an address.",
+        evidence: "DNS healthy." }
+    ],
+    diagnoses: [
+      { key: "nic", label: "Kai's network card is failing", correct: false,
+        feedback: "The NIC has link at 1 Gbps with zero errors, and two other machines fail the same way. It's not his hardware." },
+      { key: "scope", label: "DHCP scope exhausted", correct: true,
+        feedback: "Right. Zero free leases, so new clients fall back to APIPA. Clear the stale visitor leases, shorten guest lease times, and give guests their own VLAN and scope so they can't starve the staff pool." },
+      { key: "static", label: "Give Kai a static IP and move on", correct: false,
+        feedback: "That gets one laptop working and leaves everyone else broken, plus a static IP inside a DHCP pool is a future conflict. Fix the pool." },
+      { key: "dns", label: "DNS is down", correct: false,
+        feedback: "DNS turns names into addresses; it doesn't hand them out. A 169.254 address means DHCP never answered." }
+    ]
+  },
+
+  "duplex": {
+    floor: "floor5", day: 4, cert: "Network+ N10-009 · 5.2 Cabling & interface issues",
+    title: "CRC errors on the Accounting printer port",
+    principle: "Both ends of a link must agree",
+    principleText:
+      "CRC errors on one end and late collisions on the other, over a cable that tests clean, usually mean a duplex mismatch: one end hard-coded, the other left on auto. Auto-negotiation fails and the auto side falls back to half duplex. Set both ends the same, ideally both auto.",
+    ticket: "\"Gi1/0/31 on the Floor 3 switch is throwing CRC errors and runts. Accounting says their printer takes four minutes a page.\"",
+    ticketMeta: "Network queue · NOC · Abby",
+    actions: 6,
+    pois: [
+      { id: "port", label: "Switch port Gi1/0/31",
+        body: "Speed 100, duplex FULL (hard-coded). Input errors 18,422, CRC 9,870, runts 1,204 and climbing.",
+        evidence: "Switch side hard-coded 100/full; CRC errors + runts climbing." },
+      { id: "printer", label: "Printer config page",
+        body: "Link: 100 Mbps HALF duplex (auto-negotiated). Late collisions: 412.",
+        evidence: "Printer side fell back to 100/half and logs late collisions." },
+      { id: "cable", label: "Cable tester",
+        body: "All four pairs pass. Length 38 m. No split pairs.",
+        evidence: "Cable tests clean (38 m)." },
+      { id: "log", label: "Change log",
+        body: "Last month: 'Hard-set Gi1/0/31 to 100/full to fix flapping.' No change on the printer.",
+        evidence: "Someone hard-coded only the switch end last month." },
+      { id: "abby", label: "Ask Abby",
+        body: "'Every other port on that switch is clean. Just this one.'",
+        evidence: "Only this one port is erroring." }
+    ],
+    diagnoses: [
+      { key: "cable", label: "Bad patch cable", correct: false,
+        feedback: "The cable passes on all four pairs at 38 m. CRC errors on one end plus late collisions on the other point at duplex, not copper." },
+      { key: "duplex", label: "Duplex mismatch", correct: true,
+        feedback: "Right. Switch hard-coded to full, printer auto-negotiated to half. Set the port back to auto/auto (both ends agree), clear the counters, and watch them stay at zero." },
+      { key: "storm", label: "Broadcast storm", correct: false,
+        feedback: "A storm would hit every port in the VLAN. This is one port with collision errors." },
+      { key: "firmware", label: "Printer firmware bug", correct: false,
+        feedback: "Possible in theory, but the evidence (one end hard-coded last month) explains everything. Fix the config first." }
+    ]
+  },
+
+  "voice-vlan": {
+    floor: "floor5", day: 5, cert: "Network+ N10-009 · 2.1 VLANs (voice VLAN, LLDP-MED)",
+    title: "Desk phone stuck on \"Registering…\"",
+    principle: "Phones need their own VLAN",
+    principleText:
+      "An IP phone learns its voice VLAN from the switch (CDP or LLDP-MED). If the new access port has no voice VLAN configured, the phone lands in the data VLAN, gets a data address and can't reach the call server.",
+    ticket: "\"My desk phone boots, says 'Registering' forever. It worked on the old switch!\"",
+    ticketMeta: "Network queue · Open desks, Floor 3 · Benny",
+    actions: 6,
+    pois: [
+      { id: "phone", label: "Phone status screen",
+        body: "IP 10.30.3.88 (that's the DATA range). VLAN: none. Status: Registering…",
+        evidence: "Phone got a data-VLAN address." },
+      { id: "port", label: "His new switch port",
+        body: "switchport access vlan 30 · spanning-tree portfast. No 'switchport voice vlan 120' line.",
+        evidence: "New port has no voice VLAN configured.",
+        followups: [
+          { label: "Compare with a working port",
+            result: "Gi1/0/12 (a working phone): access vlan 30 + voice vlan 120, LLDP-MED on.",
+            addEvidence: "Working ports carry voice VLAN 120." }
+        ] },
+      { id: "poe", label: "PoE on the port",
+        body: "Delivering 6.3 W, Class 2. The phone powers up fine.",
+        evidence: "PoE is fine." },
+      { id: "server", label: "Call server",
+        body: "Registered phones: 214. Lives at 10.120.0.10; only the voice subnet is allowed to register.",
+        evidence: "Call server up; accepts the voice subnet only." },
+      { id: "benny", label: "Ask Benny",
+        body: "'Mine and Gabe's both died after the swap. Everybody else's works.'",
+        evidence: "Two phones affected, both on newly patched ports." }
+    ],
+    diagnoses: [
+      { key: "poe", label: "Not enough PoE", correct: false,
+        feedback: "The phone is powered and booted. Power isn't the problem; its network placement is." },
+      { key: "voice", label: "Voice VLAN missing on the new ports", correct: true,
+        feedback: "Right. Add 'voice vlan 120' (with LLDP-MED) to the ports, bounce the phone, and it lands in the voice subnet and registers. Then check every re-patched phone port." },
+      { key: "server", label: "Call server is down", correct: false,
+        feedback: "214 phones are registered. The server's fine; these phones can't reach it from the data VLAN." },
+      { key: "handset", label: "Replace the handset", correct: false,
+        feedback: "Two phones failing on two new ports isn't two broken handsets. Look at what changed: the ports." }
+    ]
+  },
+
+  "poe-budget": {
+    floor: "floor5", day: 5, cert: "Network+ N10-009 · 2.3 PoE / wireless deployment",
+    title: "The 7th and 8th APs won't power on",
+    principle: "PoE is a power budget",
+    principleText:
+      "A PoE switch has a total power budget. 802.3at (PoE+) reserves up to 30 W per port at the switch (25.5 W at the device). When the budget is spent, the switch denies power to new devices even though every port has a working cable.",
+    ticket: "\"Six new APs came up on the staging switch. Seven and eight just sit there dark. Same cables, same model.\"",
+    ticketMeta: "Network queue · Staging lab · Wade",
+    actions: 6,
+    pois: [
+      { id: "summary", label: "show power inline",
+        body: "Available 180.0 W · Used 180.0 W · Remaining 0.0 W. Ports 1–6: 30.0 W each (Class 4).",
+        evidence: "PoE budget 180 W, fully allocated by six APs." },
+      { id: "ports", label: "Ports 7 and 8",
+        body: "Link: down. Power: DENIED (insufficient power budget).",
+        evidence: "Ports 7–8: power denied for budget." },
+      { id: "sheet", label: "AP datasheet",
+        body: "Wi-Fi 6E AP: requires 802.3at (PoE+); up to 25.5 W at the AP.",
+        evidence: "Each AP needs PoE+ (up to 25.5 W)." },
+      { id: "cable", label: "The patch cables",
+        body: "Brand new 1 m Cat6, tested fine.",
+        evidence: "Cables are fine." },
+      { id: "wade", label: "Ask Wade",
+        body: "'These all worked one at a time on the bench injector yesterday.'",
+        evidence: "Each AP works individually." }
+    ],
+    diagnoses: [
+      { key: "cable", label: "Bad cables on 7 and 8", correct: false,
+        feedback: "The cables test fine, and the switch is literally saying 'insufficient power budget'." },
+      { key: "budget", label: "Switch PoE budget exhausted", correct: true,
+        feedback: "Right. Six PoE+ APs at 30 W each eat the whole 180 W budget. Stage them on the production 48-port switch (740 W budget) and do the math before you deploy: devices × watts, plus headroom." },
+      { key: "doa", label: "Two APs are dead on arrival", correct: false,
+        feedback: "Both worked on the bench injector yesterday. They're fine; the switch won't feed them." },
+      { key: "vlan", label: "Wrong VLAN on ports 7–8", correct: false,
+        feedback: "A VLAN problem would give a powered AP with no network. These APs have no power at all." }
+    ]
+  },
+
+  "gateway": {
+    floor: "floor5", day: 6, cert: "Network+ N10-009 · 1.7 IPv4 addressing / 5.3 Troubleshooting",
+    title: "S: drive works, websites don't",
+    principle: "Local works, remote fails: check the gateway",
+    principleText:
+      "If a host can reach things on its own subnet but nothing beyond it, look at the default gateway. Traffic to the same subnet never touches the router; everything else needs a correct gateway.",
+    ticket: "\"I can open the S: drive fine, but no website loads and Teams says I'm offline.\"",
+    ticketMeta: "Network queue · Accounting, Floor 3 · Lisa",
+    actions: 6,
+    pois: [
+      { id: "ipconfig", label: "ipconfig",
+        body: "IPv4 10.30.3.45 (STATIC), mask 255.255.255.0, default gateway 10.30.30.1, DNS 10.30.0.10.",
+        evidence: "Static IP 10.30.3.45/24 with gateway 10.30.30.1." },
+      { id: "local", label: "Ping the file server",
+        body: "ping 10.30.3.20 → Reply, 1 ms.",
+        evidence: "Same-subnet file server replies." },
+      { id: "gw", label: "Ping the gateway",
+        body: "ping 10.30.30.1 → Destination host unreachable.",
+        evidence: "The configured gateway doesn't exist on her subnet.",
+        followups: [
+          { label: "Ping 1.1.1.1 by IP",
+            result: "Request timed out. Even raw IPs on the internet fail.",
+            addEvidence: "Internet IPs fail too (not a DNS issue)." }
+        ] },
+      { id: "router", label: "Router interface list",
+        body: "Floor 3 data VLAN 30: gateway 10.30.3.1/24. There is no 10.30.30.1 anywhere.",
+        evidence: "The real gateway is 10.30.3.1." },
+      { id: "lisa", label: "Ask Lisa",
+        body: "'Somebody typed in my settings years ago so the old printer would work. I never touched them.'",
+        evidence: "Static settings typed in by hand years ago." }
+    ],
+    diagnoses: [
+      { key: "dns", label: "DNS is broken", correct: false,
+        feedback: "Even 1.1.1.1 by IP fails, so names aren't the problem. Something's wrong one layer down." },
+      { key: "gw", label: "Wrong default gateway (typo in a static config)", correct: true,
+        feedback: "Right. 10.30.30.1 isn't her router; 10.30.3.1 is. Better than fixing the typo: set her back to DHCP so the new network's gateway and DNS come automatically, and give the printer a reservation instead." },
+      { key: "isp", label: "Internet outage", correct: false,
+        feedback: "Everyone else on Floor 3 is online. It's this one machine's config." },
+      { key: "cable", label: "Bad cable", correct: false,
+        feedback: "A bad cable kills everything, including the S: drive she can open just fine." }
+    ]
+  },
+
+  "wifi-channel": {
+    floor: "floor5", day: 6, cert: "Network+ N10-009 · 2.3 Wireless (channels & bands)",
+    title: "Conference-room Wi-Fi falls over in meetings",
+    principle: "Plan your channels",
+    principleText:
+      "In 2.4 GHz only channels 1, 6 and 11 don't overlap; APs on channels in between talk over each other. Plan channels (or let the controller's RRM do it), keep 2.4 GHz at 20 MHz, and steer clients to 5 and 6 GHz.",
+    ticket: "\"Every meeting the video freezes. Wired's fine. It's the Wi-Fi in the conference room, every time.\"",
+    ticketMeta: "Network queue · Conf. room, Floor 3 · Harold",
+    actions: 6,
+    pois: [
+      { id: "scan", label: "Wi-Fi analyzer in the room",
+        body: "Three company APs heard: channels 1, 3 and 6, all 2.4 GHz, 40 MHz wide. Heavy overlap.",
+        evidence: "2.4 GHz APs on 1, 3 and 6 at 40 MHz: overlapping." },
+      { id: "ap", label: "Conference-room AP config",
+        body: "5 GHz radio: DISABLED (note: 'testing, turn back on'). Channel width 2.4 GHz: 40 MHz.",
+        evidence: "5 GHz radio left disabled; 2.4 GHz at 40 MHz." },
+      { id: "client", label: "Harold's laptop",
+        body: "Connected at 2.4 GHz, 54 Mbps, 38% retries.",
+        evidence: "Client stuck on 2.4 GHz with 38% retries." },
+      { id: "wired", label: "The wired dock",
+        body: "940 Mbps, smooth video.",
+        evidence: "Wired is fine." },
+      { id: "isp", label: "Internet circuit",
+        body: "12% utilized. No drops.",
+        evidence: "Internet circuit healthy." }
+    ],
+    diagnoses: [
+      { key: "isp", label: "Not enough internet bandwidth", correct: false,
+        feedback: "The circuit is at 12% and wired video is perfect. The bottleneck is the air in that room." },
+      { key: "rf", label: "Channel overlap + 5 GHz left off", correct: true,
+        feedback: "Right. Put 2.4 GHz on 1/6/11 at 20 MHz, turn the 5 GHz radio back on so clients move up a band, and run a quick survey after. Retries drop and the video stops freezing." },
+      { key: "laptop", label: "Harold's laptop needs replacing", correct: false,
+        feedback: "Every laptop in that room struggles. It's the RF environment, not one device." },
+      { key: "dhcp", label: "DHCP lease problem", correct: false,
+        feedback: "He has an address and he's connected. The connection is just bad, which is radio, not addressing." }
+    ]
+  },
+
   "phish-ir": {
-    floor: "floor7", cert: "Security+ SY0-701 \u00b7 2.2 Threat vectors / 4.8 Incident response",
+    floor: "floor7", day: 7, cert: "Security+ SY0-701 \u00b7 2.2 Threat vectors / 4.8 Incident response",
     title: "User entered creds on a lookalike site",
     principle: "Contain the credential, not just the email",
     principleText:
@@ -361,7 +609,7 @@ export const SCENARIOS = {
   },
 
   "privesc": {
-    floor: "floor7", cert: "PenTest+ PT0-003 \u00b7 Attacks & exploits (privesc)",
+    floor: "floor7", day: 9, cert: "PenTest+ PT0-003 \u00b7 Attacks & exploits (privesc)",
     title: "Pentest: low-priv shell on a Linux host",
     principle: "Check configuration before reaching for an exploit",
     principleText:
@@ -404,7 +652,7 @@ export const SCENARIOS = {
   },
 
   "lateral": {
-    floor: "floor7", cert: "Security+ SY0-701 \u00b7 2.4 Indicators / 4.4 Monitoring",
+    floor: "floor7", day: 8, cert: "Security+ SY0-701 \u00b7 2.4 Indicators / 4.4 Monitoring",
     title: "One host is authenticating to everything",
     principle: "One source, many targets, odd hours = lateral movement",
     principleText:
@@ -447,7 +695,7 @@ export const SCENARIOS = {
   },
 
   "segmentation": {
-    floor: "floor7", cert: "Network+ N10-009 \u00b7 1.7 IPv4 addressing / 4.1 Segmentation",
+    floor: "floor7", day: 9, cert: "Network+ N10-009 \u00b7 1.7 IPv4 addressing / 4.1 Segmentation",
     title: "A lobby camera can reach Finance",
     principle: "Segment by trust",
     principleText:
@@ -490,7 +738,7 @@ export const SCENARIOS = {
   },
 
   "tls-chain": {
-    floor: "floor7", cert: "Security+ SY0-701 \u00b7 1.4 Cryptographic solutions (PKI)",
+    floor: "floor7", day: 7, cert: "Security+ SY0-701 \u00b7 1.4 Cryptographic solutions (PKI)",
     title: "Cert warnings after a renewal",
     principle: "A cert is only as valid as its chain",
     principleText:
@@ -528,7 +776,7 @@ export const SCENARIOS = {
   },
 
   "ransomware": {
-    floor: "floor7", cert: "Security+ SY0-701 \u00b7 4.8 Incident response",
+    floor: "floor7", day: 8, cert: "Security+ SY0-701 \u00b7 4.8 Incident response",
     title: "A file share is encrypting itself",
     principle: "Isolate first, then eradicate",
     principleText:
@@ -566,7 +814,7 @@ export const SCENARIOS = {
   },
 
   "rogue-ap": {
-    floor: "floor7", cert: "Security+ SY0-701 \u00b7 2.4 Indicators (wireless / on-path)",
+    floor: "floor7", day: 7, cert: "Security+ SY0-701 \u00b7 2.4 Indicators (wireless / on-path)",
     title: "Two 'CorpWiFi' networks, one is fake",
     principle: "Same SSID, two BSSIDs, deauths = evil twin",
     principleText:

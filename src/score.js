@@ -4,7 +4,7 @@
 // The board lives under its OWN localStorage key (outside the it-game: save
 // prefix), so New Playthrough and Full Reset never wipe it.
 
-import { CORE, DD, ddSave } from "./core.js";
+import { CORE, DD, ddSave, WEEKS, LAST_DAY } from "./core.js";
 import { SCENARIOS } from "./scenarios.js";
 import { SIDE_QUESTS } from "./sideQuests.js";
 import { FINDTOTAL } from "./collectables.js";
@@ -16,18 +16,31 @@ export const HS_KEY = "itgame_hiscores";
 export function loadHS() { try { return JSON.parse(localStorage.getItem(HS_KEY) || "[]"); } catch { return window.__itgHS || []; } }
 export function saveHS(a) { window.__itgHS = a; try { localStorage.setItem(HS_KEY, JSON.stringify(a)); } catch { /* ignore */ } }
 
-// Grade cutoffs (calibrated with the headless bot; see the handoff).
-export const GRADES = [["S", 9300], ["A", 7800], ["B", 6300], ["C", 4600], ["D", 0]];
+// Grade cutoffs per week (calibrated with the headless bot; see the handoff).
+export const GRADES_BY_WEEK = {
+  1: [["S", 9300], ["A", 7800], ["B", 6300], ["C", 4600], ["D", 0]],
+  2: [["S", 7000], ["A", 6000], ["B", 5000], ["C", 3800], ["D", 0]],
+  3: [["S", 6200], ["A", 5300], ["B", 4500], ["C", 3400], ["D", 0]]
+};
+export const GRADES = GRADES_BY_WEEK[1];
+export const CAREER_GRADES = ["S", "A", "B", "C", "D"].map((g, i) => [g, [1, 2, 3].reduce((a, w) => a + GRADES_BY_WEEK[w][i][1], 0)]);
 
-export function finalScore() {
+function quizRow(add, w) {
+  const q = DD().quiz && DD().quiz[w];
+  if (q) add(`${WEEKS[w].bossName}'s training quiz`, `${q.first}/${q.total} first try`, q.first * 60);
+}
+
+export function finalScore(w = 1) {
+  if (w !== 1) return weekScore(w);
   const S = CORE.S, d = DD();
   const R = []; const add = (label, detail, pts) => { if (pts) R.push([label, detail, Math.round(pts)]); };
   const all = [1, 2, 3].flatMap((day) => tasksFor(day));
   const tDone = all.filter((t) => t.done()).length;
   add("Day tasks completed", `${tDone} of ${all.length}`, tDone * 100);
   add("Tasks left undone", `${all.length - tDone}`, -(all.length - tDone) * 75);
-  const tickets = Object.keys(SCENARIOS).filter((id) => S.solved.has(id)).length;
-  add("Tickets solved", `${tickets} of ${Object.keys(SCENARIOS).length}`, tickets * 100);
+  const f3 = Object.keys(SCENARIOS).filter((id) => (SCENARIOS[id].floor || "floor3") === "floor3");
+  const tickets = f3.filter((id) => S.solved.has(id)).length + (S.solved.has("phish-ir") && d.solvedOn && d.solvedOn["phish-ir"] <= 3 ? 1 : 0);
+  add("Tickets solved", `${tickets} of ${f3.length}`, tickets * 100);
   add("Side quests & field calls", `${S.sqSolved.size} of ${Object.keys(SIDE_QUESTS).length}`, S.sqSolved.size * 50);
   const best = d.st.best || 0, heard = d.st.heard || 0;
   add("Walk-ups: nailed it", `${best}`, best * 75);
@@ -56,11 +69,101 @@ export function finalScore() {
   add("First-try accuracy", `${Math.round(acc * 100)}%`, acc * 500);
   add("Wrong answers", `${d.st.wrong || 0}`, -(d.st.wrong || 0) * 20);
   add("Lifelines used", `${d.st.lifelines || 0}`, -(d.st.lifelines || 0) * 50);
-  const qb = Math.max(loadNum("quiz-best-floor3", 0), loadNum("quiz-best-floor7", 0));
+  quizRow(add, 1);
+  const qb = loadNum("quiz-best-floor3", 0);
   add("Practice exam best", `${qb}/5`, (qb / 5) * 300);
   const total = Math.max(0, R.reduce((a, r) => a + r[2], 0));
   const grade = GRADES.find(([, min]) => total >= min)[0];
   return { rows: R, total, grade };
+}
+
+// Weeks 2 and 3: the same habits, scored from this week's work only.
+function weekScore(w) {
+  const S = CORE.S, d = DD(), W = WEEKS[w], ws = d.weekStart || { rep: 5, badges: 0, finds: 0 };
+  const R = []; const add = (label, detail, pts) => { if (pts) R.push([label, detail, Math.round(pts)]); };
+  const all = W.days.flatMap((day) => tasksFor(day));
+  const tDone = all.filter((t) => t.done()).length;
+  add("Tasks completed", `${tDone} of ${all.length}`, tDone * 100);
+  add("Tasks left undone", `${all.length - tDone}`, -(all.length - tDone) * 75);
+  const floor = W.base;
+  const ids = Object.keys(SCENARIOS).filter((id) => (SCENARIOS[id].floor || "floor3") === floor);
+  const tickets = ids.filter((id) => S.solved.has(id)).length;
+  add("Tickets solved", `${tickets} of ${ids.length}`, tickets * 100);
+  const best = d.st.best || 0, heard = d.st.heard || 0;
+  add("Walk-ups: nailed it", `${best}`, best * 75);
+  add("Walk-ups: heard out", `${Math.max(0, heard - best)}`, Math.max(0, heard - best) * 25);
+  add("Pages answered", `${d.st.pages || 0}`, (d.st.pages || 0) * 40);
+  add(w === 3 ? "Case-log entries" : "Known issues logged", `${d.st.logged || 0}`, (d.st.logged || 0) * 50);
+  add("Hotspots fixed right", `${d.st.hotBest || 0} of ${d.st.hot || 0}`, (d.st.hotBest || 0) * 120 + Math.max(0, (d.st.hot || 0) - (d.st.hotBest || 0)) * 30);
+  add("Social engineers stopped", `${d.st.se || 0}`, (d.st.se || 0) * 100);
+  if (w === 2) { const so = ["karen", "ed", "riley"].filter((id) => S.hasFlag("so2_" + id)).length; add("Business sign-offs", `${so} of 3`, so * 150); }
+  const docs = d.docs.filter((x) => W.days.includes(x.d));
+  const doc = docs.filter((x) => x.documented).length;
+  add("Work documented", `${doc} of ${docs.length}`, doc * 40);
+  add("Closed without notes", `${docs.length - doc}`, -(docs.length - doc) * 60);
+  const fnd = Math.max(0, S.finds.size - (ws.finds || 0));
+  add("Keepsakes found", `${fnd}`, fnd * 25);
+  const bd = Math.max(0, d.badges.length - (ws.badges || 0));
+  add("Badges earned", `${bd}`, bd * 40);
+  const rep = d.rep - (ws.rep || 0);
+  add("Reputation earned", `⭐ ${rep >= 0 ? "+" : ""}${rep}`, rep * 10);
+  const acc = d.st.asked ? d.st.first / d.st.asked : 0;
+  add("First-try accuracy", `${Math.round(acc * 100)}%`, acc * 500);
+  add("Wrong answers", `${d.st.wrong || 0}`, -(d.st.wrong || 0) * 20);
+  add("Lifelines used", `${d.st.lifelines || 0}`, -(d.st.lifelines || 0) * 50);
+  quizRow(add, w);
+  const qb = loadNum("quiz-best-" + floor, 0);
+  add("Practice exam best", `${qb}/5`, (qb / 5) * 300);
+  const total = Math.max(0, R.reduce((a, r) => a + r[2], 0));
+  const grade = GRADES_BY_WEEK[w].find(([, min]) => total >= min)[0];
+  return { rows: R, total, grade };
+}
+
+// Freeze a week's score when it ends (at the party).
+export function archiveWeek(w) {
+  const d = DD(); if (d.weeks[w]) return d.weeks[w];
+  const F = finalScore(w);
+  d.weeks[w] = { total: F.total, grade: F.grade, rows: F.rows, title: WEEKS[w].title, role: WEEKS[w].role };
+  ddSave();
+  return d.weeks[w];
+}
+
+export function careerScore() {
+  const d = DD();
+  const rows = [1, 2, 3].filter((w) => d.weeks[w]).map((w) => [`Week ${w} · ${WEEKS[w].title}`, `${WEEKS[w].role} · grade ${d.weeks[w].grade}`, d.weeks[w].total]);
+  if ([1, 2, 3].every((w) => d.weeks[w])) rows.push(["Climbed the whole ladder", "help desk → network → security", 500]);
+  const total = rows.reduce((a, r) => a + r[2], 0);
+  const grade = CAREER_GRADES.find(([, min]) => total >= min)[0];
+  return { rows, total, grade };
+}
+
+// End of weeks 1 and 2: the report card and the promotion.
+export function showWeekReport(w, onDone) {
+  const S = CORE.S, d = DD();
+  const A = document.getElementById("arcade"); if (!A) { if (onDone) onDone(); return; }
+  const F = d.weeks[w] || archiveWeek(w);
+  const nw = WEEKS[w + 1];
+  S.overlay = true; A.hidden = false;
+  A.innerHTML = `<div class="ar-box"><div class="ar-h">WEEK ${w} REPORT</div><div class="ar-sub">${esc2(WEEKS[w].title)} · ${esc2(WEEKS[w].role)} · ${esc2(S.playerName || "You")}</div>
+    <div class="ar-rows">${F.rows.map((r) => `<div class="r${r[2] < 0 ? " neg" : ""}"><span>${esc2(r[0])} <span class="ar-d">· ${esc2(r[1])}</span></span><span>${r[2] > 0 ? "+" : ""}${r[2].toLocaleString()}</span></div>`).join("")}</div>
+    <div class="ar-total" id="ar-total">0</div><div class="ar-grade">GRADE ${F.grade}</div><div id="ar-bottom"></div></div>`;
+  const rows = [...A.querySelectorAll(".ar-rows .r")];
+  rows.forEach((r, i) => setTimeout(() => { r.classList.add("in"); CORE.sfx && CORE.sfx("tick"); }, 90 * i));
+  const tot = A.querySelector("#ar-total"); const t0 = performance.now(), dur = Math.min(2400, 300 + rows.length * 90);
+  const step = (n) => { const k = Math.min(1, (n - t0) / dur); tot.textContent = Math.round(F.total * k).toLocaleString(); if (k < 1) requestAnimationFrame(step); else bottom(); };
+  requestAnimationFrame(step);
+  function bottom() {
+    const B = A.querySelector("#ar-bottom");
+    B.innerHTML = `<div class="promo"><div class="promo-k">PROMOTED</div><div class="promo-r">${esc2(nw.role)}</div>
+      <div class="promo-s">${esc2(nw.title)} starts Monday · ${esc2(nw.bossName)}, ${esc2(nw.bossRole)} · ${nw.base === "floor5" ? "Floor 5" : "Floor 7"}</div>
+      <div class="ladder">${[1, 2, 3].map((k) => `<span class="${k <= w ? "done" : k === w + 1 ? "next" : ""}">${esc2(WEEKS[k].short)}</span>`).join("<i>›</i>")}</div></div>
+      <button class="ar-btn" id="ar-back">\u{1F37B} Back to the party</button>`;
+    CORE.sfx && CORE.sfx("win");
+    const close = () => { window.removeEventListener("keydown", key, true); A.hidden = true; S.overlay = false; S.updateProgressUI(); if (onDone) onDone(); };
+    const key = (e) => { if (e.key === "Enter" || e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(); } };
+    window.addEventListener("keydown", key, true);
+    B.querySelector("#ar-back").onclick = close;
+  }
 }
 
 export function hsTable(highlight, limit = 10) {
@@ -75,14 +178,16 @@ export function rollCredits() {
   S.overlay = true;
   c.hidden = false;
   c.innerHTML = `<div class="cr-roll">
-    <div class="cr-h">THE TICKET QUEUE</div><div class="cr-s">CUTOVER WEEK</div>
-    <p>Starring<br><b>${esc2(S.playerName || "You")}</b><br>as the new Tier 1 tech</p>
-    <p>Tasha · Help Desk Lead<br>Director Chen · IT Director<br>Harold · Change Manager<br>Benny · Service Desk Coordinator<br>Gloria · Service Desk Manager<br>Kai · IT intern<br>Lou · Building security<br>Mo · IT storeroom<br>Ray · Byte Bodega<br>Mittens · herself</p>
-    <p>Karen · Marcus · Priya · Dana · Jordan · Riley · Ed · Lisa<br>and everyone on Floor 7</p>
-    <p>No laptops were harmed.<br>Eight were responsibly destroyed.</p>
-    <p class="cr-next">Coming soon: <b>SOC WEEK</b> · Floor 7</p>
+    <div class="cr-h">THE TICKET QUEUE</div><div class="cr-s">THE LADDER</div>
+    <p>Starring<br><b>${esc2(S.playerName || "You")}</b><br>as Tier 1 tech, then network tech, then security analyst</p>
+    <p><b>Cutover Week</b><br>Tasha · Help Desk Lead<br>Harold · Change Manager<br>Benny · Service Desk Coordinator<br>Kai · IT intern</p>
+    <p><b>Network Week</b><br>Rosa · Network Lead<br>Hiro · Senior Network Engineer<br>Abby · NOC<br>Wade · Wireless<br>Sam · Cabling (both ends)</p>
+    <p><b>SOC Week</b><br>Omar · Incident Response Lead<br>Sofia · Nadia · Tomas · Grace · Bex · Wes</p>
+    <p>Director Chen · Gloria · Lou · Mo · Ray · Nico<br>Karen · Marcus · Priya · Dana · Jordan · Riley · Ed · Lisa · Luis<br>Mittens · herself</p>
+    <p>No laptops were harmed.<br>Eight laptops and two switches were responsibly destroyed.<br>One attacker was contained in under an hour.</p>
+    <p class="cr-next">Thanks for playing.</p>
     <p class="cr-tap">tap or press Enter</p></div>`;
-  const done = () => { window.removeEventListener("keydown", key, true); c.hidden = true; S.overlay = false; S.setDay(4); S.updateProgressUI(); showArcade(); };
+  const done = () => { window.removeEventListener("keydown", key, true); c.hidden = true; S.overlay = false; S.setDay(LAST_DAY + 1); S.updateProgressUI(); showArcade(); };
   const key = (e) => { if (e.key === "Enter" || e.key === " " || e.key === "Escape") { e.preventDefault(); e.stopPropagation(); done(); } };
   c.onclick = done;
   window.addEventListener("keydown", key, true);
@@ -91,11 +196,11 @@ export function rollCredits() {
 export function showArcade() {
   const S = CORE.S, d = DD();
   const A = document.getElementById("arcade"); if (!A) return;
-  const F = finalScore();
+  const F = careerScore();
   S.overlay = true;
   A.hidden = false;
   const submitted = S.hasFlag("scoreSubmitted");
-  A.innerHTML = `<div class="ar-box"><div class="ar-h">FINAL SCORE</div><div class="ar-sub">Cutover Week · ${esc2(S.playerName || "You")}</div>
+  A.innerHTML = `<div class="ar-box"><div class="ar-h">CAREER SCORE</div><div class="ar-sub">Help Desk → Network → Security · ${esc2(S.playerName || "You")}</div>
     <div class="ar-rows">${F.rows.map((r) => `<div class="r${r[2] < 0 ? " neg" : ""}"><span>${esc2(r[0])} <span class="ar-d">· ${esc2(r[1])}</span></span><span>${r[2] > 0 ? "+" : ""}${r[2].toLocaleString()}</span></div>`).join("")}</div>
     <div class="ar-total" id="ar-total">0</div><div class="ar-grade">GRADE ${F.grade}</div><div id="ar-bottom"></div></div>`;
   const rows = [...A.querySelectorAll(".ar-rows .r")];
